@@ -182,6 +182,6 @@ class Net(nn.Module):
         x = self.encoder(x)
         desc = self.lstm(desc)
 
-        x = self.decoder(torch.cat((x, desc), dim=1))
+        out = self.decoder(torch.cat((x, desc), dim=1))
 
-        return x
+        return out
