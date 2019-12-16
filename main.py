@@ -10,12 +10,12 @@ from colorama import Fore
 from utils import HDF5Dataset, RandomCentralErasing, UnNormalize
 from models import Net
 
-NUM_EPOCHS = 100
+NUM_EPOCHS = 250
 BATCH_SIZE = 64
 
 
 train_transform = transforms.Compose([transforms.ToTensor(),
-                                      # RandomCentralErasing(p=1.0, scale=(0.03, 0.12), ratio=(0.75, 1.25), value="random"),
+                                      RandomCentralErasing(p=1.0, scale=(0.03, 0.12), ratio=(0.75, 1.25), value="random"),
                                       transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
                                       ])
 
@@ -40,7 +40,7 @@ net.to(device)
 
 loss_fn = nn.BCELoss()
 loss_fn = loss_fn.to(device)
-lr = 0.01
+lr = 0.001
 optimizer = optim.Adam(net.parameters(), lr=lr)
 scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.95)
 writer = SummaryWriter()
