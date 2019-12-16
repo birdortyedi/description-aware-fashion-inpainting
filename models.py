@@ -45,7 +45,7 @@ class Encoder(nn.Module):
         self.dropout_5 = nn.Dropout2d(p=0.25)
         self.maxp_5 = nn.MaxPool2d(kernel_size=(2, 2))  # B x 64 x 8 x 8 --> B x 64 x 4 x 4
 
-        # self.linear_1 = nn.Linear(in_features=64 * 4 * 4, out_features=128)  # B x 64 x 4 x 4 --> B x 512
+        self.linear_1 = nn.Linear(in_features=64 * 4 * 4, out_features=128)  # B x 64 x 4 x 4 --> B x 512
 
     def forward(self, x):
         x = F.leaky_relu(self.conv_11(x))
@@ -84,6 +84,7 @@ class Encoder(nn.Module):
 
         # x = F.relu(self.linear_1(torch.flatten(x, 1)))
         x = torch.flatten(x, 1)
+        x = F.relu(self.linear_1(x))
 
         return x
 
@@ -91,6 +92,7 @@ class Encoder(nn.Module):
 class Decoder(nn.Module):
     def __init__(self):
         super(Decoder, self).__init__()
+        self.linear_1 = nn.Linear(in_features=128, out_features=512)
         self.up_1 = nn.Upsample(mode='bilinear', scale_factor=2)
         self.up_conv_1 = nn.Conv2d(in_channels=64, out_channels=64, kernel_size=1)   # B x 64 x 4 x 4 --> B x 64 x 8 x 8
         self.bn_1 = nn.BatchNorm2d(64)
@@ -135,6 +137,7 @@ class Decoder(nn.Module):
         #
 
     def forward(self, x):
+        x = F.leaky_relu(self.linear_1(x))
         x = F.leaky_relu(self.bn_1(self.up_conv_1(self.up_1(x.view(-1, 64, 4, 4)))))
         x = F.leaky_relu(self.bn_2(self.up_conv_2(self.up_2(x))))
         x = F.leaky_relu(self.bn_3(self.up_conv_3(self.up_3(x))))
@@ -177,8 +180,8 @@ class Net(nn.Module):
 
     def forward(self, x, desc):
         x = self.encoder(x)
-        # desc = self.lstm(desc)
+        desc = self.lstm(desc)
 
-        x = self.decoder(x)  # torch.cat((x, desc), dim=1)
+        x = self.decoder(torch.cat((x, desc), dim=1))
 
         return x
