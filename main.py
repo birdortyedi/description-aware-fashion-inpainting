@@ -8,7 +8,7 @@ from tqdm import tqdm
 from colorama import Fore
 
 from utils import HDF5Dataset, RandomCentralErasing, UnNormalize
-from models import Net
+from models import Net, AdvancedNet
 
 NUM_EPOCHS = 250
 BATCH_SIZE = 64
@@ -32,17 +32,17 @@ train_loader = data.DataLoader(fg_train, batch_size=BATCH_SIZE, shuffle=True, nu
 val_loader = data.DataLoader(fg_val, batch_size=BATCH_SIZE, shuffle=False, num_workers=0)
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-net = Net(fg_train.vocab_size)
+net = AdvancedNet(fg_train.vocab_size)  # Net(fg_train.vocab_size)
 if torch.cuda.device_count() > 1:
     print("Using {} GPUs...".format(torch.cuda.device_count()))
     net = nn.DataParallel(net)
 net.to(device)
 
-loss_fn = nn.BCELoss()
+loss_fn = nn.MSELoss()
 loss_fn = loss_fn.to(device)
-lr = 0.001
+lr = 0.01
 optimizer = optim.Adam(net.parameters(), lr=lr)
-scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.95)
+scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.9)
 writer = SummaryWriter()
 
 
