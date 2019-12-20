@@ -30,20 +30,18 @@ class StyleLoss(nn.Module):
 
 
 class AdverserialLoss(nn.Module):
-    def __init__(self, batch_size):
+    def __init__(self):
         super(AdverserialLoss, self).__init__()
-        self.loss_fn = nn.MSELoss()
-        self.real = torch.cuda.FloatTensor(batch_size, 1).fill_(1.0)
-        self.fake = torch.cuda.FloatTensor(batch_size, 1).fill_(0.0)
+        self.loss_fn = nn.BCELoss()
 
     def forward(self, x, out):
-        real_loss = self.loss_fn(x, self.real)
-        fake_loss = self.loss_fn(out, self.fake)
+        real_loss = self.loss_fn(x, torch.ones_like(x))
+        fake_loss = self.loss_fn(out, torch.zeros_like(out))
         return 0.5 * (real_loss + fake_loss)
 
 
 class CustomInpaintingLoss(nn.Module):
-    def __init__(self, batch_size):
+    def __init__(self):
         super(CustomInpaintingLoss, self).__init__()
         self.content_loss = ContentLoss()  # (x, out) := (the original image, inpainting)
         self.content_weight = 1.0
@@ -51,7 +49,7 @@ class CustomInpaintingLoss(nn.Module):
         self.style_weight = 3.0
         self.structural_loss = pytorch_msssim.MSSSIM()  # (x, out) := (the original image, inpainting)
         self.structural_weight = 3.0
-        self.adversarial_loss = AdverserialLoss(batch_size=batch_size)
+        self.adversarial_loss = AdverserialLoss()
         # (d_x, d_out) := (discriminator(x), discriminator(out))
         self.adversarial_weight = 1.0
 

@@ -39,7 +39,7 @@ if torch.cuda.device_count() > 1:
     net = nn.DataParallel(net)
 net.to(device)
 
-loss_fn = CustomInpaintingLoss(batch_size=BATCH_SIZE)
+loss_fn = CustomInpaintingLoss()
 loss_fn = loss_fn.to(device)
 lr = 0.01
 optimizer = optim.Adam(net.parameters(), lr=lr)
@@ -95,8 +95,8 @@ def evaluate(epoch, loader, l_fn):
             x_desc_val = x_desc_val.long().to(device)
             y_val = y_val.float().to(device)
 
-            output = net(x_val, x_desc_val)
-            val_loss = l_fn(output, y_val)
+            output, d_x, d_output = net(x_val, x_desc_val, y_val)
+            val_loss = l_fn(output, y_val, d_x, d_output)
 
             total_loss += val_loss.item()
 
