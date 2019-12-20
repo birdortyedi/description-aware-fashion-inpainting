@@ -11,16 +11,16 @@ from utils import HDF5Dataset, RandomCentralErasing, UnNormalize
 from models import Net, AdvancedNet
 
 NUM_EPOCHS = 250
-BATCH_SIZE = 64
+BATCH_SIZE = 128
 
 
 train_transform = transforms.Compose([transforms.ToTensor(),
                                       RandomCentralErasing(p=1.0, scale=(0.03, 0.12), ratio=(0.75, 1.25), value="random"),
-                                      transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
+                                      # transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
                                       ])
 
 val_transform = transforms.Compose([transforms.ToTensor(),
-                                    transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
+                                    # transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
                                     ])
 
 fg_train = HDF5Dataset(filename='./Fashion-Gen/fashiongen_256_256_train.h5', transform=train_transform)
@@ -38,7 +38,7 @@ if torch.cuda.device_count() > 1:
     net = nn.DataParallel(net)
 net.to(device)
 
-loss_fn = nn.MSELoss()
+loss_fn = nn.BCELoss()
 loss_fn = loss_fn.to(device)
 lr = 0.01
 optimizer = optim.Adam(net.parameters(), lr=lr)
@@ -69,7 +69,7 @@ def train(epoch, loader, l_fn, opt, sch):
 
         if batch_idx % 100 == 0:
             num_step = epoch * len(loader) + batch_idx
-            x_0 = UnNormalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))(x_train[0].cpu()).detach().numpy()  #
+            x_0 = (x_train[0].cpu()).detach().numpy()  # UnNormalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
             y_0 = (y_train[0].cpu()).detach().numpy()
             out_0 = (output[0].squeeze(0).cpu()).detach().numpy()  # UnNormalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
             writer.add_image("train_x/epoch_{}".format(epoch), x_0, num_step)

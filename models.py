@@ -251,26 +251,27 @@ class DilatedResidualBlock(nn.Module):
 class AdvancedNet(nn.Module):
     def __init__(self, vocab_size):
         super(AdvancedNet, self).__init__()
-        self.block_1 = self._conv_adain_lrelu_block(in_channels=3, out_channels=64, kernel_size=9, stride=2)
-        self.block_2 = self._conv_adain_lrelu_block(in_channels=64, out_channels=128, kernel_size=5, stride=2)
-        self.block_3 = self._conv_adain_lrelu_block(in_channels=128, out_channels=256, kernel_size=5, stride=2)
-        self.dilated_res_blocks = self._dilated_res_blocks(num_features=256, kernel_size=3)
+        self.block_1 = self._conv_in_lrelu_block(in_channels=3, out_channels=32, kernel_size=9, stride=2)
+        self.block_2 = self._conv_in_lrelu_block(in_channels=32, out_channels=64, kernel_size=5, stride=2)
+        self.block_3 = self._conv_in_lrelu_block(in_channels=64, out_channels=128, kernel_size=5, stride=2)
+
+        self.dilated_res_blocks = self._dilated_res_blocks(num_features=128, kernel_size=3)
+
+        self.block_4 = self._conv_in_lrelu_block(in_channels=128, out_channels=64, kernel_size=3, stride=2, padding=1)
+        self.block_5 = self._conv_in_lrelu_block(in_channels=64, out_channels=32, kernel_size=3, stride=2)
+
+        self.image_embedding_layer_1 = self._linear_block(in_features=32 * 6 * 6, out_features=128)
 
         self.lstm_block = self._lstm_block(vocab_size)
 
-        self.block_4 = self._conv_adain_lrelu_block(in_channels=256, out_channels=128, kernel_size=3, stride=2, padding=1)
-        self.block_5 = self._conv_adain_lrelu_block(in_channels=128, out_channels=64, kernel_size=3, stride=2)
+        self.block_6 = self._upsampling_in_lrelu_block(in_channels=16, out_channels=32, scale_factor=1.5)
+        self.block_7 = self._upsampling_in_lrelu_block(in_channels=32, out_channels=64, padding=1)
+        self.block_8 = self._upsampling_in_lrelu_block(in_channels=64, out_channels=128)
 
-        self.image_embedding_layer_1 = self._linear_block(in_features=64 * 6 * 6, out_features=256)
-
-        self.block_6 = self._upsampling_adain_lrelu_block(in_channels=32, out_channels=64, scale_factor=1.5)
-        self.block_7 = self._upsampling_adain_lrelu_block(in_channels=64, out_channels=128, padding=1)
-        self.block_8 = self._upsampling_adain_lrelu_block(in_channels=128, out_channels=256)
-
-        self.block_9 = self._upsampling_adain_lrelu_block(in_channels=512, out_channels=256, scale_factor=1.15)
-        self.block_10 = self._upsampling_adain_lrelu_block(in_channels=256, out_channels=128)
-        self.block_11 = self._upsampling_adain_lrelu_block(in_channels=128, out_channels=64)
-        self.block_12 = self._upsampling_adain_lrelu_block(in_channels=64, out_channels=3)
+        self.block_9 = self._upsampling_in_lrelu_block(in_channels=256, out_channels=128, scale_factor=1.15)
+        self.block_10 = self._upsampling_in_lrelu_block(in_channels=128, out_channels=64)
+        self.block_11 = self._upsampling_in_lrelu_block(in_channels=64, out_channels=32)
+        self.block_12 = self._upsampling_in_lrelu_block(in_channels=32, out_channels=3)
 
     def forward(self, x, descriptions):
         x = self.block_1(x)
@@ -288,7 +289,7 @@ class AdvancedNet(nn.Module):
 
         x = torch.cat((x, descriptions), dim=1)
 
-        x = self.block_6(x.view(-1, 32, 4, 4))
+        x = self.block_6(x.view(-1, 16, 4, 4))
         x = self.block_7(x)
         x = self.block_8(x)
 
@@ -297,15 +298,15 @@ class AdvancedNet(nn.Module):
         x = self.block_9(x)
         x = self.block_10(x)
         x = self.block_11(x)
-        x = torch.sigmoid((self.block_12(x)))
+        x = torch.sigmoid(self.block_12(x))
 
         return x
 
     @staticmethod
-    def _conv_adain_lrelu_block(in_channels, out_channels, kernel_size, stride=1, padding=0):
+    def _conv_in_lrelu_block(in_channels, out_channels, kernel_size, stride=1, padding=0):
         return nn.Sequential(
             nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size, stride=stride, padding=padding),
-            nn.InstanceNorm2d(num_features=out_channels),
+            nn.BatchNorm2d(num_features=out_channels),
             nn.LeakyReLU()
             )
 
@@ -321,7 +322,7 @@ class AdvancedNet(nn.Module):
         )
 
     @staticmethod
-    def _lstm_block(vocab_size, embedding_dim=32, hidden_dim=1024, n_layers=3, output_size=256):
+    def _lstm_block(vocab_size, embedding_dim=32, hidden_dim=1024, n_layers=3, output_size=128):
         return nn.Sequential(
             LSTMModule(vocab_size, embedding_dim, hidden_dim, n_layers, output_size)
         )
@@ -329,16 +330,17 @@ class AdvancedNet(nn.Module):
     @staticmethod
     def _linear_block(in_features, out_features):
         return nn.Sequential(
-            nn.Linear(in_features=in_features, out_features=1024),
-            nn.LeakyReLU(),
-            nn.Linear(in_features=1024, out_features=out_features)
+            nn.Linear(in_features=in_features, out_features=512),
+            nn.ReLU(),
+            nn.Linear(in_features=512, out_features=out_features),
+            nn.ReLU()
         )
 
     @staticmethod
-    def _upsampling_adain_lrelu_block(in_channels, out_channels, mode='bilinear', scale_factor=2.0, padding=0):
+    def _upsampling_in_lrelu_block(in_channels, out_channels, mode='bilinear', scale_factor=2.0, padding=0):
         return nn.Sequential(
             nn.Upsample(mode=mode, scale_factor=scale_factor),
             nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=1, padding=padding),
-            nn.InstanceNorm2d(num_features=out_channels),
+            nn.BatchNorm2d(num_features=out_channels),
             nn.LeakyReLU()
         )
