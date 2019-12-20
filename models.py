@@ -187,7 +187,6 @@ class Net(nn.Module):
         return out
 
 
-
 class SelfAttention(nn.Module):
     """ Self attention Layer"""
 
@@ -264,6 +263,8 @@ class AdvancedNet(nn.Module):
 
         self.lstm_block = self._lstm_block(vocab_size)
 
+        self.discriminator = self._linear_block(in_features=256, out_features=1, hidden_features=64)
+
         self.block_6 = self._upsampling_in_lrelu_block(in_channels=16, out_channels=32, scale_factor=1.5)
         self.block_7 = self._upsampling_in_lrelu_block(in_channels=32, out_channels=64, padding=1)
         self.block_8 = self._upsampling_in_lrelu_block(in_channels=64, out_channels=128)
@@ -289,6 +290,8 @@ class AdvancedNet(nn.Module):
 
         x = torch.cat((x, descriptions), dim=1)
 
+        d = torch.sigmoid(self.discriminator(x))
+
         x = self.block_6(x.view(-1, 16, 4, 4))
         x = self.block_7(x)
         x = self.block_8(x)
@@ -300,7 +303,7 @@ class AdvancedNet(nn.Module):
         x = self.block_11(x)
         x = torch.sigmoid(self.block_12(x))
 
-        return x
+        return x, d
 
     @staticmethod
     def _conv_in_lrelu_block(in_channels, out_channels, kernel_size, stride=1, padding=0):
@@ -328,11 +331,11 @@ class AdvancedNet(nn.Module):
         )
 
     @staticmethod
-    def _linear_block(in_features, out_features):
+    def _linear_block(in_features, out_features, hidden_features=512):
         return nn.Sequential(
-            nn.Linear(in_features=in_features, out_features=512),
+            nn.Linear(in_features=in_features, out_features=hidden_features),
             nn.ReLU(),
-            nn.Linear(in_features=512, out_features=out_features),
+            nn.Linear(in_features=hidden_features, out_features=out_features),
             nn.ReLU()
         )
 
