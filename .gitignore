@@ -76,3 +76,4 @@ runs/
 weights/
 Fashion-Gen/
 /pytorch-msssim/
+.git/
