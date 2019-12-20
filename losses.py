@@ -22,7 +22,8 @@ class StyleLoss(nn.Module):
         G_out = self._gram_matrix(out).detach()
         return self.loss_fn(G_x, G_out)
 
-    def _gram_matrix(self, mat):
+    @staticmethod
+    def _gram_matrix(mat):
         a, b, c, d = mat.size()
         features = mat.view(a * b, c * d)
         G_mat = torch.mm(features, features.t())

@@ -319,7 +319,7 @@ class AdvancedNet(nn.Module):
     def _conv_in_lrelu_block(in_channels, out_channels, kernel_size, stride=1, padding=0):
         return nn.Sequential(
             nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size, stride=stride, padding=padding),
-            nn.InstanceNorm2d(num_features=out_channels),
+            nn.BatchNorm2d(num_features=out_channels),
             nn.LeakyReLU()
             )
 
