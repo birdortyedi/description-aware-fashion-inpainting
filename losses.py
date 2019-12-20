@@ -32,7 +32,7 @@ class StyleLoss(nn.Module):
 class AdverserialLoss(nn.Module):
     def __init__(self, batch_size):
         super(AdverserialLoss, self).__init__()
-        self.loss_fn = nn.BCELoss()
+        self.loss_fn = nn.MSELoss()
         self.real = torch.cuda.FloatTensor(batch_size, 1).fill_(1.0)
         self.fake = torch.cuda.FloatTensor(batch_size, 1).fill_(0.0)
 
