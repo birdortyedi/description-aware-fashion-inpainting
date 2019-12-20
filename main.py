@@ -9,6 +9,7 @@ from colorama import Fore
 
 from utils import HDF5Dataset, RandomCentralErasing, UnNormalize
 from models import Net, AdvancedNet
+from losses import CustomInpaintingLoss
 
 NUM_EPOCHS = 250
 BATCH_SIZE = 128
@@ -38,7 +39,7 @@ if torch.cuda.device_count() > 1:
     net = nn.DataParallel(net)
 net.to(device)
 
-loss_fn = nn.BCELoss()
+loss_fn = CustomInpaintingLoss(batch_size=BATCH_SIZE)
 loss_fn = loss_fn.to(device)
 lr = 0.01
 optimizer = optim.Adam(net.parameters(), lr=lr)
@@ -56,8 +57,8 @@ def train(epoch, loader, l_fn, opt, sch):
         x_desc = x_desc.long().to(device)
         y_train = y_train.float().to(device)
 
-        output = net(x_train, x_desc)
-        loss = l_fn(output, y_train)
+        output, d_x, d_output = net(x_train, x_desc, y_train)
+        loss = l_fn(output, y_train, d_x, d_output)
 
         total_loss += loss.item()
 

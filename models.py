@@ -274,23 +274,33 @@ class AdvancedNet(nn.Module):
         self.block_11 = self._upsampling_in_lrelu_block(in_channels=64, out_channels=32)
         self.block_12 = self._upsampling_in_lrelu_block(in_channels=32, out_channels=3)
 
-    def forward(self, x, descriptions):
+    def forward(self, x, descriptions, x_original):
         x = self.block_1(x)
+        x_original = self.block_1(x_original)
         x = self.block_2(x)
+        x_original = self.block_2(x_original)
         x = self.block_3(x)
+        x_original = self.block_3(x_original)
 
         spatial_map, _ = self.dilated_res_blocks(x)
+        spatial_map_original, _ = self.dilated_res_blocks(x_original)
 
         x = self.block_4(spatial_map)
+        x_original = self.block_4(spatial_map_original)
         x = self.block_5(x)
+        x_original = self.block_5(x_original)
         x = torch.flatten(x, 1)
+        x_original = torch.flatten(x_original, 1)
         x = F.relu(self.image_embedding_layer_1(x))
+        x_original = F.relu(self.image_embedding_layer_1(x_original))
 
         descriptions = self.lstm_block(descriptions)
 
         x = torch.cat((x, descriptions), dim=1)
+        x_original = torch.cat((x_original, descriptions), dim=1)
 
-        d = torch.sigmoid(self.discriminator(x))
+        d_x = torch.sigmoid(self.discriminator(x))
+        d_output = torch.sigmoid(self.discriminator(x_original))
 
         x = self.block_6(x.view(-1, 16, 4, 4))
         x = self.block_7(x)
@@ -303,7 +313,7 @@ class AdvancedNet(nn.Module):
         x = self.block_11(x)
         x = torch.sigmoid(self.block_12(x))
 
-        return x, d
+        return x, d_x, d_output
 
     @staticmethod
     def _conv_in_lrelu_block(in_channels, out_channels, kernel_size, stride=1, padding=0):
