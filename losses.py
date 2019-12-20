@@ -37,7 +37,7 @@ class AdverserialLoss(nn.Module):
         self.fake = torch.cuda.FloatTensor(batch_size, 1).fill_(0.0)
 
     def forward(self, x, out):
-        real_loss = self.loss_fn(x, self.valid)
+        real_loss = self.loss_fn(x, self.real)
         fake_loss = self.loss_fn(out, self.fake)
         return 0.5 * (real_loss + fake_loss)
 
