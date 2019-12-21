@@ -57,8 +57,8 @@ def train(epoch, loader, l_fn, opt, sch):
         x_desc = x_desc.long().to(device)
         y_train = y_train.float().to(device)
 
-        output = net(x_train, x_desc, y_train)
-        loss, content, style, struct = l_fn(output, y_train)
+        output, d_x, d_out = net(x_train, x_desc, y_train)
+        loss, content, style, struct, adversarial = l_fn(output, y_train,  d_x, d_out)
 
         total_loss += loss.item()
 
@@ -83,7 +83,8 @@ def train(epoch, loader, l_fn, opt, sch):
                   "Loss: {:.4f}  ".format(loss.item()),
                   "Content: {:.4f}  ".format(content.item()),
                   "Style: {:.4f}  ".format(style.item()),
-                  "Structure: {:.4f}  ".format(struct.item()))
+                  "Structure: {:.4f}  ".format(struct.item()),
+                  "Adversarial: {:.4f}  ".format(adversarial.item()))
 
     writer.add_scalar("Loss/on_epoch_loss", total_loss, epoch)
 
@@ -98,8 +99,8 @@ def evaluate(epoch, loader, l_fn):
             x_desc_val = x_desc_val.long().to(device)
             y_val = y_val.float().to(device)
 
-            output = net(x_val, x_desc_val, y_val)
-            val_loss, val_content, val_style, val_struct = l_fn(output, y_val)
+            output, d_x, d_out = net(x_val, x_desc_val, y_val)
+            val_loss, val_content, val_style, val_struct, val_adversarial = l_fn(output, y_val, d_x, d_out)
 
             total_loss += val_loss.item()
 
@@ -109,7 +110,8 @@ def evaluate(epoch, loader, l_fn):
                       "Loss: {:.4f}".format(val_loss.item()),
                       "Content: {:.4f}  ".format(val_content.item()),
                       "Style: {:.9f}  ".format(val_style.item()),
-                      "Structure: {:.4f}  ".format(val_struct.item()))
+                      "Structure: {:.4f}  ".format(val_struct.item()),
+                      "Adversarial: {:.4f}  ".format(val_adversarial.item()))
 
         writer.add_scalar("Loss/on_epoch_val_loss", total_loss, epoch)
 

@@ -47,18 +47,20 @@ class CustomInpaintingLoss(nn.Module):
         self.content_loss = ContentLoss()  # (x, out) := (the original image, inpainting)
         self.content_weight = 1.0
         self.style_loss = StyleLoss()  # (x, out) := (the original image, inpainting)
-        self.style_weight = 5.0
+        self.style_weight = 3.0
         self.structural_loss = pytorch_msssim.MSSSIM()  # (x, out) := (the original image, inpainting)
-        self.structural_weight = 1.0
-        # self.adversarial_loss = AdverserialLoss()
+        self.structural_weight = 3.0
+        self.adversarial_loss = AdverserialLoss()
         # (d_x, d_out) := (discriminator(x), discriminator(out))
-        # self.adversarial_weight = 1.0
+        self.adversarial_weight = 1.0
 
-    def forward(self, x, out):
+    def forward(self, x, out, d_x, d_out):
         con_loss = self.content_loss(x, out.detach())
         sty_loss = self.style_loss(x, out.detach())
-        str_loss = self.structural_loss(x, out.detach())
-        # adv_loss = self.adversarial_loss(d_x.detach(), d_out.detach())
+        str_loss = 1 - self.structural_loss(x, out.detach())
+        adv_loss = self.adversarial_loss(d_x.detach(), d_out.detach())
         return self.content_weight * con_loss + \
                self.style_weight * sty_loss + \
-               self.structural_weight * str_loss, con_loss, sty_loss, str_loss
+               self.structural_weight * str_loss + \
+               self.adversarial_weight * adv_loss, \
+               con_loss, sty_loss, str_loss, adv_loss

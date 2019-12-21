@@ -276,31 +276,31 @@ class AdvancedNet(nn.Module):
 
     def forward(self, x, descriptions, x_original):
         x = self.block_1(x)
-        # x_original = self.block_1(x_original)
+        x_original = self.block_1(x_original)
         x = self.block_2(x)
-        # x_original = self.block_2(x_original)
+        x_original = self.block_2(x_original)
         x = self.block_3(x)
-        # x_original = self.block_3(x_original)
+        x_original = self.block_3(x_original)
 
         # spatial_map, _ = self.dilated_res_blocks(x)
         # spatial_map_original, _ = self.dilated_res_blocks(x_original)
 
         x = self.block_4(x)
-        # x_original = self.block_4(spatial_map_original)
+        x_original = self.block_4(x_original)
         x = self.block_5(x)
-        # x_original = self.block_5(x_original)
+        x_original = self.block_5(x_original)
         x = torch.flatten(x, 1)
-        # x_original = torch.flatten(x_original, 1)
+        x_original = torch.flatten(x_original, 1)
         x = F.relu(self.image_embedding_layer_1(x))
-        # x_original = F.relu(self.image_embedding_layer_1(x_original))
+        x_original = F.relu(self.image_embedding_layer_1(x_original))
 
         descriptions = self.lstm_block(descriptions)
 
         x = torch.cat((x, descriptions), dim=1)
-        # x_original = torch.cat((x_original, descriptions), dim=1)
+        x_original = torch.cat((x_original, descriptions), dim=1)
 
-        # d_x = torch.sigmoid(self.discriminator(x))
-        # d_output = torch.sigmoid(self.discriminator(x_original))
+        d_x = torch.sigmoid(self.discriminator(x))
+        d_output = torch.sigmoid(self.discriminator(x_original))
 
         x = self.block_6(x.view(-1, 16, 4, 4))
         x = self.block_7(x)
