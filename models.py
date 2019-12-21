@@ -313,7 +313,7 @@ class AdvancedNet(nn.Module):
         x = self.block_11(x)
         x = self.block_12(x)
 
-        return x
+        return x, d_x, d_output
 
     @staticmethod
     def _conv_in_lrelu_block(in_channels, out_channels, kernel_size, stride=1, padding=0):
