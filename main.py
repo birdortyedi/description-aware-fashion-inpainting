@@ -72,7 +72,7 @@ def train(epoch, loader, l_fn, opt, sch):
             num_step = epoch * len(loader) + batch_idx
             x_0 = (x_train[0].cpu()).detach().numpy()  # UnNormalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
             y_0 = (y_train[0].cpu()).detach().numpy()
-            out_0 = (output[0].squeeze(0).cpu()).detach().numpy()  # UnNormalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
+            out_0 = ((output[0] * 255.0).squeeze(0).cpu()).detach().numpy()  # UnNormalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
             writer.add_image("train_x/epoch_{}".format(epoch), x_0, num_step)
             writer.add_image("original_x/epoch_{}".format(epoch), y_0, num_step)
             writer.add_image("output/epoch_{}".format(epoch), out_0, num_step)
