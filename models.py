@@ -282,10 +282,10 @@ class AdvancedNet(nn.Module):
         x = self.block_3(x)
         # x_original = self.block_3(x_original)
 
-        spatial_map, _ = self.dilated_res_blocks(x)
+        # spatial_map, _ = self.dilated_res_blocks(x)
         # spatial_map_original, _ = self.dilated_res_blocks(x_original)
 
-        x = self.block_4(spatial_map)
+        x = self.block_4(x)
         # x_original = self.block_4(spatial_map_original)
         x = self.block_5(x)
         # x_original = self.block_5(x_original)

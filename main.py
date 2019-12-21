@@ -108,7 +108,7 @@ def evaluate(epoch, loader, l_fn):
                       "({}%)]\t".format(int(100 * batch_idx / float(len(loader)))),
                       "Loss: {:.4f}".format(val_loss.item()),
                       "Content: {:.4f}  ".format(val_content.item()),
-                      "Style: {:.4f}  ".format(val_style.item()),
+                      "Style: {:.9f}  ".format(val_style.item()),
                       "Structure: {:.4f}  ".format(val_struct.item()))
 
         writer.add_scalar("Loss/on_epoch_val_loss", total_loss, epoch)
