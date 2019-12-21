@@ -306,7 +306,7 @@ class AdvancedNet(nn.Module):
         x = self.block_7(x)
         x = self.block_8(x)
 
-        x = torch.cat((x, spatial_map), dim=1)
+        # x = torch.cat((x, spatial_map), dim=1)
 
         x = self.block_9(x)
         x = self.block_10(x)
