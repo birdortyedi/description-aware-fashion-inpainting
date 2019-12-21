@@ -80,10 +80,10 @@ def train(epoch, loader, l_fn, opt, sch):
                   "Epoch: {}".format(epoch),
                   "[{}/{} ".format(batch_idx * len(x_train), len(train_loader.dataset)),
                   "({}%)]\t".format(int(100 * batch_idx / float(len(train_loader)))),
-                  "Loss: {.4f}  ".format(loss.item()),
-                  "Content: {.4f}  ".format(content.item()),
-                  "Style: {.4f}  ".format(style.item()),
-                  "Structure: {.4f}  ".format(struct.item()))
+                  "Loss: {:.4f}  ".format(loss.item()),
+                  "Content: {:.4f}  ".format(content.item()),
+                  "Style: {:.4f}  ".format(style.item()),
+                  "Structure: {:.4f}  ".format(struct.item()))
 
     writer.add_scalar("Loss/on_epoch_loss", total_loss, epoch)
 
@@ -106,10 +106,10 @@ def evaluate(epoch, loader, l_fn):
             if batch_idx % 100 == 0:
                 print("[{}/{} ".format(batch_idx * len(x_val), len(loader.dataset)),
                       "({}%)]\t".format(int(100 * batch_idx / float(len(loader)))),
-                      "Loss: {}".format(val_loss.item()),
-                      "Content: {}  ".format(val_content.item()),
-                      "Style: {}  ".format(val_style.item()),
-                      "Structure: {}  ".format(val_struct.item()))
+                      "Loss: {:.4f}".format(val_loss.item()),
+                      "Content: {:.4f}  ".format(val_content.item()),
+                      "Style: {:.4f}  ".format(val_style.item()),
+                      "Structure: {:.4f}  ".format(val_struct.item()))
 
         writer.add_scalar("Loss/on_epoch_val_loss", total_loss, epoch)
 
