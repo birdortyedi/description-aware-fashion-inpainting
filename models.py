@@ -269,7 +269,7 @@ class AdvancedNet(nn.Module):
         self.block_7 = self._upsampling_bn_lrelu_block(in_channels=32, out_channels=64, padding=1)
         self.block_8 = self._upsampling_bn_lrelu_block(in_channels=64, out_channels=128)
 
-        self.block_9 = self._upsampling_bn_lrelu_block(in_channels=128, out_channels=128, scale_factor=1.15)
+        self.block_9 = self._upsampling_bn_lrelu_block(in_channels=256, out_channels=128, scale_factor=1.15)
         self.block_10 = self._upsampling_bn_lrelu_block(in_channels=128, out_channels=64)
         self.block_11 = self._upsampling_bn_lrelu_block(in_channels=64, out_channels=32)
         self.block_12 = self._upsampling_sigmoid_block(in_channels=32, out_channels=3)
