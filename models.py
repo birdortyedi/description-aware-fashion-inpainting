@@ -229,9 +229,9 @@ class DilatedResidualBlock(nn.Module):
         self.out_channels = out_channels
 
         self.conv_1 = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size, stride=stride, padding=dilation, dilation=dilation)
-        self.in_1 = nn.InstanceNorm2d(num_features=out_channels)
+        self.in_1 = nn.BatchNorm2d(num_features=out_channels)
         self.conv_2 = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=1, stride=stride)
-        self.in_2 = nn.InstanceNorm2d(num_features=out_channels)
+        self.in_2 = nn.BatchNorm2d(num_features=out_channels)
 
     def forward(self, x):
         residual = x
@@ -277,41 +277,77 @@ class AdvancedNet(nn.Module):
     def forward(self, x, descriptions, x_original):
         x = self.block_1(x)
         x_original = self.block_1(x_original)
+        print("Block 1: ")
+        print(x.size())
         x = self.block_2(x)
+        print("Block 2: ")
+        print(x.size())
         x_original = self.block_2(x_original)
         x = self.block_3(x)
+        print("Block 3: ")
+        print(x.size())
         x_original = self.block_3(x_original)
 
-        # spatial_map, _ = self.dilated_res_blocks(x)
-        # spatial_map_original, _ = self.dilated_res_blocks(x_original)
+        spatial_map, _ = self.dilated_res_blocks(x)
+        print("Spatial Map: ")
+        print(spatial_map.size())
+        spatial_map_original, _ = self.dilated_res_blocks(x_original)
 
-        x = self.block_4(x)
-        x_original = self.block_4(x_original)
+        x = self.block_4(spatial_map)
+        print("Block 4: ")
+        print(x.size())
+        x_original = self.block_4(spatial_map_original)
         x = self.block_5(x)
+        print("Block 5: ")
+        print(x.size())
         x_original = self.block_5(x_original)
         x = torch.flatten(x, 1)
+        print("Flatted: ")
+        print(x.size())
         x_original = torch.flatten(x_original, 1)
         x = F.relu(self.image_embedding_layer_1(x))
+        print("Embedded: ")
+        print(x.size())
         x_original = F.relu(self.image_embedding_layer_1(x_original))
 
         descriptions = self.lstm_block(descriptions)
 
         x = torch.cat((x, descriptions), dim=1)
+        print("Concated: ")
+        print(x.size())
         x_original = torch.cat((x_original, descriptions), dim=1)
 
         d_x = torch.sigmoid(self.discriminator(x))
+        print("D output: ")
+        print(d_x.size())
         d_output = torch.sigmoid(self.discriminator(x_original))
 
         x = self.block_6(x.view(-1, 16, 4, 4))
+        print("Block 6: ")
+        print(x.size())
         x = self.block_7(x)
+        print("Block 7: ")
+        print(x.size())
         x = self.block_8(x)
+        print("Block 8: ")
+        print(x.size())
 
-        # x = torch.cat((x, spatial_map), dim=1)
+        x = torch.cat((x, spatial_map), dim=1)
+        print("Concated: ")
+        print(x.size())
 
         x = self.block_9(x)
+        print("Block 9: ")
+        print(x.size())
         x = self.block_10(x)
+        print("Block 10: ")
+        print(x.size())
         x = self.block_11(x)
+        print("Block 11: ")
+        print(x.size())
         x = self.block_12(x)
+        print("G output: ")
+        print(x.size())
 
         return x, d_x, d_output
 

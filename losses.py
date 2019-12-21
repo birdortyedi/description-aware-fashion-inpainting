@@ -6,7 +6,7 @@ import pytorch_msssim
 class ContentLoss(nn.Module):
     def __init__(self):
         super(ContentLoss, self).__init__()
-        self.loss_fn = nn.MSELoss()
+        self.loss_fn = nn.L1Loss()
 
     def forward(self, x, out):
         return self.loss_fn(x, out)
@@ -15,7 +15,7 @@ class ContentLoss(nn.Module):
 class StyleLoss(nn.Module):
     def __init__(self):
         super(StyleLoss, self).__init__()
-        self.loss_fn = nn.MSELoss()
+        self.loss_fn = nn.L1Loss()
 
     def forward(self, x, out):
         G_x = self._gram_matrix(x)
