@@ -56,6 +56,6 @@ class CustomInpaintingLoss(nn.Module):
 
     def forward(self, x, out, d_x, d_out):
         return self.content_weight * self.content_loss(x, out.detach()) + \
-               self.style_weight * self.style_loss(x, out.detach()) + \
+               self.style_weight * self.style_loss(x, out.detach()) - \
                self.structural_weight * self.structural_loss(x, out.detach()) + \
                self.adversarial_weight * self.adversarial_loss(d_x.detach(), d_out.detach())
