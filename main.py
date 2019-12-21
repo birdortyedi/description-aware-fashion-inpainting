@@ -57,8 +57,8 @@ def train(epoch, loader, l_fn, opt, sch):
         x_desc = x_desc.long().to(device)
         y_train = y_train.float().to(device)
 
-        output, d_x, d_output = net(x_train, x_desc, y_train)
-        loss, content, style, struct, adversarial = l_fn(output, y_train, d_x, d_output)
+        output = net(x_train, x_desc, y_train)
+        loss, content, style, struct = l_fn(output, y_train)
 
         total_loss += loss.item()
 
@@ -80,11 +80,10 @@ def train(epoch, loader, l_fn, opt, sch):
                   "Epoch: {}".format(epoch),
                   "[{}/{} ".format(batch_idx * len(x_train), len(train_loader.dataset)),
                   "({}%)]\t".format(int(100 * batch_idx / float(len(train_loader)))),
-                  "Loss: {}\t".format(loss.item()),
-                  "Content: {}  ".format(content.item()),
-                  "Style: {}  ".format(style.item()),
-                  "Structure: {}  ".format(struct.item()),
-                  "Adversarial: {}".format(adversarial.item()))
+                  "Loss: {.4f}  ".format(loss.item()),
+                  "Content: {.4f}  ".format(content.item()),
+                  "Style: {.4f}  ".format(style.item()),
+                  "Structure: {.4f}  ".format(struct.item()))
 
     writer.add_scalar("Loss/on_epoch_loss", total_loss, epoch)
 
@@ -99,8 +98,8 @@ def evaluate(epoch, loader, l_fn):
             x_desc_val = x_desc_val.long().to(device)
             y_val = y_val.float().to(device)
 
-            output, d_x, d_output = net(x_val, x_desc_val, y_val)
-            val_loss, val_content, val_style, val_struct, val_adversarial = l_fn(output, y_val, d_x, d_output)
+            output = net(x_val, x_desc_val, y_val)
+            val_loss, val_content, val_style, val_struct = l_fn(output, y_val)
 
             total_loss += val_loss.item()
 
@@ -110,8 +109,7 @@ def evaluate(epoch, loader, l_fn):
                       "Loss: {}".format(val_loss.item()),
                       "Content: {}  ".format(val_content.item()),
                       "Style: {}  ".format(val_style.item()),
-                      "Structure: {}  ".format(val_struct.item()),
-                      "Adversarial: {}".format(val_adversarial.item()))
+                      "Structure: {}  ".format(val_struct.item()))
 
         writer.add_scalar("Loss/on_epoch_val_loss", total_loss, epoch)
 
