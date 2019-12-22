@@ -273,9 +273,8 @@ class AdvancedNet(nn.Module):
         self.block_10 = self._upsampling_bn_lrelu_block(in_channels=384, out_channels=128)
         self._1x1conv_10 = self._1x1conv_lrelu_block(in_channels=192, out_channels=128)
         self.block_11 = self._upsampling_bn_lrelu_block(in_channels=128, out_channels=64)
-        self._1x1conv_11 = self._1x1conv_lrelu_block(in_channels=96, out_channels=64)
-        self.block_12 = self._upsampling_bn_lrelu_block(in_channels=64, out_channels=32)
-        self.block_13 = self._upsampling_sigmoid_block(in_channels=32, out_channels=3)
+        self._1x1conv_11 = self._1x1conv_lrelu_block(in_channels=96, out_channels=32)
+        self.block_12 = self._upsampling_sigmoid_block(in_channels=32, out_channels=3)
 
     def forward(self, x, descriptions, x_original):
         x_1, x_2, x_3, x_smap, x_4, x_5, x_6 = self.extractor(x)
@@ -302,8 +301,7 @@ class AdvancedNet(nn.Module):
         x = self.block_11(x)  # output size: torch.Size([64, 64, 128, 128])
         x = torch.cat((x, x_1), dim=1)
         x = self._1x1conv_11(x)
-        x = self.block_12(x)  # output size: torch.Size([64, 32, 256, 256])
-        x = self.block_13(x)  # output size: torch.Size([64, 3, 256, 256])
+        x = self.block_12(x)  # output size: torch.Size([64, 3, 256, 256])
 
         return x, d_x, d_x_original
 
