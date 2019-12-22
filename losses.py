@@ -52,7 +52,7 @@ class CustomInpaintingLoss(nn.Module):
         self.structural_weight = 5.0
         self.adversarial_loss = AdverserialLoss()
         # (d_x, d_out) := (discriminator(x), discriminator(out))
-        self.adversarial_weight = 0.5
+        self.adversarial_weight = 1.0
 
     def forward(self, x, out, d_x, d_out):
         con_loss = self.content_loss(x, out.detach())
