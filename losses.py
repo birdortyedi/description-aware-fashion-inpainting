@@ -33,7 +33,7 @@ class StyleLoss(nn.Module):
 class AdverserialLoss(nn.Module):
     def __init__(self):
         super(AdverserialLoss, self).__init__()
-        self.loss_fn = nn.MSELoss()
+        self.loss_fn = nn.BCELoss()
 
     def forward(self, x, out):
         real_loss = self.loss_fn(x, torch.ones_like(x))
