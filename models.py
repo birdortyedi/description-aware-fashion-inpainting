@@ -250,72 +250,83 @@ class DilatedResidualBlock(nn.Module):
 class AdvancedNet(nn.Module):
     def __init__(self, vocab_size):
         super(AdvancedNet, self).__init__()
-        self.block_1 = self._conv_in_lrelu_block(in_channels=3, out_channels=32, kernel_size=9, stride=2)
-        self.block_2 = self._conv_in_lrelu_block(in_channels=32, out_channels=64, kernel_size=5, stride=2)
-        self.block_3 = self._conv_in_lrelu_block(in_channels=64, out_channels=128, kernel_size=5, stride=2)
+        self.block_1 = self._conv_in_lrelu_block(in_channels=3, out_channels=32, kernel_size=7, stride=2, padding=3)
+        self.block_2 = self._conv_in_lrelu_block(in_channels=32, out_channels=64, kernel_size=5, stride=2, padding=2)
+        self.block_3 = self._conv_in_lrelu_block(in_channels=64, out_channels=128, kernel_size=5, stride=2, padding=2)
 
         self.dilated_res_blocks = self._dilated_res_blocks(num_features=128, kernel_size=3)
 
-        self.block_4 = self._conv_in_lrelu_block(in_channels=128, out_channels=64, kernel_size=3, stride=2, padding=1)
-        self.block_5 = self._conv_in_lrelu_block(in_channels=64, out_channels=32, kernel_size=3, stride=2)
+        self.block_4 = self._conv_in_lrelu_block(in_channels=128, out_channels=64, kernel_size=5, stride=2, padding=2)
+        self.block_5 = self._conv_in_lrelu_block(in_channels=64, out_channels=32, kernel_size=5, stride=2, padding=2)
+        self.block_6 = self._conv_in_lrelu_block(in_channels=32, out_channels=16, kernel_size=5, stride=2, padding=2)
 
-        self.image_embedding_layer_1 = self._linear_block(in_features=32 * 6 * 6, out_features=128)
+        self.image_embedding_layer_1 = self._linear_block(in_features=16 * 4 * 4, out_features=128, hidden_features=256)
 
         self.lstm_block = self._lstm_block(vocab_size)
 
         self.discriminator = self._linear_block(in_features=256, out_features=1, hidden_features=64)
 
-        self.block_6 = self._upsampling_bn_lrelu_block(in_channels=16, out_channels=32, scale_factor=1.5)
-        self.block_7 = self._upsampling_bn_lrelu_block(in_channels=64, out_channels=64, padding=1)
-        self.block_8 = self._upsampling_bn_lrelu_block(in_channels=128, out_channels=128)
+        self.block_7 = self._upsampling_bn_lrelu_block(in_channels=16, out_channels=32)
+        self.block_8 = self._upsampling_bn_lrelu_block(in_channels=64, out_channels=64)
+        self.block_9 = self._upsampling_bn_lrelu_block(in_channels=128, out_channels=128)
 
-        self.block_9 = self._upsampling_bn_lrelu_block(in_channels=256, out_channels=128, scale_factor=1.15)
-        self.block_10 = self._upsampling_bn_lrelu_block(in_channels=128, out_channels=64)
-        self.block_11 = self._upsampling_bn_lrelu_block(in_channels=64, out_channels=32)
-        self.block_12 = self._upsampling_sigmoid_block(in_channels=32, out_channels=3)
+        self.block_10 = self._upsampling_bn_lrelu_block(in_channels=384, out_channels=128)
+        self._1x1conv_10 = self._1x1conv_lrelu_block(in_channels=192, out_channels=128)
+        self.block_11 = self._upsampling_bn_lrelu_block(in_channels=128, out_channels=64)
+        self._1x1conv_11 = self._1x1conv_lrelu_block(in_channels=96, out_channels=64)
+        self.block_12 = self._upsampling_bn_lrelu_block(in_channels=64, out_channels=32)
+        self.block_13 = self._upsampling_sigmoid_block(in_channels=32, out_channels=3)
 
     def forward(self, x, descriptions, x_original):
-        x = self.block_1(x)  # output size: torch.Size([64, 32, 124, 124])
-        x_original = self.block_1(x_original)
-        x = self.block_2(x)  # output size: torch.Size([64, 64, 60, 60])
-        x_original = self.block_2(x_original)
-        x = self.block_3(x)  # output size: torch.Size([64, 128, 28, 28])
-        x_original = self.block_3(x_original)
+        x_1, x_2, x_3, x_smap, x_4, x_5, x_6 = self.extractor(x)
+        x_original_1, x_original_2, x_original_3, _, x_original_4, x_original_5, x_original_6 = self.extractor(x_original)
 
-        spatial_map, _ = self.dilated_res_blocks(x)  # output size: torch.Size([64, 128, 28, 28])
-        spatial_map_original, _ = self.dilated_res_blocks(x_original)
+        x_with_descriptor = self.concat_with_descriptor(x_6, descriptions)
+        x_original_with_descriptor = self.concat_with_descriptor(x_original_6, descriptions)
 
-        x_4 = self.block_4(spatial_map)  # output size: torch.Size([64, 64, 14, 14])
-        x_original = self.block_4(spatial_map_original)
-        x_5 = self.block_5(x_4)  # output size: torch.Size([64, 32, 6, 6])
-        x_original = self.block_5(x_original)
-        x = torch.flatten(x_5, 1)  # output size: torch.Size([64, 1152])
-        x_original = torch.flatten(x_original, 1)
-        x = F.relu(self.image_embedding_layer_1(x))  # output size: torch.Size([64, 128])
-        x_original = F.relu(self.image_embedding_layer_1(x_original))
+        d_x = torch.sigmoid(self.discriminator(x_with_descriptor))  # output size: torch.Size([64, 1])
+        d_x_original = torch.sigmoid(self.discriminator(x_original_with_descriptor))
 
-        descriptions = self.lstm_block(descriptions)
-
-        x = torch.cat((x, descriptions), dim=1)  # output size: torch.Size([64, 256])
-        x_original = torch.cat((x_original, descriptions), dim=1)
-
-        d_x = torch.sigmoid(self.discriminator(x))  # output size: torch.Size([64, 1])
-        d_output = torch.sigmoid(self.discriminator(x_original))
-
-        x = self.block_6(x.view(-1, 16, 4, 4))  # output size: torch.Size([64, 32, 6, 6])
-        x = torch.cat((x, x_5), dim=1)  # output size: torch.Size([64, 64, 6, 6])
-        x = self.block_7(x)  # output size: torch.Size([64, 64, 14, 14])
-        x = torch.cat((x, x_4), dim=1)  # output size: torch.Size([64, 128, 14, 14])
-        x = self.block_8(x)  # output size: torch.Size([64, 128, 28, 28])
-
-        x = torch.cat((x, spatial_map), dim=1)  # output size: torch.Size([64, 256, 28, 28])
-
+        x = self.block_7(x_with_descriptor.view(-1, 16, 4, 4))  # output size: torch.Size([64, 32, 8, 8])
+        x = torch.cat((x, x_5), dim=1)  # output size: torch.Size([64, 64, 8, 8])
+        x = self.block_8(x)  # output size: torch.Size([64, 64, 16, 16])
+        x = torch.cat((x, x_4), dim=1)  # output size: torch.Size([64, 128, 16, 16])
         x = self.block_9(x)  # output size: torch.Size([64, 128, 32, 32])
-        x = self.block_10(x)  # output size: torch.Size([64, 64, 64, 64])
-        x = self.block_11(x)  # output size: torch.Size([64, 32, 128, 128])
-        x = self.block_12(x)  # output size: torch.Size([64, 3, 256, 256])
+        x = torch.cat((x, x_3), dim=1)
 
-        return x, d_x, d_output
+        x = torch.cat((x, x_smap), dim=1)  # output size: torch.Size([64, 384, 32, 32])
+
+        x = self.block_10(x)  # output size: torch.Size([64, 128, 64, 64])
+        x = torch.cat((x, x_2), dim=1)
+        x = self._1x1conv_10(x)
+        x = self.block_11(x)  # output size: torch.Size([64, 64, 128, 128])
+        x = torch.cat((x, x_1), dim=1)
+        x = self._1x1conv_11(x)
+        x = self.block_12(x)  # output size: torch.Size([64, 32, 256, 256])
+        x = self.block_13(x)  # output size: torch.Size([64, 3, 256, 256])
+
+        return x, d_x, d_x_original
+
+    def concat_with_descriptor(self, x_6, descriptions):
+        x_ = torch.flatten(x_6, 1)  # output size: torch.Size([64, 256])
+        x_ = F.relu(self.image_embedding_layer_1(x_))  # output size: torch.Size([64, 128])
+        descriptions = self.lstm_block(descriptions)
+        x_ = torch.cat((x_, descriptions), dim=1)  # output size: torch.Size([64, 256])
+
+        return x_
+
+    def extractor(self, x):
+        x_1 = self.block_1(x)  # output size: torch.Size([64, 32, 128, 128])
+        x_2 = self.block_2(x_1)  # output size: torch.Size([64, 64, 64, 64])
+        x_3 = self.block_3(x_2)  # output size: torch.Size([64, 128, 32, 32])
+
+        spatial_map, _ = self.dilated_res_blocks(x_3)  # output size: torch.Size([64, 128, 32, 32])
+
+        x_4 = self.block_4(spatial_map)  # output size: torch.Size([64, 64, 16, 16])
+        x_5 = self.block_5(x_4)  # output size: torch.Size([64, 32, 8, 8])
+        x_6 = self.block_6(x_5)  # output size: torch.Size([64, 16, 4, 4])
+
+        return x_1, x_2, x_3, spatial_map, x_4, x_5, x_6
 
     @staticmethod
     def _conv_in_lrelu_block(in_channels, out_channels, kernel_size, stride=1, padding=0):
@@ -365,4 +376,11 @@ class AdvancedNet(nn.Module):
             nn.Upsample(mode=mode, scale_factor=scale_factor),
             nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=1, padding=padding),
             nn.Sigmoid()
+        )
+
+    @staticmethod
+    def _1x1conv_lrelu_block(in_channels, out_channels):
+        return nn.Sequential(
+            nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=1),
+            nn.LeakyReLU()
         )
