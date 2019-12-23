@@ -16,7 +16,7 @@ BATCH_SIZE = 128
 
 
 train_transform = transforms.Compose([transforms.ToTensor(),
-                                      RandomCentralErasing(p=1.0, scale=(0.03, 0.12), ratio=(0.75, 1.25), value="random"),
+                                      RandomCentralErasing(p=1.0, scale=(0.03, 0.12), ratio=(0.75, 1.25)),
                                       # transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
                                       ])
 
@@ -49,7 +49,7 @@ writer = SummaryWriter()
 
 def train(epoch, loader, l_fn, opt, sch):
     net.train()
-    total_loss = 0.
+    total_loss, total_content_loss, total_style_loss, total_struct_loss, total_adverserial_loss = 0., 0., 0., 0., 0.
     for batch_idx, (x_train, x_desc, y_train) in tqdm(enumerate(loader), ncols=50, desc="Training",
                                                       bar_format="{l_bar}%s{bar}%s{r_bar}" % (Fore.GREEN, Fore.RESET)):
         opt.zero_grad()
@@ -61,18 +61,26 @@ def train(epoch, loader, l_fn, opt, sch):
         loss, content, style, struct, adversarial = l_fn(output, y_train,  d_x, d_out)
 
         total_loss += loss.item()
+        total_content_loss += content.item()
+        total_style_loss += style.item()
+        total_struct_loss += struct.item()
+        total_adverserial_loss += adversarial.item()
 
         loss.backward()
         opt.step()
         sch.step(epoch)
 
         writer.add_scalar("Loss/on_step_loss", loss.item(), epoch * len(loader) + batch_idx)
+        writer.add_scalar("Loss/on_step_content_loss", content.item(), epoch * len(loader) + batch_idx)
+        writer.add_scalar("Loss/on_step_style_loss", style.item(), epoch * len(loader) + batch_idx)
+        writer.add_scalar("Loss/on_step_structure_loss", struct.item(), epoch * len(loader) + batch_idx)
+        writer.add_scalar("Loss/on_step_adversarial_loss", adversarial.item(), epoch * len(loader) + batch_idx)
 
         if batch_idx % 100 == 0:
             num_step = epoch * len(loader) + batch_idx
             x_0 = (x_train[0].cpu()).detach().numpy()  # UnNormalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
             y_0 = (y_train[0].cpu()).detach().numpy()
-            out_0 = (output[0].squeeze(0).cpu()).detach().numpy()  # UnNormalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
+            out_0 = (output[0].squeeze(0).cpu()).detach().numpy()
             writer.add_image("train_x/epoch_{}".format(epoch), x_0, num_step)
             writer.add_image("original_x/epoch_{}".format(epoch), y_0, num_step)
             writer.add_image("output/epoch_{}".format(epoch), out_0, num_step)
@@ -87,10 +95,14 @@ def train(epoch, loader, l_fn, opt, sch):
                   "Adversarial: {:.4f}  ".format(adversarial.item()))
 
     writer.add_scalar("Loss/on_epoch_loss", total_loss, epoch)
+    writer.add_scalar("Loss/on_epoch_content_loss", total_content_loss, epoch)
+    writer.add_scalar("Loss/on_epoch_style_loss", total_style_loss, epoch)
+    writer.add_scalar("Loss/on_epoch_structure_loss", total_struct_loss, epoch)
+    writer.add_scalar("Loss/on_epoch_adverserial_loss", total_adverserial_loss, epoch)
 
 
 def evaluate(epoch, loader, l_fn):
-    total_loss = 0.
+    total_loss, total_content_loss, total_style_loss, total_struct_loss, total_adverserial_loss = 0., 0., 0., 0., 0.
     with torch.no_grad():
         net.eval()
         for batch_idx, (x_val, x_desc_val, y_val) in tqdm(enumerate(loader), ncols=50, desc="Validation",
@@ -103,6 +115,10 @@ def evaluate(epoch, loader, l_fn):
             val_loss, val_content, val_style, val_struct, val_adversarial = l_fn(output, y_val, d_x, d_out)
 
             total_loss += val_loss.item()
+            total_content_loss += val_content.item()
+            total_style_loss += val_style.item()
+            total_struct_loss += val_struct.item()
+            total_adverserial_loss += val_adversarial.item()
 
             if batch_idx % 100 == 0:
                 print("[{}/{} ".format(batch_idx * len(x_val), len(loader.dataset)),
@@ -114,6 +130,10 @@ def evaluate(epoch, loader, l_fn):
                       "Adversarial: {:.4f}  ".format(val_adversarial.item()))
 
         writer.add_scalar("Loss/on_epoch_val_loss", total_loss, epoch)
+        writer.add_scalar("Loss/on_epoch_val_content_loss", total_content_loss, epoch)
+        writer.add_scalar("Loss/on_epoch_val_style_loss", total_style_loss, epoch)
+        writer.add_scalar("Loss/on_epoch_val_structure_loss", total_struct_loss, epoch)
+        writer.add_scalar("Loss/on_epoch_val_adversarial_loss", total_adverserial_loss, epoch)
 
 
 if __name__ == '__main__':

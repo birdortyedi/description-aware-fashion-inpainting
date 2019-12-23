@@ -49,7 +49,7 @@ class CustomInpaintingLoss(nn.Module):
         self.style_loss = StyleLoss()  # (x, out) := (the original image, inpainting)
         self.style_weight = 100.0
         self.structural_loss = pytorch_msssim.MSSSIM()  # (x, out) := (the original image, inpainting)
-        self.structural_weight = 5.0
+        self.structural_weight = 20.0
         self.adversarial_loss = AdverserialLoss()
         # (d_x, d_out) := (discriminator(x), discriminator(out))
         self.adversarial_weight = 1.0
