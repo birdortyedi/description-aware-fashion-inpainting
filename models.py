@@ -289,8 +289,8 @@ class AdvancedNet(nn.Module):
         d_x_original_smap = self.block_5(d_x_original_smap)
         d_x_original_smap = self.block_6(d_x_original_smap)
 
-        d_x = torch.softmax(self.discriminator(torch.flatten(d_x_smap, 1)), dim=1)  # output size: torch.Size([64, 1])
-        d_x_original = torch.softmax(self.discriminator(torch.flatten(d_x_original_smap, 1)), dim=1)
+        d_x = torch.sigmoid(self.discriminator(torch.flatten(d_x_smap, 1)))  # output size: torch.Size([64, 1])
+        d_x_original = torch.sigmoid(self.discriminator(torch.flatten(d_x_original_smap, 1)))
 
         x_with_descriptor = self.concat_with_descriptor(x_6, descriptions)
 
