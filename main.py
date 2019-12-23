@@ -16,7 +16,7 @@ BATCH_SIZE = 128
 
 
 train_transform = transforms.Compose([transforms.ToTensor(),
-                                      RandomCentralErasing(p=1.0, scale=(0.03, 0.12), ratio=(0.75, 1.25)),
+                                      RandomCentralErasing(p=1.0, scale=(0.03, 0.12), ratio=(0.75, 1.25), value=1),
                                       # transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
                                       ])
 
