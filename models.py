@@ -256,6 +256,8 @@ class AdvancedNet(nn.Module):
 
         self.dilated_res_blocks = self._dilated_res_blocks(num_features=128, kernel_size=3)
 
+        self.discriminator = self._linear_block(in_features=16 * 4 * 4, out_features=1, hidden_features=32)
+
         self.block_4 = self._conv_in_lrelu_block(in_channels=128, out_channels=64, kernel_size=5, stride=2, padding=2)
         self.block_5 = self._conv_in_lrelu_block(in_channels=64, out_channels=32, kernel_size=5, stride=2, padding=2)
         self.block_6 = self._conv_in_lrelu_block(in_channels=32, out_channels=16, kernel_size=5, stride=2, padding=2)
@@ -263,8 +265,6 @@ class AdvancedNet(nn.Module):
         self.image_embedding_layer_1 = self._linear_block(in_features=16 * 4 * 4, out_features=128, hidden_features=256)
 
         self.lstm_block = self._lstm_block(vocab_size)
-
-        self.discriminator = self._linear_block(in_features=256, out_features=1, hidden_features=64)
 
         self.block_7 = self._upsampling_bn_lrelu_block(in_channels=16, out_channels=32)
         self.block_8 = self._upsampling_bn_lrelu_block(in_channels=64, out_channels=64)
@@ -278,13 +278,21 @@ class AdvancedNet(nn.Module):
 
     def forward(self, x, descriptions, x_original):
         x_1, x_2, x_3, x_smap, x_4, x_5, x_6 = self.extractor(x)
-        x_original_1, x_original_2, x_original_3, _, x_original_4, x_original_5, x_original_6 = self.extractor(x_original)
+        x_original_1, x_original_2, x_original_3, x_original_smap, \
+        x_original_4, x_original_5, x_original_6 = self.extractor(x_original)
+
+        d_x_smap = self.block_4(x_smap)
+        d_x_smap = self.block_5(d_x_smap)
+        d_x_smap = self.block_6(d_x_smap)
+
+        d_x_original_smap = self.block_4(x_original_smap)
+        d_x_original_smap = self.block_5(d_x_original_smap)
+        d_x_original_smap = self.block_6(d_x_original_smap)
+
+        d_x = torch.softmax(self.discriminator(torch.flatten(d_x_smap, 1)), dim=1)  # output size: torch.Size([64, 1])
+        d_x_original = torch.softmax(self.discriminator(torch.flatten(d_x_original_smap, 1)), dim=1)
 
         x_with_descriptor = self.concat_with_descriptor(x_6, descriptions)
-        x_original_with_descriptor = self.concat_with_descriptor(x_original_6, descriptions)
-
-        d_x = torch.softmax(self.discriminator(x_with_descriptor), dim=1)  # output size: torch.Size([64, 1])
-        d_x_original = torch.softmax(self.discriminator(x_original_with_descriptor), dim=1)
 
         x = self.block_7(x_with_descriptor.view(-1, 16, 4, 4))  # output size: torch.Size([64, 32, 8, 8])
         x = torch.cat((x, x_5), dim=1)  # output size: torch.Size([64, 64, 8, 8])
