@@ -229,9 +229,9 @@ class DilatedResidualBlock(nn.Module):
         self.out_channels = out_channels
 
         self.conv_1 = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size, stride=stride, padding=dilation, dilation=dilation)
-        self.in_1 = nn.BatchNorm2d(num_features=out_channels)
+        self.in_1 = nn.InstanceNorm2d(num_features=out_channels)
         self.conv_2 = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=1, stride=stride)
-        self.in_2 = nn.BatchNorm2d(num_features=out_channels)
+        self.in_2 = nn.InstanceNorm2d(num_features=out_channels)
 
     def forward(self, x):
         residual = x
@@ -266,13 +266,13 @@ class AdvancedNet(nn.Module):
 
         self.lstm_block = self._lstm_block(vocab_size)
 
-        self.block_7 = self._upsampling_bn_lrelu_block(in_channels=16, out_channels=32)
-        self.block_8 = self._upsampling_bn_lrelu_block(in_channels=64, out_channels=64)
-        self.block_9 = self._upsampling_bn_lrelu_block(in_channels=128, out_channels=128)
+        self.block_7 = self._upsampling_in_lrelu_block(in_channels=16, out_channels=32)
+        self.block_8 = self._upsampling_in_lrelu_block(in_channels=64, out_channels=64)
+        self.block_9 = self._upsampling_in_lrelu_block(in_channels=128, out_channels=128)
 
-        self.block_10 = self._upsampling_bn_lrelu_block(in_channels=384, out_channels=128)
+        self.block_10 = self._upsampling_in_lrelu_block(in_channels=384, out_channels=128)
         self._1x1conv_10 = self._1x1conv_lrelu_block(in_channels=192, out_channels=128)
-        self.block_11 = self._upsampling_bn_lrelu_block(in_channels=128, out_channels=64)
+        self.block_11 = self._upsampling_in_lrelu_block(in_channels=128, out_channels=64)
         self._1x1conv_11 = self._1x1conv_lrelu_block(in_channels=96, out_channels=32)
         self.block_12 = self._upsampling_sigmoid_block(in_channels=32, out_channels=3)
 
@@ -368,11 +368,11 @@ class AdvancedNet(nn.Module):
         )
 
     @staticmethod
-    def _upsampling_bn_lrelu_block(in_channels, out_channels, mode='bilinear', scale_factor=2.0, padding=0):
+    def _upsampling_in_lrelu_block(in_channels, out_channels, mode='bilinear', scale_factor=2.0, padding=0):
         return nn.Sequential(
             nn.Upsample(mode=mode, scale_factor=scale_factor),
             nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=1, padding=padding),
-            nn.BatchNorm2d(num_features=out_channels),
+            nn.InstanceNorm2d(num_features=out_channels),
             nn.LeakyReLU()
         )
 
@@ -381,7 +381,7 @@ class AdvancedNet(nn.Module):
         return nn.Sequential(
             nn.Upsample(mode=mode, scale_factor=scale_factor),
             nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=1, padding=padding),
-            nn.Sigmoid()
+            nn.Tanh()
         )
 
     @staticmethod
