@@ -12,7 +12,7 @@ from models import Net, AdvancedNet
 from losses import CustomInpaintingLoss
 
 NUM_EPOCHS = 250
-BATCH_SIZE = 128
+BATCH_SIZE = 4
 
 
 train_transform = transforms.Compose([transforms.ToTensor(),
@@ -80,7 +80,7 @@ def train(epoch, loader, l_fn, opt, sch):
         writer.add_scalar("Loss/on_step_structure_loss", struct.item(), epoch * len(loader) + batch_idx)
         writer.add_scalar("Loss/on_step_adversarial_loss", adversarial.item(), epoch * len(loader) + batch_idx)
 
-        if batch_idx % 100 == 0:
+        if batch_idx % 1000 == 0:
             num_step = epoch * len(loader) + batch_idx
             x_0 = (x_train[0].cpu()).detach().numpy()  # UnNormalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
             y_0 = (y_train[0].cpu()).detach().numpy()
