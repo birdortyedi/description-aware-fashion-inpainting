@@ -24,10 +24,11 @@ class StyleLoss(nn.Module):
 
     @staticmethod
     def _gram_matrix(mat):
-        a, b, c, d = mat.size()
-        features = mat.view(a * b, c * d)
-        G_mat = torch.mm(features, features.t())
-        return G_mat
+        b, ch, h, w = mat.size()
+        m = mat.view(b, ch, w * h)
+        m_transposed = m.transpose(1, 2)
+        G = m.bmm(m_transposed) / (h * w * ch)
+        return G
 
 
 class AdverserialLoss(nn.Module):
@@ -47,7 +48,7 @@ class CustomInpaintingLoss(nn.Module):
         self.content_loss = ContentLoss()  # (x, out) := (the original image, inpainting)
         self.content_weight = 20.0
         self.style_loss = StyleLoss()  # (x, out) := (the original image, inpainting)
-        self.style_weight = 0.1
+        self.style_weight = 100.0
         self.structural_loss = pytorch_msssim.MSSSIM()  # (x, out) := (the original image, inpainting)
         self.structural_weight = 20.0
         self.adversarial_loss = AdverserialLoss()
