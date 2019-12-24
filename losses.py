@@ -27,7 +27,7 @@ class StyleLoss(nn.Module):
         a, b, c, d = mat.size()
         features = mat.view(a * b, c * d)
         G_mat = torch.mm(features, features.t())
-        return G_mat.div(a * b * c * d)
+        return G_mat
 
 
 class AdverserialLoss(nn.Module):
@@ -47,7 +47,7 @@ class CustomInpaintingLoss(nn.Module):
         self.content_loss = ContentLoss()  # (x, out) := (the original image, inpainting)
         self.content_weight = 20.0
         self.style_loss = StyleLoss()  # (x, out) := (the original image, inpainting)
-        self.style_weight = 100.0
+        self.style_weight = 0.1
         self.structural_loss = pytorch_msssim.MSSSIM()  # (x, out) := (the original image, inpainting)
         self.structural_weight = 20.0
         self.adversarial_loss = AdverserialLoss()
