@@ -58,8 +58,8 @@ def train(epoch, loader, l_fn, opt, sch):
         y_train = y_train.float().to(device)
 
         output, d_x, d_out = net(x_train, x_desc, y_train)
-        d_real_acc = torch.mean((d_x > 0.5), dim=0)
-        d_fake_acc = torch.mean((d_out > 0.5), dim=0)
+        d_real_acc = torch.mean((d_x.float() > 0.5), dim=0)
+        d_fake_acc = torch.mean((d_out.float() > 0.5), dim=0)
         writer.add_scalar("Metrics/on_step_discriminator_real_acc", d_real_acc, epoch * len(loader) + batch_idx)
         writer.add_scalar("Metrics/on_step_discriminator_fake_acc", d_fake_acc, epoch * len(loader) + batch_idx)
         loss, content, style, struct, adversarial = l_fn(output, y_train,  d_x, d_out)

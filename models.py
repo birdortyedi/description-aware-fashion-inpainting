@@ -281,10 +281,10 @@ class AdvancedNet(nn.Module):
         self.d_block_1 = self._conv_in_lrelu_block(in_channels=3, out_channels=32, kernel_size=7, stride=2, padding=1)
         self.d_block_2 = self._conv_in_lrelu_block(in_channels=32, out_channels=64, kernel_size=5, stride=2, padding=1)
         self.d_block_3 = self._conv_in_lrelu_block(in_channels=64, out_channels=128, kernel_size=5, stride=2, padding=1)
-        self.d_block_4 = self._conv_in_lrelu_block(in_channels=128, out_channels=64, kernel_size=5, stride=2)
+        self.d_block_4 = self._conv_in_lrelu_block(in_channels=128, out_channels=64, kernel_size=5, stride=2, padding=1)
         self.d_block_5 = self._conv_in_lrelu_block(in_channels=64, out_channels=32, kernel_size=3, stride=2)
         self.d_block_6 = self._conv_in_lrelu_block(in_channels=32, out_channels=16, kernel_size=3, stride=2)
-        self.d_block_7 = self._linear_block(in_features=16 * 4 * 4, out_features=1, hidden_features=128)
+        self.d_block_7 = self._linear_block(in_features=16 * 4 * 4, out_features=1, hidden_features=64)
 
     def forward(self, x, descriptions, x_original):
         x_1, x_2, x_3, x_smap, x_4, x_5, x_6 = self.extractor(x)
