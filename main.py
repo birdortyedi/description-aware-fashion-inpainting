@@ -12,7 +12,7 @@ from models import Net, AdvancedNet
 from losses import CustomInpaintingLoss
 
 NUM_EPOCHS = 250
-BATCH_SIZE = 4
+BATCH_SIZE = 256
 
 
 train_transform = transforms.Compose([transforms.ToTensor(),
@@ -58,8 +58,8 @@ def train(epoch, loader, l_fn, opt, sch):
         y_train = y_train.float().to(device)
 
         output, d_x, d_out = net(x_train, x_desc, y_train)
-        d_real_acc = torch.div(torch.sum((d_x > 0.5), dim=0), float(d_x.size(0)))
-        d_fake_acc = torch.div(torch.sum((d_out > 0.5), dim=0), float(d_out.size(0)))
+        d_real_acc = torch.mean((d_x > 0.5), dim=0)
+        d_fake_acc = torch.mean((d_out > 0.5), dim=0)
         writer.add_scalar("Metrics/on_step_discriminator_real_acc", d_real_acc, epoch * len(loader) + batch_idx)
         writer.add_scalar("Metrics/on_step_discriminator_fake_acc", d_fake_acc, epoch * len(loader) + batch_idx)
         loss, content, style, struct, adversarial = l_fn(output, y_train,  d_x, d_out)
@@ -110,7 +110,7 @@ def evaluate(epoch, loader, l_fn):
     with torch.no_grad():
         net.eval()
         for batch_idx, (x_val, x_desc_val, y_val) in tqdm(enumerate(loader), ncols=50, desc="Validation",
-                                              bar_format="{l_bar}%s{bar}%s{r_bar}" % (Fore.GREEN, Fore.RESET)):
+                                                          bar_format="{l_bar}%s{bar}%s{r_bar}" % (Fore.GREEN, Fore.RESET)):
             x_val = x_val.float().to(device)
             x_desc_val = x_desc_val.long().to(device)
             y_val = y_val.float().to(device)

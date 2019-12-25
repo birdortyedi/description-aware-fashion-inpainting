@@ -250,13 +250,12 @@ class DilatedResidualBlock(nn.Module):
 class AdvancedNet(nn.Module):
     def __init__(self, vocab_size):
         super(AdvancedNet, self).__init__()
+        # Encoder
         self.block_1 = self._conv_in_lrelu_block(in_channels=3, out_channels=32, kernel_size=7, stride=2, padding=3)
         self.block_2 = self._conv_in_lrelu_block(in_channels=32, out_channels=64, kernel_size=5, stride=2, padding=2)
         self.block_3 = self._conv_in_lrelu_block(in_channels=64, out_channels=128, kernel_size=5, stride=2, padding=2)
 
         self.dilated_res_blocks = self._dilated_res_blocks(num_features=128, kernel_size=3)
-
-        self.discriminator = self._linear_block(in_features=16 * 4 * 4, out_features=1, hidden_features=32)
 
         self.block_4 = self._conv_in_lrelu_block(in_channels=128, out_channels=64, kernel_size=5, stride=2, padding=2)
         self.block_5 = self._conv_in_lrelu_block(in_channels=64, out_channels=32, kernel_size=5, stride=2, padding=2)
@@ -264,8 +263,10 @@ class AdvancedNet(nn.Module):
 
         self.image_embedding_layer_1 = self._linear_block(in_features=16 * 4 * 4, out_features=128, hidden_features=256)
 
+        # LSTM
         self.lstm_block = self._lstm_block(vocab_size)
 
+        # Decoder
         self.block_7 = self._upsampling_in_lrelu_block(in_channels=16, out_channels=32)
         self.block_8 = self._upsampling_in_lrelu_block(in_channels=64, out_channels=64)
         self.block_9 = self._upsampling_in_lrelu_block(in_channels=128, out_channels=128)
@@ -276,21 +277,17 @@ class AdvancedNet(nn.Module):
         self._1x1conv_11 = self._1x1conv_lrelu_block(in_channels=96, out_channels=32)
         self.block_12 = self._upsampling_sigmoid_block(in_channels=32, out_channels=3)
 
+        # Discriminator
+        self.d_block_1 = self._conv_in_lrelu_block(in_channels=3, out_channels=32, kernel_size=7, stride=2, padding=1)
+        self.d_block_2 = self._conv_in_lrelu_block(in_channels=32, out_channels=64, kernel_size=5, stride=2, padding=1)
+        self.d_block_3 = self._conv_in_lrelu_block(in_channels=64, out_channels=128, kernel_size=5, stride=2, padding=1)
+        self.d_block_4 = self._conv_in_lrelu_block(in_channels=128, out_channels=64, kernel_size=5, stride=2)
+        self.d_block_5 = self._conv_in_lrelu_block(in_channels=64, out_channels=32, kernel_size=3, stride=2)
+        self.d_block_6 = self._conv_in_lrelu_block(in_channels=32, out_channels=16, kernel_size=3, stride=2)
+        self.d_block_7 = self._linear_block(in_features=16 * 4 * 4, out_features=1, hidden_features=128)
+
     def forward(self, x, descriptions, x_original):
         x_1, x_2, x_3, x_smap, x_4, x_5, x_6 = self.extractor(x)
-        x_original_1, x_original_2, x_original_3, x_original_smap, \
-        x_original_4, x_original_5, x_original_6 = self.extractor(x_original)
-
-        d_x_smap = self.block_4(x_smap)
-        d_x_smap = self.block_5(d_x_smap)
-        d_x_smap = self.block_6(d_x_smap)
-
-        d_x_original_smap = self.block_4(x_original_smap)
-        d_x_original_smap = self.block_5(d_x_original_smap)
-        d_x_original_smap = self.block_6(d_x_original_smap)
-
-        d_x = torch.sigmoid(self.discriminator(torch.flatten(d_x_smap, 1)))  # output size: torch.Size([64, 1])
-        d_x_original = torch.sigmoid(self.discriminator(torch.flatten(d_x_original_smap, 1)))
 
         x_with_descriptor = self.concat_with_descriptor(x_6, descriptions)
 
@@ -310,6 +307,30 @@ class AdvancedNet(nn.Module):
         x = torch.cat((x, x_1), dim=1)
         x = self._1x1conv_11(x)
         x = self.block_12(x)  # output size: torch.Size([64, 3, 256, 256])
+
+        print(x.size())
+        d_x = self.d_block_1(x)
+        print(d_x.size())
+        d_x = self.d_block_2(d_x)
+        print(d_x.size())
+        d_x = self.d_block_3(d_x)
+        print(d_x.size())
+        d_x = self.d_block_4(d_x)
+        print(d_x.size())
+        d_x = self.d_block_5(d_x)
+        print(d_x.size())
+        d_x = self.d_block_6(d_x)
+        print(d_x.size())
+        d_x = torch.sigmoid(self.d_block_7(d_x.view(-1, 16 * 4 * 4)))
+        print(d_x.size())
+
+        d_x_original = self.d_block_1(x_original)
+        d_x_original = self.d_block_2(d_x_original)
+        d_x_original = self.d_block_3(d_x_original)
+        d_x_original = self.d_block_4(d_x_original)
+        d_x_original = self.d_block_5(d_x_original)
+        d_x_original = self.d_block_6(d_x_original)
+        d_x_original = torch.sigmoid(self.d_block_7(d_x_original.view(-1, 16 * 4 * 4)))
 
         return x, d_x, d_x_original
 
