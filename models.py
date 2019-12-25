@@ -308,31 +308,20 @@ class AdvancedNet(nn.Module):
         x = self._1x1conv_11(x)
         x = self.block_12(x)  # output size: torch.Size([64, 3, 256, 256])
 
-        print(x.size())
-        d_x = self.d_block_1(x)
-        print(d_x.size())
-        d_x = self.d_block_2(d_x)
-        print(d_x.size())
-        d_x = self.d_block_3(d_x)
-        print(d_x.size())
-        d_x = self.d_block_4(d_x)
-        print(d_x.size())
-        d_x = self.d_block_5(d_x)
-        print(d_x.size())
-        d_x = self.d_block_6(d_x)
-        print(d_x.size())
-        d_x = torch.sigmoid(self.d_block_7(d_x.view(-1, 16 * 4 * 4)))
-        print(d_x.size())
-
-        d_x_original = self.d_block_1(x_original)
-        d_x_original = self.d_block_2(d_x_original)
-        d_x_original = self.d_block_3(d_x_original)
-        d_x_original = self.d_block_4(d_x_original)
-        d_x_original = self.d_block_5(d_x_original)
-        d_x_original = self.d_block_6(d_x_original)
-        d_x_original = torch.sigmoid(self.d_block_7(d_x_original.view(-1, 16 * 4 * 4)))
+        d_x = self.discriminator(x)
+        d_x_original = self.discriminator(x_original)
 
         return x, d_x, d_x_original
+
+    def discriminator(self, x):
+        x_ = self.d_block_1(x)
+        x_ = self.d_block_2(x_)
+        x_ = self.d_block_3(x_)
+        x_ = self.d_block_4(x_)
+        x_ = self.d_block_5(x_)
+        x_ = self.d_block_6(x_)
+        x_ = torch.sigmoid(self.d_block_7(x_.view(-1, 16 * 4 * 4)))
+        return x_
 
     def concat_with_descriptor(self, x_6, descriptions):
         x_ = torch.flatten(x_6, 1)  # output size: torch.Size([64, 256])
