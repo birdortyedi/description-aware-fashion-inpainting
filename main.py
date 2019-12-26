@@ -41,9 +41,9 @@ net.to(device)
 
 loss_fn = CustomInpaintingLoss()
 loss_fn = loss_fn.to(device)
-lr = 0.001
-optimizer = optim.Adam(net.parameters(), lr=lr)
-scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.9)
+lr = 0.0002
+optimizer = optim.Adam(net.parameters(), lr=lr, betas=(0.5, 0.999))
+scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.95)
 writer = SummaryWriter()
 
 

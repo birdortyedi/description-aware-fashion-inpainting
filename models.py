@@ -284,7 +284,8 @@ class AdvancedNet(nn.Module):
         self.d_block_4 = self._conv_in_lrelu_block(in_channels=128, out_channels=64, kernel_size=5, stride=2, padding=1)
         self.d_block_5 = self._conv_in_lrelu_block(in_channels=64, out_channels=32, kernel_size=3, stride=2, padding=1)
         self.d_block_6 = self._conv_in_lrelu_block(in_channels=32, out_channels=16, kernel_size=3, stride=2, padding=1)
-        self.d_block_7 = self._linear_block(in_features=16 * 4 * 4, out_features=1, hidden_features=64)
+        self.avg_pooling = nn.AdaptiveAvgPool2d(output_size=(1, 1))
+        self.d_block_7 = nn.Linear(in_features=16, out_features=1)
 
     def forward(self, x, descriptions, x_original):
         x_1, x_2, x_3, x_smap, x_4, x_5, x_6 = self.extractor(x)
@@ -320,7 +321,8 @@ class AdvancedNet(nn.Module):
         x_ = self.d_block_4(x_)
         x_ = self.d_block_5(x_)
         x_ = self.d_block_6(x_)
-        x_ = torch.sigmoid(self.d_block_7(x_.view(-1, 16 * 4 * 4)))
+        x_ = self.avg_pooling(x_)
+        x_ = torch.sigmoid(self.d_block_7(x_.squeeze()))
         return x_
 
     def concat_with_descriptor(self, x_6, descriptions):
@@ -349,7 +351,7 @@ class AdvancedNet(nn.Module):
         return nn.Sequential(
             nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size, stride=stride, padding=padding),
             nn.InstanceNorm2d(num_features=out_channels),
-            nn.LeakyReLU()
+            nn.LeakyReLU(negative_slope=0.2)
             )
 
     @staticmethod
@@ -383,7 +385,7 @@ class AdvancedNet(nn.Module):
             nn.Upsample(mode=mode, scale_factor=scale_factor),
             nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=1, padding=padding),
             nn.InstanceNorm2d(num_features=out_channels),
-            nn.LeakyReLU()
+            nn.LeakyReLU(negative_slope=0.2)
         )
 
     @staticmethod
