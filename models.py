@@ -310,7 +310,7 @@ class AdvancedNet(nn.Module):
         self._1x1conv_11 = self._1x1conv_lrelu_block(in_channels=96, out_channels=32)
         self.block_12 = self._upsampling_tanh_block(in_channels=32, out_channels=3)
 
-    def forward(self, x, descriptions, x_original):
+    def forward(self, x, descriptions):
         x_1, x_2, x_3, x_smap, x_4, x_5, x_6 = self.extractor(x)
 
         x_with_descriptor = self.concat_with_descriptor(x_6, descriptions)
