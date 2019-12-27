@@ -271,6 +271,14 @@ class DiscriminatorNet(nn.Module):
         x = torch.sigmoid(self.d_block_7(x.squeeze()))
         return x
 
+    @staticmethod
+    def _conv_in_lrelu_block(in_channels, out_channels, kernel_size, stride=1, padding=0):
+        return nn.Sequential(
+            nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size, stride=stride, padding=padding),
+            nn.InstanceNorm2d(num_features=out_channels),
+            nn.LeakyReLU(negative_slope=0.2)
+        )
+
 
 class AdvancedNet(nn.Module):
     def __init__(self, vocab_size):
