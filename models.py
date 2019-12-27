@@ -157,7 +157,7 @@ class LSTMModule(nn.Module):
         self.embedding = nn.Embedding(vocab_size, embedding_dim)
         self.lstm = nn.LSTM(embedding_dim, hidden_dim, n_layers, dropout=0.25, batch_first=True, bidirectional=True)
         self.dropout = nn.Dropout(0.25)
-        self.linear_1 = nn.Linear(hidden_dim, output_size)
+        self.linear_1 = nn.Linear(hidden_dim * 2, output_size)
 
     def forward(self, x):
         h0 = torch.zeros(self.n_layers * 2, x.size(0), self.hidden_dim).requires_grad_().cuda()
@@ -377,7 +377,7 @@ class AdvancedNet(nn.Module):
     @staticmethod
     def _lstm_block(vocab_size, embedding_dim=32, hidden_dim=1024, n_layers=3, output_size=128):
         return nn.Sequential(
-            LSTMModule(vocab_size, embedding_dim, hidden_dim * 2, n_layers, output_size)
+            LSTMModule(vocab_size, embedding_dim, hidden_dim, n_layers, output_size)
         )
 
     @staticmethod
