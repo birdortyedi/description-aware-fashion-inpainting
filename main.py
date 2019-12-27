@@ -82,7 +82,7 @@ def train(epoch, loader, l_fns, opts, schs):
         fake_label = torch.zeros_like(d_fake_output).to(device)
         fake_loss = l_fns[0](d_fake_output, fake_label)
         fake_loss.backward()
-        writer.add_scalar("Loss/on_step_discriminator_real_loss", fake_loss.mean().item(), epoch * len(loader) + batch_idx)
+        writer.add_scalar("Loss/on_step_discriminator_fake_loss", fake_loss.mean().item(), epoch * len(loader) + batch_idx)
 
         d_loss = real_loss + fake_loss
         total_d_loss += d_loss.item()
