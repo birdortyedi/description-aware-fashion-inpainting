@@ -377,7 +377,7 @@ class AdvancedNet(nn.Module):
     @staticmethod
     def _lstm_block(vocab_size, embedding_dim=32, hidden_dim=1024, n_layers=3, output_size=128):
         return nn.Sequential(
-            LSTMModule(vocab_size, embedding_dim, hidden_dim, n_layers, output_size)
+            LSTMModule(vocab_size, embedding_dim, hidden_dim * 2, n_layers, output_size)
         )
 
     @staticmethod
