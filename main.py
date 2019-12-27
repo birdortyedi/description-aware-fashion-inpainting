@@ -157,7 +157,8 @@ def evaluate(epoch, loader, l_fn):
             y_val = y_val.float().to(device)
 
             output = net(x_val, x_desc_val)
-            val_loss, val_content, val_style, val_struct, val_adversarial = l_fn(output, y_val)
+            d_output = d_net(output).view(-1)
+            val_loss, val_content, val_style, val_struct, val_adversarial = l_fn[1](output, y_val, d_output)
 
             total_loss += val_loss.item()
             total_content_loss += val_content.item()
@@ -184,5 +185,5 @@ def evaluate(epoch, loader, l_fn):
 if __name__ == '__main__':
     for e in range(NUM_EPOCHS):
         train(e, train_loader, (d_loss_fn, loss_fn), (d_optimizer, optimizer), (d_scheduler, scheduler))
-        evaluate(e, val_loader, loss_fn)
+        evaluate(e, val_loader, (d_loss_fn, loss_fn))
         torch.save(net.state_dict(), "./weights/weights_epoch_{}.pth".format(e))
