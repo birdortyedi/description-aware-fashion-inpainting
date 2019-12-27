@@ -36,10 +36,8 @@ class AdverserialLoss(nn.Module):
         super(AdverserialLoss, self).__init__()
         self.loss_fn = nn.BCELoss()
 
-    def forward(self, x, out):
-        real_loss = self.loss_fn(x, torch.ones_like(x))
-        fake_loss = self.loss_fn(out, torch.zeros_like(out))
-        return 0.5 * (real_loss + fake_loss)
+    def forward(self, x):
+        return self.loss_fn(x, torch.ones_like(x))
 
 
 class CustomInpaintingLoss(nn.Module):
@@ -55,11 +53,11 @@ class CustomInpaintingLoss(nn.Module):
         # (d_x, d_out) := (discriminator(x), discriminator(out))
         self.adversarial_weight = 1.0
 
-    def forward(self, x, out, d_x, d_out):
+    def forward(self, x, out, d_out):
         con_loss = self.content_loss(x, out.detach())
         sty_loss = self.style_loss(x, out.detach())
         str_loss = 1 - self.structural_loss(x, out.detach())
-        adv_loss = self.adversarial_loss(d_x.detach(), d_out.detach())
+        adv_loss = self.adversarial_loss(d_out.detach())
         return self.content_weight * con_loss + \
                self.style_weight * sty_loss + \
                self.structural_weight * str_loss + \

@@ -8,7 +8,7 @@ from tqdm import tqdm
 from colorama import Fore
 
 from utils import HDF5Dataset, RandomCentralErasing, UnNormalize
-from models import Net, AdvancedNet
+from models import Net, AdvancedNet, DiscriminatorNet
 from losses import CustomInpaintingLoss
 
 NUM_EPOCHS = 250
@@ -34,35 +34,72 @@ val_loader = data.DataLoader(fg_val, batch_size=BATCH_SIZE, shuffle=False, num_w
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 net = AdvancedNet(fg_train.vocab_size)  # Net(fg_train.vocab_size)
+d_net = DiscriminatorNet()
 if torch.cuda.device_count() > 1:
     print("Using {} GPUs...".format(torch.cuda.device_count()))
     net = nn.DataParallel(net)
+    d_net = nn.DataParallel(d_net)
 net.to(device)
+d_net.to(device)
 
 loss_fn = CustomInpaintingLoss()
 loss_fn = loss_fn.to(device)
-lr = 0.0002
+
+d_loss_fn = nn.BCELoss()
+d_loss_fn = d_loss_fn.to(device)
+
+lr, d_lr = 0.0002, 0.001
 optimizer = optim.Adam(net.parameters(), lr=lr, betas=(0.5, 0.999))
+d_optimizer = optim.Adam(d_net.parameters(), lr=d_lr)
 scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.95)
+d_scheduler = optim.lr_scheduler.ExponentialLR(d_optimizer, gamma=0.9)
+
 writer = SummaryWriter()
 
 
-def train(epoch, loader, l_fn, opt, sch):
+def train(epoch, loader, l_fns, opts, schs):
     net.train()
+    num_step = 0
+    total_d_loss, total_real_loss, total_fake_loss = 0., 0., 0.
     total_loss, total_content_loss, total_style_loss, total_struct_loss, total_adverserial_loss = 0., 0., 0., 0., 0.
     for batch_idx, (x_train, x_desc, y_train) in tqdm(enumerate(loader), ncols=50, desc="Training",
                                                       bar_format="{l_bar}%s{bar}%s{r_bar}" % (Fore.GREEN, Fore.RESET)):
-        opt.zero_grad()
+        num_step += 1
+        opts[0].zero_grad()
+
         x_train = x_train.float().to(device)
         x_desc = x_desc.long().to(device)
         y_train = y_train.float().to(device)
 
-        output, d_x, d_out = net(x_train, x_desc, y_train)
-        d_real_acc = torch.mean((d_x > 0.5).float(), dim=0)
-        d_fake_acc = torch.mean((d_out > 0.5).float(), dim=0)
-        writer.add_scalar("Metrics/on_step_discriminator_real_acc", d_real_acc, epoch * len(loader) + batch_idx)
-        writer.add_scalar("Metrics/on_step_discriminator_fake_acc", d_fake_acc, epoch * len(loader) + batch_idx)
-        loss, content, style, struct, adversarial = l_fn(output, y_train,  d_x, d_out)
+        d_real_output = d_net(x_train).view(-1)
+        real_label = torch.ones_like(d_real_output).to(device)
+        real_loss = l_fns[0](d_real_output, real_label)
+        real_loss.backward()
+        writer.add_scalar("Loss/on_step_discriminator_real_loss", real_loss.mean().item(), epoch * len(loader) + batch_idx)
+
+        fake_inputs = net(x_train, x_desc)
+        d_fake_output = d_net(fake_inputs).view(-1)
+        fake_label = torch.zeros_like(d_fake_output).to(device)
+        fake_loss = l_fns[0](d_fake_output, fake_label)
+        fake_loss.backward()
+        writer.add_scalar("Loss/on_step_discriminator_real_loss", fake_loss.mean().item(), epoch * len(loader) + batch_idx)
+
+        d_loss = real_loss + fake_loss
+        total_d_loss += d_loss.item()
+        total_real_loss += real_loss.item()
+        total_fake_loss += fake_loss.item()
+        writer.add_scalar("Loss/on_step_discriminator_total_loss", d_loss.mean().item(), epoch * len(loader) + batch_idx)
+
+        opts[0].step()
+        schs[0].step(epoch)
+
+        opts[1].zero_grad()
+        output = net(x_train, x_desc)
+        d_output = d_net(output).view(-1)
+        d_accuracy = torch.mean((d_output > 0.5).float(), dim=0)
+        writer.add_scalar("Metrics/on_step_d_acc_on_g", d_accuracy, epoch * len(loader) + batch_idx)
+        loss, content, style, struct, adversarial = l_fns[1](output, y_train, d_output)
+        loss.backward()
 
         total_loss += loss.item()
         total_content_loss += content.item()
@@ -70,9 +107,8 @@ def train(epoch, loader, l_fn, opt, sch):
         total_struct_loss += struct.item()
         total_adverserial_loss += adversarial.item()
 
-        loss.backward()
-        opt.step()
-        sch.step(epoch)
+        opts[1].step()
+        schs[1].step(epoch)
 
         writer.add_scalar("Loss/on_step_loss", loss.item(), epoch * len(loader) + batch_idx)
         writer.add_scalar("Loss/on_step_content_loss", content.item(), epoch * len(loader) + batch_idx)
@@ -98,25 +134,30 @@ def train(epoch, loader, l_fn, opt, sch):
                   "Structure: {:.4f}  ".format(struct.item()),
                   "Adversarial: {:.4f}  ".format(adversarial.item()))
 
-    writer.add_scalar("Loss/on_epoch_loss", total_loss, epoch)
-    writer.add_scalar("Loss/on_epoch_content_loss", total_content_loss, epoch)
-    writer.add_scalar("Loss/on_epoch_style_loss", total_style_loss, epoch)
-    writer.add_scalar("Loss/on_epoch_structure_loss", total_struct_loss, epoch)
-    writer.add_scalar("Loss/on_epoch_adverserial_loss", total_adverserial_loss, epoch)
+    writer.add_scalar("Loss/on_epoch_d_total_loss", total_d_loss / num_step, epoch)
+    writer.add_scalar("Loss/on_epoch_d_real_loss", total_real_loss / num_step, epoch)
+    writer.add_scalar("Loss/on_epoch_d_fake_loss", total_fake_loss / num_step, epoch)
+    writer.add_scalar("Loss/on_epoch_loss", total_loss / num_step, epoch)
+    writer.add_scalar("Loss/on_epoch_content_loss", total_content_loss / num_step, epoch)
+    writer.add_scalar("Loss/on_epoch_style_loss", total_style_loss / num_step, epoch)
+    writer.add_scalar("Loss/on_epoch_structure_loss", total_struct_loss / num_step, epoch)
+    writer.add_scalar("Loss/on_epoch_adverserial_loss", total_adverserial_loss / num_step, epoch)
 
 
 def evaluate(epoch, loader, l_fn):
+    num_step = 0
     total_loss, total_content_loss, total_style_loss, total_struct_loss, total_adverserial_loss = 0., 0., 0., 0., 0.
     with torch.no_grad():
         net.eval()
         for batch_idx, (x_val, x_desc_val, y_val) in tqdm(enumerate(loader), ncols=50, desc="Validation",
                                                           bar_format="{l_bar}%s{bar}%s{r_bar}" % (Fore.GREEN, Fore.RESET)):
+            num_step += 1
             x_val = x_val.float().to(device)
             x_desc_val = x_desc_val.long().to(device)
             y_val = y_val.float().to(device)
 
-            output, d_x, d_out = net(x_val, x_desc_val, y_val)
-            val_loss, val_content, val_style, val_struct, val_adversarial = l_fn(output, y_val, d_x, d_out)
+            output = net(x_val, x_desc_val)
+            val_loss, val_content, val_style, val_struct, val_adversarial = l_fn(output, y_val)
 
             total_loss += val_loss.item()
             total_content_loss += val_content.item()
@@ -133,15 +174,15 @@ def evaluate(epoch, loader, l_fn):
                       "Structure: {:.4f}  ".format(val_struct.item()),
                       "Adversarial: {:.4f}  ".format(val_adversarial.item()))
 
-        writer.add_scalar("Loss/on_epoch_val_loss", total_loss, epoch)
-        writer.add_scalar("Loss/on_epoch_val_content_loss", total_content_loss, epoch)
-        writer.add_scalar("Loss/on_epoch_val_style_loss", total_style_loss, epoch)
-        writer.add_scalar("Loss/on_epoch_val_structure_loss", total_struct_loss, epoch)
-        writer.add_scalar("Loss/on_epoch_val_adversarial_loss", total_adverserial_loss, epoch)
+        writer.add_scalar("Loss/on_epoch_val_loss", total_loss / num_step, epoch)
+        writer.add_scalar("Loss/on_epoch_val_content_loss", total_content_loss / num_step, epoch)
+        writer.add_scalar("Loss/on_epoch_val_style_loss", total_style_loss / num_step, epoch)
+        writer.add_scalar("Loss/on_epoch_val_structure_loss", total_struct_loss / num_step, epoch)
+        writer.add_scalar("Loss/on_epoch_val_adversarial_loss", total_adverserial_loss / num_step, epoch)
 
 
 if __name__ == '__main__':
     for e in range(NUM_EPOCHS):
-        train(e, train_loader, loss_fn, optimizer, scheduler)
+        train(e, train_loader, (d_loss_fn, loss_fn), (d_optimizer, optimizer), (d_scheduler, scheduler))
         evaluate(e, val_loader, loss_fn)
         torch.save(net.state_dict(), "./weights/weights_epoch_{}.pth".format(e))

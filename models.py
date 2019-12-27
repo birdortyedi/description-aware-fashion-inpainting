@@ -155,13 +155,13 @@ class LSTMModule(nn.Module):
         self.hidden_dim = hidden_dim
         self.n_layers = n_layers
         self.embedding = nn.Embedding(vocab_size, embedding_dim)
-        self.lstm = nn.LSTM(embedding_dim, hidden_dim, n_layers, dropout=0.25, batch_first=True)
+        self.lstm = nn.LSTM(embedding_dim, hidden_dim, n_layers, dropout=0.25, batch_first=True, bidirectional=True)
         self.dropout = nn.Dropout(0.25)
         self.linear_1 = nn.Linear(hidden_dim, output_size)
 
     def forward(self, x):
-        h0 = torch.zeros(self.n_layers, x.size(0), self.hidden_dim).requires_grad_().cuda()
-        c0 = torch.zeros(self.n_layers, x.size(0), self.hidden_dim).requires_grad_().cuda()
+        h0 = torch.zeros(self.n_layers * 2, x.size(0), self.hidden_dim).requires_grad_().cuda()
+        c0 = torch.zeros(self.n_layers * 2, x.size(0), self.hidden_dim).requires_grad_().cuda()
 
         x = self.embedding(x)
         self.lstm.flatten_parameters()
@@ -247,6 +247,31 @@ class DilatedResidualBlock(nn.Module):
         return x
 
 
+class DiscriminatorNet(nn.Module):
+    def __init__(self):
+        super(DiscriminatorNet, self).__init__()
+        # Discriminator
+        self.d_block_1 = self._conv_in_lrelu_block(in_channels=3, out_channels=32, kernel_size=7, stride=2, padding=1)
+        self.d_block_2 = self._conv_in_lrelu_block(in_channels=32, out_channels=64, kernel_size=5, stride=2, padding=1)
+        self.d_block_3 = self._conv_in_lrelu_block(in_channels=64, out_channels=128, kernel_size=5, stride=2, padding=1)
+        self.d_block_4 = self._conv_in_lrelu_block(in_channels=128, out_channels=64, kernel_size=5, stride=2, padding=1)
+        self.d_block_5 = self._conv_in_lrelu_block(in_channels=64, out_channels=32, kernel_size=3, stride=2, padding=1)
+        self.d_block_6 = self._conv_in_lrelu_block(in_channels=32, out_channels=16, kernel_size=3, stride=2, padding=1)
+        self.avg_pooling = nn.AdaptiveAvgPool2d(output_size=(1, 1))
+        self.d_block_7 = nn.Linear(in_features=16, out_features=1)
+
+    def forward(self, x):
+        x = self.d_block_1(x)
+        x = self.d_block_2(x)
+        x = self.d_block_3(x)
+        x = self.d_block_4(x)
+        x = self.d_block_5(x)
+        x = self.d_block_6(x)
+        x = self.avg_pooling(x)
+        x = torch.sigmoid(self.d_block_7(x.squeeze()))
+        return x
+
+
 class AdvancedNet(nn.Module):
     def __init__(self, vocab_size):
         super(AdvancedNet, self).__init__()
@@ -275,17 +300,7 @@ class AdvancedNet(nn.Module):
         self._1x1conv_10 = self._1x1conv_lrelu_block(in_channels=192, out_channels=128)
         self.block_11 = self._upsampling_in_lrelu_block(in_channels=128, out_channels=64)
         self._1x1conv_11 = self._1x1conv_lrelu_block(in_channels=96, out_channels=32)
-        self.block_12 = self._upsampling_sigmoid_block(in_channels=32, out_channels=3)
-
-        # Discriminator
-        self.d_block_1 = self._conv_in_lrelu_block(in_channels=3, out_channels=32, kernel_size=7, stride=2, padding=1)
-        self.d_block_2 = self._conv_in_lrelu_block(in_channels=32, out_channels=64, kernel_size=5, stride=2, padding=1)
-        self.d_block_3 = self._conv_in_lrelu_block(in_channels=64, out_channels=128, kernel_size=5, stride=2, padding=1)
-        self.d_block_4 = self._conv_in_lrelu_block(in_channels=128, out_channels=64, kernel_size=5, stride=2, padding=1)
-        self.d_block_5 = self._conv_in_lrelu_block(in_channels=64, out_channels=32, kernel_size=3, stride=2, padding=1)
-        self.d_block_6 = self._conv_in_lrelu_block(in_channels=32, out_channels=16, kernel_size=3, stride=2, padding=1)
-        self.avg_pooling = nn.AdaptiveAvgPool2d(output_size=(1, 1))
-        self.d_block_7 = nn.Linear(in_features=16, out_features=1)
+        self.block_12 = self._upsampling_tanh_block(in_channels=32, out_channels=3)
 
     def forward(self, x, descriptions, x_original):
         x_1, x_2, x_3, x_smap, x_4, x_5, x_6 = self.extractor(x)
@@ -309,21 +324,7 @@ class AdvancedNet(nn.Module):
         x = self._1x1conv_11(x)
         x = self.block_12(x)  # output size: torch.Size([64, 3, 256, 256])
 
-        d_x = self.discriminator(x)
-        d_x_original = self.discriminator(x_original)
-
-        return x, d_x, d_x_original
-
-    def discriminator(self, x):
-        x_ = self.d_block_1(x)
-        x_ = self.d_block_2(x_)
-        x_ = self.d_block_3(x_)
-        x_ = self.d_block_4(x_)
-        x_ = self.d_block_5(x_)
-        x_ = self.d_block_6(x_)
-        x_ = self.avg_pooling(x_)
-        x_ = torch.sigmoid(self.d_block_7(x_.squeeze()))
-        return x_
+        return x
 
     def concat_with_descriptor(self, x_6, descriptions):
         x_ = torch.flatten(x_6, 1)  # output size: torch.Size([64, 256])
@@ -389,7 +390,7 @@ class AdvancedNet(nn.Module):
         )
 
     @staticmethod
-    def _upsampling_sigmoid_block(in_channels, out_channels, mode='bilinear', scale_factor=2.0, padding=0):
+    def _upsampling_tanh_block(in_channels, out_channels, mode='bilinear', scale_factor=2.0, padding=0):
         return nn.Sequential(
             nn.Upsample(mode=mode, scale_factor=scale_factor),
             nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=1, padding=padding),
