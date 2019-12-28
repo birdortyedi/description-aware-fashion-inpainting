@@ -48,9 +48,9 @@ loss_fn = loss_fn.to(device)
 d_loss_fn = nn.BCELoss()
 d_loss_fn = d_loss_fn.to(device)
 
-lr, d_lr = 0.0002, 0.001
+lr = 0.0002
 optimizer = optim.Adam(net.parameters(), lr=lr, betas=(0.5, 0.999))
-d_optimizer = optim.Adam(d_net.parameters(), lr=d_lr)
+d_optimizer = optim.Adam(d_net.parameters(), lr=lr, betas=(0.5, 0.999))
 scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.95)
 d_scheduler = optim.lr_scheduler.ExponentialLR(d_optimizer, gamma=0.9)
 
@@ -65,7 +65,7 @@ def train(epoch, loader, l_fns, opts, schs):
     for batch_idx, (x_train, x_desc, y_train) in tqdm(enumerate(loader), ncols=50, desc="Training",
                                                       bar_format="{l_bar}%s{bar}%s{r_bar}" % (Fore.GREEN, Fore.RESET)):
         num_step += 1
-        opts[0].zero_grad()
+        d_net.zero_grad()
 
         x_train = x_train.float().to(device)
         x_desc = x_desc.long().to(device)
@@ -93,7 +93,7 @@ def train(epoch, loader, l_fns, opts, schs):
         opts[0].step()
         schs[0].step(epoch)
 
-        opts[1].zero_grad()
+        net.zero_grad()
         output = net(x_train, x_desc)
         d_output = d_net(output).view(-1)
         d_accuracy = torch.mean((d_output > 0.5).float(), dim=0)
