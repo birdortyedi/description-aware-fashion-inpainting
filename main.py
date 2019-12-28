@@ -12,7 +12,7 @@ from models import Net, AdvancedNet, DiscriminatorNet
 from losses import CustomInpaintingLoss
 
 NUM_EPOCHS = 250
-BATCH_SIZE = 256
+BATCH_SIZE = 32
 
 
 train_transform = transforms.Compose([transforms.ToTensor(),
@@ -52,7 +52,7 @@ lr = 0.0002
 optimizer = optim.Adam(net.parameters(), lr=lr, betas=(0.5, 0.999))
 d_optimizer = optim.Adam(d_net.parameters(), lr=lr, betas=(0.5, 0.999))
 scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.95)
-d_scheduler = optim.lr_scheduler.ExponentialLR(d_optimizer, gamma=0.9)
+d_scheduler = optim.lr_scheduler.ExponentialLR(d_optimizer, gamma=0.95)
 
 writer = SummaryWriter()
 
