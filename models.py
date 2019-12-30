@@ -294,7 +294,7 @@ class AdvancedNet(nn.Module):
         self.block_5 = self._conv_in_lrelu_block(in_channels=64, out_channels=32, kernel_size=5, stride=2, padding=2)
         self.block_6 = self._conv_in_lrelu_block(in_channels=32, out_channels=16, kernel_size=5, stride=2, padding=2)
 
-        self.image_embedding_layer_1 = self._linear_block(in_features=16 * 4 * 4, out_features=128, hidden_features=256)
+        self.image_embedding_layer_1 = self._linear_block(in_features=16 * 4 * 4, out_features=256, hidden_features=128)  # 128, 256 changed to 256, 128
 
         # LSTM
         self.lstm_block = self._lstm_block(vocab_size)
@@ -337,8 +337,8 @@ class AdvancedNet(nn.Module):
     def concat_with_descriptor(self, x_6, descriptions):
         x_ = torch.flatten(x_6, 1)  # output size: torch.Size([64, 256])
         x_ = F.relu(self.image_embedding_layer_1(x_))  # output size: torch.Size([64, 128])
-        descriptions = self.lstm_block(descriptions)
-        x_ = torch.cat((x_, descriptions), dim=1)  # output size: torch.Size([64, 256])
+        # descriptions = self.lstm_block(descriptions)
+        # x_ = torch.cat((x_, descriptions), dim=1)  # output size: torch.Size([64, 256])
 
         return x_
 

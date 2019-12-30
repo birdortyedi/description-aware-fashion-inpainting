@@ -12,7 +12,7 @@ from models import Net, AdvancedNet, DiscriminatorNet
 from losses import CustomInpaintingLoss
 
 NUM_EPOCHS = 250
-BATCH_SIZE = 32
+BATCH_SIZE = 256
 
 
 train_transform = transforms.Compose([transforms.ToTensor(),
