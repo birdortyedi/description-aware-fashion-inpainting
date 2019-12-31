@@ -328,7 +328,7 @@ class CoarseNet(nn.Module):
         x_5 = self.block_5(x_4)
         print(x_5.size())
 
-        visual_embedding = self.avg_pooling(x_5)
+        visual_embedding = self.avg_pooling(x_5).squeeze()
         print(visual_embedding.size())
         textual_embedding = self.lstm_block(descriptions)
         print(textual_embedding.size())
