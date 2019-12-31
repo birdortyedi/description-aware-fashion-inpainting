@@ -296,7 +296,7 @@ class CoarseNet(nn.Module):
 
         # Visual features for concatenating with textual features
         self.block_4 = self._conv_in_lrelu_block(in_channels=128, out_channels=64, kernel_size=5, stride=2, padding=2)
-        self.block_5 = self._conv_in_lrelu_block(in_channels=64, out_channels=32, kernel_size=5, stride=2, padding=2)
+        self.block_5 = self._conv_in_lrelu_block(in_channels=64, out_channels=128, kernel_size=5, stride=2, padding=2)
         self.avg_pooling = nn.AdaptiveAvgPool2d(output_size=(1, 1))
 
         # LSTM
@@ -305,9 +305,13 @@ class CoarseNet(nn.Module):
         # Decoder
         self.block_6 = self._upsampling_in_lrelu_block(in_channels=32, out_channels=64)
         self._1x1conv_6 = self._1x1conv_lrelu_block(in_channels=64, out_channels=64)
-        self.block_7 = self._upsampling_in_lrelu_block(in_channels=64, out_channels=32)
-        self._1x1conv_7 = self._1x1conv_lrelu_block(in_channels=32, out_channels=32)
-        self.block_8 = self._upsampling_tanh_block(in_channels=32, out_channels=3)
+        self.block_7 = self._upsampling_in_lrelu_block(in_channels=64, out_channels=128)
+        self._1x1conv_7 = self._1x1conv_lrelu_block(in_channels=128, out_channels=64)
+        self.block_8 = self._upsampling_in_lrelu_block(in_channels=64, out_channels=128)
+        self._1x1conv_8 = self._1x1conv_lrelu_block(in_channels=128, out_channels=64)
+        self.block_9 = self._upsampling_in_lrelu_block(in_channels=64, out_channels=128)
+        self._1x1conv_9 = self._1x1conv_lrelu_block(in_channels=128, out_channels=32)
+        self.block_10 = self._upsampling_tanh_block(in_channels=32, out_channels=3)
 
     def forward(self, x, descriptions):
         print(x.size())
@@ -335,7 +339,7 @@ class CoarseNet(nn.Module):
         embedding = torch.cat((visual_embedding, textual_embedding), dim=1)
         print(embedding.size())
 
-        x_6 = self.block_6(embedding.view(-1, 32, 8, 8))
+        x_6 = self.block_6(embedding.view(-1, 16, 4, 4))
         print(x_6.size())
         x_6 = self._1x1conv_6(x_6)
         print(x_6.size())
@@ -345,8 +349,16 @@ class CoarseNet(nn.Module):
         print(x_7.size())
         x_8 = self.block_8(x_7)
         print(x_8.size())
+        x_8 = self._1x1conv_8(x_8)
+        print(x_8.size())
+        x_9 = self.block_9(x_8)
+        print(x_9.size())
+        x_9 = self._1x1conv_9(x_9)
+        print(x_9.size())
+        x_10 = self.block_10(x_9)
+        print(x_10.size())
 
-        return x_8
+        return x_10
 
     @staticmethod
     def _conv_in_lrelu_block(in_channels, out_channels, kernel_size, stride=1, padding=0):
