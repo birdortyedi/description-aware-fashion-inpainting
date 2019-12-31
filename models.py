@@ -280,6 +280,83 @@ class DiscriminatorNet(nn.Module):
         )
 
 
+class CoarseNet(nn.Module):
+    def __init__(self, vocab_size):
+        super(CoarseNet, self).__init__()
+        # Encoder
+        self.block_1 = self._conv_in_lrelu_block(in_channels=3, out_channels=32, kernel_size=7, stride=2, padding=3)
+        self.block_2 = self._conv_in_lrelu_block(in_channels=32, out_channels=64, kernel_size=5, stride=2, padding=2)
+        self.block_3 = self._conv_in_lrelu_block(in_channels=64, out_channels=128, kernel_size=5, stride=2, padding=2)
+
+        # Dilated Residual Blocks
+        self.dilated_res_blocks = self._dilated_res_blocks(num_features=128, kernel_size=3)
+
+        # Self-Attention
+        self.self_attention = SelfAttention(in_channels=128)
+
+        # Visual features for concatenating with textual features
+        self.block_4 = self._conv_in_lrelu_block(in_channels=128, out_channels=64, kernel_size=5, stride=2, padding=2)
+        self.block_5 = self._conv_in_lrelu_block(in_channels=64, out_channels=32, kernel_size=5, stride=2, padding=2)
+        self.avg_pooling = nn.AdaptiveAvgPool2d(output_size=(1, 1))
+
+        # LSTM
+        self.lstm_block = self._lstm_block(vocab_size)
+
+        # Decoder
+        self.block_6 = self._upsampling_in_lrelu_block(in_channels=32, out_channels=64)
+        self._1x1conv_6 = self._1x1conv_lrelu_block(in_channels=64, out_channels=64)
+        self.block_7 = self._upsampling_in_lrelu_block(in_channels=64, out_channels=32)
+        self._1x1conv_7 = self._1x1conv_lrelu_block(in_channels=32, out_channels=32)
+        self.block_8 = self._upsampling_tanh_block(in_channels=32, out_channels=3)
+
+    def forward(self, x, descriptions):
+        print(x.size())
+        x_1 = self.block_1(x)
+        print(x_1.size())
+        x_2 = self.block_2(x_1)
+        print(x_2.size())
+        x_3 = self.block_3(x_2)
+        print(x_3.size())
+
+        dil_res_x_3 = self.dilated_res_blocks(x_3)
+        print(dil_res_x_3.size())
+        attention_map = self.self_attention(dil_res_x_3)
+        print(attention_map.size())
+
+        x_4 = self.block_4(x_3)
+        print(x_4.size())
+        x_5 = self.block_5(x_4)
+        print(x_5.size())
+
+        visual_embedding = self.avg_pooling(x_5)
+        print(visual_embedding.size())
+        textual_embedding = self.lstm_block(descriptions)
+        print(textual_embedding.size())
+        embedding = torch.cat((visual_embedding, textual_embedding), dim=1)
+        print(embedding.size())
+
+        x_6 = self.block_6(embedding.view(-1, 32, 8, 8))
+        print(x_6.size())
+        x_6 = self._1x1conv_6(x_6)
+        print(x_6.size())
+        x_7 = self.block_7(x_6)
+        print(x_7.size())
+        x_7 = self._1x1conv_7(x_7)
+        print(x_7.size())
+        x_8 = self.block_8(x_7)
+        print(x_8.size())
+
+        return x_8
+
+
+class RefineNet(nn.Module):
+    def __init__(self):
+        super(RefineNet, self).__init__()
+
+    def forward(self, x):
+        return x
+
+
 class AdvancedNet(nn.Module):
     def __init__(self, vocab_size):
         super(AdvancedNet, self).__init__()
@@ -370,8 +447,7 @@ class AdvancedNet(nn.Module):
             DilatedResidualBlock(in_channels=num_features, out_channels=num_features, kernel_size=kernel_size, stride=stride, dilation=dilation),
             DilatedResidualBlock(in_channels=num_features, out_channels=num_features, kernel_size=kernel_size, stride=stride, dilation=dilation),
             DilatedResidualBlock(in_channels=num_features, out_channels=num_features, kernel_size=kernel_size, stride=stride, dilation=dilation),
-            DilatedResidualBlock(in_channels=num_features, out_channels=num_features, kernel_size=kernel_size, stride=stride, dilation=dilation),
-            SelfAttention(in_channels=num_features)
+            DilatedResidualBlock(in_channels=num_features, out_channels=num_features, kernel_size=kernel_size, stride=stride, dilation=dilation)
         )
 
     @staticmethod
