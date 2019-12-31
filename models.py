@@ -450,10 +450,8 @@ class CoarseNet(nn.Module):
         x_7 = self._1x1conv_7(x_7)
 
         x_8 = self.block_8(x_7)
-        x_8 = torch.cat((x_8, attention_map), dim=1)
-        x_8 = self._1x1conv_8_1(x_8)
-        x_8 = torch.cat((x_3, x_8), dim=1)
-        x_8 = self._1x1conv_8_2(x_8)
+        x_8 = torch.cat((x_3, x_8, attention_map), dim=1)
+        x_8 = self._1x1conv_8(x_8)
 
         x_9 = self.block_9(x_8)
         x_9 = torch.cat((x_2, x_9), dim=1)
