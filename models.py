@@ -359,7 +359,7 @@ class CoarseNet(nn.Module):
         print(x_9.size())
         x_10 = self.block_10(x_9)
         print(x_10.size())
-        x_10 = self.block_10(x_10)
+        x_10 = self._1x1conv_10(x_10)
         print(x_10.size())
         x_11 = self.block_11(x_10)
         print(x_11.size())
