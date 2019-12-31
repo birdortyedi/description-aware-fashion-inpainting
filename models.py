@@ -309,7 +309,7 @@ class RefineNet(nn.Module):
         self._1x1conv_9 = self._1x1conv_lrelu_block(in_channels=128, out_channels=32)
 
         self.block_10 = self._upsampling_in_lrelu_block(in_channels=32, out_channels=32)
-        self._1x1conv_10 = self._1x1conv_lrelu_block(in_channels=32, out_channels=16)
+        self._1x1conv_10 = self._1x1conv_lrelu_block(in_channels=64, out_channels=16)
 
         self.block_11 = self._upsampling_tanh_block(in_channels=16, out_channels=3)
 
