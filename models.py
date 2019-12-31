@@ -320,7 +320,7 @@ class CoarseNet(nn.Module):
 
         dil_res_x_3 = self.dilated_res_blocks(x_3)
         print(dil_res_x_3.size())
-        attention_map = self.self_attention(dil_res_x_3)
+        attention_map, _ = self.self_attention(dil_res_x_3)
         print(attention_map.size())
 
         x_4 = self.block_4(x_3)
