@@ -311,7 +311,9 @@ class CoarseNet(nn.Module):
         self._1x1conv_8 = self._1x1conv_lrelu_block(in_channels=128, out_channels=64)
         self.block_9 = self._upsampling_in_lrelu_block(in_channels=64, out_channels=128)
         self._1x1conv_9 = self._1x1conv_lrelu_block(in_channels=128, out_channels=32)
-        self.block_10 = self._upsampling_tanh_block(in_channels=32, out_channels=3)
+        self.block_10 = self._upsampling_in_lrelu_block(in_channels=32, out_channels=128)
+        self._1x1conv_10 = self._1x1conv_lrelu_block(in_channels=128, out_channels=32)
+        self.block_11 = self._upsampling_tanh_block(in_channels=32, out_channels=3)
 
     def forward(self, x, descriptions):
         print(x.size())
@@ -357,8 +359,12 @@ class CoarseNet(nn.Module):
         print(x_9.size())
         x_10 = self.block_10(x_9)
         print(x_10.size())
+        x_10 = self.block_10(x_10)
+        print(x_10.size())
+        x_11 = self.block_11(x_10)
+        print(x_11.size())
 
-        return x_10
+        return x_11
 
     @staticmethod
     def _conv_in_lrelu_block(in_channels, out_channels, kernel_size, stride=1, padding=0):
