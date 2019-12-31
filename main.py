@@ -8,7 +8,7 @@ from tqdm import tqdm
 from colorama import Fore
 
 from utils import HDF5Dataset, RandomCentralErasing, UnNormalize
-from models import Net, AdvancedNet, DiscriminatorNet, CoarseNet
+from models import Net, AdvancedNet, DiscriminatorNet, CoarseNet, RefineNet
 from losses import CustomInpaintingLoss
 
 NUM_EPOCHS = 250
@@ -33,7 +33,7 @@ train_loader = data.DataLoader(fg_train, batch_size=BATCH_SIZE, shuffle=True, nu
 val_loader = data.DataLoader(fg_val, batch_size=BATCH_SIZE, shuffle=False, num_workers=0)
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-net = CoarseNet(fg_train.vocab_size)  # Net(fg_train.vocab_size)
+net = RefineNet()  # CoarseNet(fg_train.vocab_size)  # Net(fg_train.vocab_size)
 d_net = DiscriminatorNet()
 if torch.cuda.device_count() > 1:
     print("Using {} GPUs...".format(torch.cuda.device_count()))

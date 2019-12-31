@@ -280,6 +280,118 @@ class DiscriminatorNet(nn.Module):
         )
 
 
+class RefineNet(nn.Module):
+    def __init__(self):
+        super(RefineNet, self).__init__()
+        # Encoder
+        self.block_1 = self._conv_in_lrelu_block(in_channels=3, out_channels=32, kernel_size=7, stride=2, padding=3)
+        self.block_2 = self._conv_in_lrelu_block(in_channels=32, out_channels=64, kernel_size=5, stride=2, padding=2)
+        self.block_3 = self._conv_in_lrelu_block(in_channels=64, out_channels=128, kernel_size=5, stride=2, padding=2)
+
+        # Dilated Residual Blocks
+        self.dilated_res_blocks = self._dilated_res_blocks(num_features=128, kernel_size=3)
+
+        # Encoder c'ing
+        self.block_4 = self._conv_in_lrelu_block(in_channels=128, out_channels=64, kernel_size=5, stride=2, padding=2)
+        self.block_5 = self._conv_in_lrelu_block(in_channels=64, out_channels=128, kernel_size=5, stride=2, padding=2)
+        self.avg_pooling = nn.AdaptiveAvgPool2d(output_size=(1, 1))
+
+        # Decoder
+        self.block_6 = self._upsampling_in_lrelu_block(in_channels=32, out_channels=32)
+        self._1x1conv_6 = self._1x1conv_lrelu_block(in_channels=32, out_channels=128)
+        self.block_7 = self._upsampling_in_lrelu_block(in_channels=128, out_channels=128)
+        self._1x1conv_7_1 = self._1x1conv_lrelu_block(in_channels=256, out_channels=64)
+        self._1x1conv_7_2 = self._1x1conv_lrelu_block(in_channels=192, out_channels=64)
+        self.block_8 = self._upsampling_in_lrelu_block(in_channels=64, out_channels=64)
+        self._1x1conv_8_1 = self._1x1conv_lrelu_block(in_channels=64, out_channels=32)
+        self._1x1conv_8_2 = self._1x1conv_lrelu_block(in_channels=96, out_channels=32)
+        self.block_9 = self._upsampling_in_lrelu_block(in_channels=32, out_channels=32)
+        self._1x1conv_9_1 = self._1x1conv_lrelu_block(in_channels=32, out_channels=16)
+        self._1x1conv_9_2 = self._1x1conv_lrelu_block(in_channels=48, out_channels=16)
+        self.block_10 = self._upsampling_tanh_block(in_channels=16, out_channels=3)
+
+    def forward(self, x, descriptions):
+        x_1 = self.block_1(x)
+        x_2 = self.block_2(x_1)
+        x_3 = self.block_3(x_2)
+
+        dil_res_x_3 = self.dilated_res_blocks(x_3)
+
+        x_4 = self.block_4(dil_res_x_3)
+        x_5 = self.block_5(x_4)
+
+        visual_embedding = self.avg_pooling(x_5).squeeze()
+
+        x_6 = self.block_6(visual_embedding.view(-1, 32, 4, 4))
+        x_6 = self._1x1conv_6(x_6)
+
+        x_7 = self.block_8(x_6)
+        x_7 = self._1x1conv_8_1(x_7)
+        x_7 = torch.cat((x_3, x_7), dim=1)
+        x_7 = self._1x1conv_8_2(x_7)
+
+        x_8 = self.block_9(x_7)
+        x_8 = self._1x1conv_9_1(x_8)
+        x_8 = torch.cat((x_2, x_8), dim=1)
+        x_8 = self._1x1conv_9_2(x_8)
+
+        x_9 = self.block_10(x_8)
+        x_9 = self._1x1conv_10_1(x_9)
+        x_9 = torch.cat((x_1, x_9), dim=1)
+        x_9 = self._1x1conv_10_2(x_9)
+
+        x_10 = self.block_10(x_9)
+
+        return x_10
+
+    @staticmethod
+    def _conv_in_lrelu_block(in_channels, out_channels, kernel_size, stride=1, padding=0):
+        return nn.Sequential(
+            nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size, stride=stride, padding=padding),
+            nn.InstanceNorm2d(num_features=out_channels),
+            nn.LeakyReLU(negative_slope=0.2)
+        )
+
+    @staticmethod
+    def _dilated_res_blocks(num_features, kernel_size, stride=1, dilation=2):
+        return nn.Sequential(
+            DilatedResidualBlock(in_channels=num_features, out_channels=num_features, kernel_size=kernel_size, stride=stride, dilation=dilation),
+            DilatedResidualBlock(in_channels=num_features, out_channels=num_features, kernel_size=kernel_size, stride=stride, dilation=dilation),
+            DilatedResidualBlock(in_channels=num_features, out_channels=num_features, kernel_size=kernel_size, stride=stride, dilation=dilation),
+            DilatedResidualBlock(in_channels=num_features, out_channels=num_features, kernel_size=kernel_size, stride=stride, dilation=dilation),
+            DilatedResidualBlock(in_channels=num_features, out_channels=num_features, kernel_size=kernel_size, stride=stride, dilation=dilation)
+        )
+
+    @staticmethod
+    def _lstm_block(vocab_size, embedding_dim=32, hidden_dim=1024, n_layers=3, output_size=128):
+        return nn.Sequential(
+            LSTMModule(vocab_size, embedding_dim, hidden_dim, n_layers, output_size)
+        )
+
+    @staticmethod
+    def _upsampling_in_lrelu_block(in_channels, out_channels, mode='bilinear', scale_factor=2.0, padding=0):
+        return nn.Sequential(
+            nn.Upsample(mode=mode, scale_factor=scale_factor),
+            nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=1, padding=padding),
+            nn.InstanceNorm2d(num_features=out_channels),
+            nn.LeakyReLU(negative_slope=0.2)
+        )
+
+    @staticmethod
+    def _upsampling_tanh_block(in_channels, out_channels, mode='bilinear', scale_factor=2.0, padding=0):
+        return nn.Sequential(
+            nn.Upsample(mode=mode, scale_factor=scale_factor),
+            nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=1, padding=padding),
+            nn.Tanh()
+        )
+
+    @staticmethod
+    def _1x1conv_lrelu_block(in_channels, out_channels):
+        return nn.Sequential(
+            nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=1),
+            nn.LeakyReLU()
+        )
+
 class CoarseNet(nn.Module):
     def __init__(self, vocab_size):
         super(CoarseNet, self).__init__()
@@ -319,67 +431,43 @@ class CoarseNet(nn.Module):
         self.block_11 = self._upsampling_tanh_block(in_channels=16, out_channels=3)
 
     def forward(self, x, descriptions):
-        print(x.size())
         x_1 = self.block_1(x)
-        print(x_1.size())
         x_2 = self.block_2(x_1)
-        print(x_2.size())
         x_3 = self.block_3(x_2)
-        print(x_3.size())
 
         dil_res_x_3 = self.dilated_res_blocks(x_3)
-        print(dil_res_x_3.size())
         attention_map, _ = self.self_attention(dil_res_x_3)
-        print(attention_map.size())
 
         x_4 = self.block_4(x_3)
-        print(x_4.size())
         x_5 = self.block_5(x_4)
-        print(x_5.size())
 
         visual_embedding = self.avg_pooling(x_5).squeeze()
-        print(visual_embedding.size())
         textual_embedding = self.lstm_block(descriptions)
-        print(textual_embedding.size())
         embedding = torch.cat((visual_embedding, textual_embedding), dim=1)
-        print(embedding.size())
 
         x_6 = self.block_6(embedding.view(-1, 16, 4, 4))
-        print(x_6.size())
         x_6 = self._1x1conv_6(x_6)
-        print(x_6.size())
+
         x_7 = self.block_7(x_6)
-        print(x_7.size())
         x_7 = self._1x1conv_7(x_7)
-        print(x_7.size())
+
         x_8 = self.block_8(x_7)
-        print(x_8.size())
         x_8 = torch.cat((x_8, attention_map), dim=1)
-        print(x_8.size())
         x_8 = self._1x1conv_8_1(x_8)
-        print(x_8.size())
         x_8 = torch.cat((x_3, x_8), dim=1)
-        print(x_8.size())
         x_8 = self._1x1conv_8_2(x_8)
-        print(x_8.size())
+
         x_9 = self.block_9(x_8)
-        print(x_9.size())
         x_9 = self._1x1conv_9_1(x_9)
-        print(x_9.size())
         x_9 = torch.cat((x_2, x_9), dim=1)
-        print(x_9.size())
         x_9 = self._1x1conv_9_2(x_9)
-        print(x_9.size())
+
         x_10 = self.block_10(x_9)
-        print(x_10.size())
         x_10 = self._1x1conv_10_1(x_10)
-        print(x_10.size())
         x_10 = torch.cat((x_1, x_10), dim=1)
-        print(x_10.size())
         x_10 = self._1x1conv_10_2(x_10)
-        print(x_10.size())
+
         x_11 = self.block_11(x_10)
-        print(x_11.size())
 
         return x_11
 
@@ -430,14 +518,6 @@ class CoarseNet(nn.Module):
             nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=1),
             nn.LeakyReLU()
         )
-
-
-class RefineNet(nn.Module):
-    def __init__(self):
-        super(RefineNet, self).__init__()
-
-    def forward(self, x):
-        return x
 
 
 class AdvancedNet(nn.Module):
