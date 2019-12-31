@@ -325,20 +325,20 @@ class RefineNet(nn.Module):
         x_6 = self.block_6(visual_embedding.view(-1, 32, 4, 4))
         x_6 = self._1x1conv_6(x_6)
 
-        x_7 = self.block_8(x_6)
-        x_7 = self._1x1conv_8_1(x_7)
+        x_7 = self.block_7(x_6)
+        x_7 = self._1x1conv_7_1(x_7)
         x_7 = torch.cat((x_3, x_7), dim=1)
-        x_7 = self._1x1conv_8_2(x_7)
+        x_7 = self._1x1conv_7_2(x_7)
 
-        x_8 = self.block_9(x_7)
-        x_8 = self._1x1conv_9_1(x_8)
+        x_8 = self.block_8(x_7)
+        x_8 = self._1x1conv_8_1(x_8)
         x_8 = torch.cat((x_2, x_8), dim=1)
-        x_8 = self._1x1conv_9_2(x_8)
+        x_8 = self._1x1conv_8_2(x_8)
 
-        x_9 = self.block_10(x_8)
-        x_9 = self._1x1conv_10_1(x_9)
+        x_9 = self.block_9(x_8)
+        x_9 = self._1x1conv_9_1(x_9)
         x_9 = torch.cat((x_1, x_9), dim=1)
-        x_9 = self._1x1conv_10_2(x_9)
+        x_9 = self._1x1conv_9_2(x_9)
 
         x_10 = self.block_10(x_9)
 
