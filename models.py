@@ -298,17 +298,20 @@ class RefineNet(nn.Module):
 
         # Decoder
         self.block_6 = self._upsampling_in_lrelu_block(in_channels=16, out_channels=32)
-        self._1x1conv_6 = self._1x1conv_lrelu_block(in_channels=32, out_channels=128)
-        self.block_7 = self._upsampling_in_lrelu_block(in_channels=128, out_channels=128)
-        self._1x1conv_7_1 = self._1x1conv_lrelu_block(in_channels=128, out_channels=64)
-        self._1x1conv_7_2 = self._1x1conv_lrelu_block(in_channels=192, out_channels=64)
-        self.block_8 = self._upsampling_in_lrelu_block(in_channels=64, out_channels=64)
-        self._1x1conv_8_1 = self._1x1conv_lrelu_block(in_channels=64, out_channels=32)
-        self._1x1conv_8_2 = self._1x1conv_lrelu_block(in_channels=96, out_channels=32)
-        self.block_9 = self._upsampling_in_lrelu_block(in_channels=32, out_channels=32)
-        self._1x1conv_9_1 = self._1x1conv_lrelu_block(in_channels=32, out_channels=16)
-        self._1x1conv_9_2 = self._1x1conv_lrelu_block(in_channels=48, out_channels=16)
-        self.block_10 = self._upsampling_tanh_block(in_channels=16, out_channels=3)
+        self._1x1conv_6 = self._1x1conv_lrelu_block(in_channels=32, out_channels=64)
+        self.block_7 = self._upsampling_in_lrelu_block(in_channels=64, out_channels=64)
+        self._1x1conv_7 = self._1x1conv_lrelu_block(in_channels=64, out_channels=128)
+
+        self.block_8 = self._upsampling_in_lrelu_block(in_channels=128, out_channels=128)
+        self._1x1conv_8 = self._1x1conv_lrelu_block(in_channels=256, out_channels=64)
+
+        self.block_9 = self._upsampling_in_lrelu_block(in_channels=64, out_channels=64)
+        self._1x1conv_9_2 = self._1x1conv_lrelu_block(in_channels=128, out_channels=32)
+
+        self.block_10 = self._upsampling_in_lrelu_block(in_channels=32, out_channels=32)
+        self._1x1conv_10_2 = self._1x1conv_lrelu_block(in_channels=32, out_channels=16)
+
+        self.block_11 = self._upsampling_tanh_block(in_channels=16, out_channels=3)
 
     def forward(self, x, descriptions):
         x_1 = self.block_1(x)
@@ -334,35 +337,34 @@ class RefineNet(nn.Module):
 
         x_7 = self.block_7(x_6)
         print(x_7.size())
-        x_7 = self._1x1conv_7_1(x_7)
-        print(x_7.size())
-        x_7 = torch.cat((x_3, x_7), dim=1)
-        print(x_7.size())
-        x_7 = self._1x1conv_7_2(x_7)
+        x_7 = self._1x1conv_7(x_7)
         print(x_7.size())
 
         x_8 = self.block_8(x_7)
         print(x_8.size())
-        x_8 = self._1x1conv_8_1(x_8)
+        x_8 = torch.cat((x_3, x_8), dim=1)
         print(x_8.size())
-        x_8 = torch.cat((x_2, x_8), dim=1)
-        print(x_8.size())
-        x_8 = self._1x1conv_8_2(x_8)
+        x_8 = self._1x1conv_8(x_7)
         print(x_8.size())
 
         x_9 = self.block_9(x_8)
         print(x_9.size())
-        x_9 = self._1x1conv_9_1(x_9)
+        x_9 = torch.cat((x_2, x_9), dim=1)
         print(x_9.size())
-        x_9 = torch.cat((x_1, x_9), dim=1)
-        print(x_9.size())
-        x_9 = self._1x1conv_9_2(x_9)
+        x_9 = self._1x1conv_9(x_9)
         print(x_9.size())
 
         x_10 = self.block_10(x_9)
         print(x_10.size())
+        x_10 = torch.cat((x_1, x_10), dim=1)
+        print(x_10.size())
+        x_10 = self._1x1conv_10(x_10)
+        print(x_10.size())
 
-        return x_10
+        x_11 = self.block_11(x_10)
+        print(x_11.size())
+
+        return x_11
 
     @staticmethod
     def _conv_in_lrelu_block(in_channels, out_channels, kernel_size, stride=1, padding=0):
