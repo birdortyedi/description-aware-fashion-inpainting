@@ -297,7 +297,7 @@ class RefineNet(nn.Module):
         self.avg_pooling = nn.AdaptiveAvgPool2d(output_size=(1, 1))
 
         # Decoder
-        self.block_6 = self._upsampling_in_lrelu_block(in_channels=32, out_channels=32)
+        self.block_6 = self._upsampling_in_lrelu_block(in_channels=16, out_channels=32)
         self._1x1conv_6 = self._1x1conv_lrelu_block(in_channels=32, out_channels=128)
         self.block_7 = self._upsampling_in_lrelu_block(in_channels=128, out_channels=128)
         self._1x1conv_7_1 = self._1x1conv_lrelu_block(in_channels=128, out_channels=64)
@@ -327,7 +327,7 @@ class RefineNet(nn.Module):
         visual_embedding = self.avg_pooling(x_5).squeeze()
         print(visual_embedding.size())
 
-        x_6 = self.block_6(visual_embedding.view(-1, 32, 4, 4))
+        x_6 = self.block_6(visual_embedding.view(-1, 16, 4, 4))
         print(x_6.size())
         x_6 = self._1x1conv_6(x_6)
         print(x_6.size())
