@@ -344,7 +344,7 @@ class RefineNet(nn.Module):
         print(x_8.size())
         x_8 = torch.cat((x_3, x_8), dim=1)
         print(x_8.size())
-        x_8 = self._1x1conv_8(x_7)
+        x_8 = self._1x1conv_8(x_8)
         print(x_8.size())
 
         x_9 = self.block_9(x_8)
