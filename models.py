@@ -309,9 +309,7 @@ class RefineNet(nn.Module):
         self._1x1conv_9 = self._1x1conv_lrelu_block(in_channels=128, out_channels=32)
 
         self.block_10 = self._upsampling_in_lrelu_block(in_channels=32, out_channels=32)
-        self._1x1conv_10 = self._1x1conv_lrelu_block(in_channels=64, out_channels=16)
-
-        self.block_11 = self._upsampling_tanh_block(in_channels=16, out_channels=3)
+        self.block_11 = self._upsampling_tanh_block(in_channels=64, out_channels=3)
 
     def forward(self, x, descriptions):
         x_1 = self.block_1(x)
@@ -357,8 +355,6 @@ class RefineNet(nn.Module):
         x_10 = self.block_10(x_9)
         print(x_10.size())
         x_10 = torch.cat((x_1, x_10), dim=1)
-        print(x_10.size())
-        x_10 = self._1x1conv_10(x_10)
         print(x_10.size())
 
         x_11 = self.block_11(x_10)
