@@ -348,6 +348,54 @@ class CoarseNet(nn.Module):
 
         return x_8
 
+    @staticmethod
+    def _conv_in_lrelu_block(in_channels, out_channels, kernel_size, stride=1, padding=0):
+        return nn.Sequential(
+            nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size, stride=stride, padding=padding),
+            nn.InstanceNorm2d(num_features=out_channels),
+            nn.LeakyReLU(negative_slope=0.2)
+        )
+
+    @staticmethod
+    def _dilated_res_blocks(num_features, kernel_size, stride=1, dilation=2):
+        return nn.Sequential(
+            DilatedResidualBlock(in_channels=num_features, out_channels=num_features, kernel_size=kernel_size, stride=stride, dilation=dilation),
+            DilatedResidualBlock(in_channels=num_features, out_channels=num_features, kernel_size=kernel_size, stride=stride, dilation=dilation),
+            DilatedResidualBlock(in_channels=num_features, out_channels=num_features, kernel_size=kernel_size, stride=stride, dilation=dilation),
+            DilatedResidualBlock(in_channels=num_features, out_channels=num_features, kernel_size=kernel_size, stride=stride, dilation=dilation),
+            DilatedResidualBlock(in_channels=num_features, out_channels=num_features, kernel_size=kernel_size, stride=stride, dilation=dilation)
+        )
+
+    @staticmethod
+    def _lstm_block(vocab_size, embedding_dim=32, hidden_dim=1024, n_layers=3, output_size=128):
+        return nn.Sequential(
+            LSTMModule(vocab_size, embedding_dim, hidden_dim, n_layers, output_size)
+        )
+
+    @staticmethod
+    def _upsampling_in_lrelu_block(in_channels, out_channels, mode='bilinear', scale_factor=2.0, padding=0):
+        return nn.Sequential(
+            nn.Upsample(mode=mode, scale_factor=scale_factor),
+            nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=1, padding=padding),
+            nn.InstanceNorm2d(num_features=out_channels),
+            nn.LeakyReLU(negative_slope=0.2)
+        )
+
+    @staticmethod
+    def _upsampling_tanh_block(in_channels, out_channels, mode='bilinear', scale_factor=2.0, padding=0):
+        return nn.Sequential(
+            nn.Upsample(mode=mode, scale_factor=scale_factor),
+            nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=1, padding=padding),
+            nn.Tanh()
+        )
+
+    @staticmethod
+    def _1x1conv_lrelu_block(in_channels, out_channels):
+        return nn.Sequential(
+            nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=1),
+            nn.LeakyReLU()
+        )
+
 
 class RefineNet(nn.Module):
     def __init__(self):
