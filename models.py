@@ -1,6 +1,9 @@
 import torch
 from torch import nn
 from torch.nn import functional as F
+from torchvision import transforms
+
+from utils import HDF5Dataset, RandomCentralErasing
 
 
 class Encoder(nn.Module):
@@ -171,22 +174,6 @@ class LSTMModule(nn.Module):
         return out
 
 
-class Net(nn.Module):
-    def __init__(self, vocab_size, embedding_dim=32, lstm_hidden_dim=1024, lstm_n_layers=3, lstm_output_size=512):
-        super(Net, self).__init__()
-        self.encoder = Encoder()
-        self.decoder = Decoder()
-        self.lstm = LSTMModule(vocab_size, embedding_dim, lstm_hidden_dim, lstm_n_layers, lstm_output_size)
-
-    def forward(self, x, desc):
-        x = self.encoder(x)
-        desc = self.lstm(desc)
-
-        out = self.decoder(torch.cat((x, desc), dim=1))
-
-        return out
-
-
 class SelfAttention(nn.Module):
     """ Self attention Layer"""
 
@@ -247,9 +234,42 @@ class DilatedResidualBlock(nn.Module):
         return x
 
 
-class DiscriminatorNet(nn.Module):
+class LocalDiscriminator(nn.Module):
     def __init__(self):
-        super(DiscriminatorNet, self).__init__()
+        super(LocalDiscriminator, self).__init__()
+        self.d_block_1 = self._conv_in_lrelu_block(in_channels=3, out_channels=32, kernel_size=3, padding=1)
+        self.d_block_2 = self._conv_in_lrelu_block(in_channels=32, out_channels=64, kernel_size=3, stride=2, padding=1)
+        self.d_block_3 = self._conv_in_lrelu_block(in_channels=64, out_channels=128, kernel_size=3, padding=1)
+        self.d_block_4 = self._conv_in_lrelu_block(in_channels=128, out_channels=64, kernel_size=3,  stride=2, padding=1)
+        self.avg_pooling = nn.AdaptiveAvgPool2d(output_size=(1, 1))
+        self.d_block_5 = nn.Linear(in_features=16, out_features=1)
+
+    def forward(self, x):
+        x = self.d_block_1(x)
+        print(x.size())
+        x = self.d_block_2(x)
+        print(x.size())
+        x = self.d_block_3(x)
+        print(x.size())
+        x = self.d_block_4(x)
+        print(x.size())
+        x = self.avg_pooling(x).squeeze()
+        print(x.size())
+        x = torch.sigmoid(self.d_block_5(x))
+        return x
+
+    @staticmethod
+    def _conv_in_lrelu_block(in_channels, out_channels, kernel_size, stride=1, padding=0):
+        return nn.Sequential(
+            nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size, stride=stride, padding=padding),
+            nn.InstanceNorm2d(num_features=out_channels),
+            nn.LeakyReLU(negative_slope=0.2)
+        )
+
+
+class GlobalDiscriminator(nn.Module):
+    def __init__(self):
+        super(GlobalDiscriminator, self).__init__()
         # Discriminator
         self.d_block_1 = self._conv_in_lrelu_block(in_channels=3, out_channels=32, kernel_size=7, stride=2, padding=1)
         self.d_block_2 = self._conv_in_lrelu_block(in_channels=32, out_channels=64, kernel_size=5, stride=2, padding=1)
@@ -280,9 +300,9 @@ class DiscriminatorNet(nn.Module):
         )
 
 
-class RefineNet(nn.Module):
+class Net(nn.Module):
     def __init__(self):
-        super(RefineNet, self).__init__()
+        super(Net, self).__init__()
         # Encoder
         self.block_1 = self._conv_in_lrelu_block(in_channels=3, out_channels=32, kernel_size=7, stride=2, padding=3)
         self.block_2 = self._conv_in_lrelu_block(in_channels=32, out_channels=64, kernel_size=5, stride=2, padding=2)
@@ -291,10 +311,75 @@ class RefineNet(nn.Module):
         # Dilated Residual Blocks
         self.dilated_res_blocks = self._dilated_res_blocks(num_features=128, kernel_size=3)
 
-        # Encoder c'ing
+        # Visual features for concatenating with textual features
         self.block_4 = self._conv_in_lrelu_block(in_channels=128, out_channels=64, kernel_size=5, stride=2, padding=2)
-        self.block_5 = self._conv_in_lrelu_block(in_channels=64, out_channels=256, kernel_size=5, stride=2, padding=2)
         self.avg_pooling = nn.AdaptiveAvgPool2d(output_size=(1, 1))
+
+        self.block_8 = self._upsampling_in_lrelu_block(in_channels=128, out_channels=128)
+        self.block_9 = self._upsampling_in_lrelu_block(in_channels=64, out_channels=64)
+        self._1x1conv_9 = self._1x1conv_lrelu_block(in_channels=128, out_channels=32)
+        self.block_10 = self._upsampling_in_lrelu_block(in_channels=32, out_channels=32)
+        self.block_11 = self._upsampling_tanh_block(in_channels=64, out_channels=3)
+
+    def forward(self, x, descriptions):
+        raise NotImplementedError
+        pass
+
+    @staticmethod
+    def _conv_in_lrelu_block(in_channels, out_channels, kernel_size, stride=1, padding=0):
+        return nn.Sequential(
+            nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size, stride=stride, padding=padding),
+            nn.InstanceNorm2d(num_features=out_channels),
+            nn.LeakyReLU(negative_slope=0.2)
+        )
+
+    @staticmethod
+    def _dilated_res_blocks(num_features, kernel_size, stride=1, dilation=2):
+        return nn.Sequential(
+            DilatedResidualBlock(in_channels=num_features, out_channels=num_features, kernel_size=kernel_size, stride=stride, dilation=dilation),
+            DilatedResidualBlock(in_channels=num_features, out_channels=num_features, kernel_size=kernel_size, stride=stride, dilation=dilation),
+            DilatedResidualBlock(in_channels=num_features, out_channels=num_features, kernel_size=kernel_size, stride=stride, dilation=dilation),
+            DilatedResidualBlock(in_channels=num_features, out_channels=num_features, kernel_size=kernel_size, stride=stride, dilation=dilation),
+            DilatedResidualBlock(in_channels=num_features, out_channels=num_features, kernel_size=kernel_size, stride=stride, dilation=dilation)
+        )
+
+    @staticmethod
+    def _lstm_block(vocab_size, embedding_dim=32, hidden_dim=1024, n_layers=3, output_size=128):
+        return nn.Sequential(
+            LSTMModule(vocab_size, embedding_dim, hidden_dim, n_layers, output_size)
+        )
+
+    @staticmethod
+    def _upsampling_in_lrelu_block(in_channels, out_channels, mode='bilinear', scale_factor=2.0, padding=0):
+        return nn.Sequential(
+            nn.Upsample(mode=mode, scale_factor=scale_factor),
+            nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=1, padding=padding),
+            nn.InstanceNorm2d(num_features=out_channels),
+            nn.LeakyReLU(negative_slope=0.2)
+        )
+
+    @staticmethod
+    def _upsampling_tanh_block(in_channels, out_channels, mode='bilinear', scale_factor=2.0, padding=0):
+        return nn.Sequential(
+            nn.Upsample(mode=mode, scale_factor=scale_factor),
+            nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=1, padding=padding),
+            nn.Tanh()
+        )
+
+    @staticmethod
+    def _1x1conv_lrelu_block(in_channels, out_channels):
+        return nn.Sequential(
+            nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=1),
+            nn.LeakyReLU()
+        )
+
+
+class RefineNet(Net):
+    def __init__(self):
+        super(RefineNet, self).__init__()
+
+        # Encoder c'ing
+        self.block_5 = self._conv_in_lrelu_block(in_channels=64, out_channels=256, kernel_size=5, stride=2, padding=2)
 
         # Decoder
         self.block_6 = self._upsampling_in_lrelu_block(in_channels=16, out_channels=32)
@@ -302,14 +387,7 @@ class RefineNet(nn.Module):
         self.block_7 = self._upsampling_in_lrelu_block(in_channels=64, out_channels=64)
         self._1x1conv_7 = self._1x1conv_lrelu_block(in_channels=64, out_channels=128)
 
-        self.block_8 = self._upsampling_in_lrelu_block(in_channels=128, out_channels=128)
         self._1x1conv_8 = self._1x1conv_lrelu_block(in_channels=256, out_channels=64)
-
-        self.block_9 = self._upsampling_in_lrelu_block(in_channels=64, out_channels=64)
-        self._1x1conv_9 = self._1x1conv_lrelu_block(in_channels=128, out_channels=32)
-
-        self.block_10 = self._upsampling_in_lrelu_block(in_channels=32, out_channels=32)
-        self.block_11 = self._upsampling_tanh_block(in_channels=64, out_channels=3)
 
     def forward(self, x, descriptions):
         x_1 = self.block_1(x)
@@ -344,73 +422,15 @@ class RefineNet(nn.Module):
 
         return x_11
 
-    @staticmethod
-    def _conv_in_lrelu_block(in_channels, out_channels, kernel_size, stride=1, padding=0):
-        return nn.Sequential(
-            nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size, stride=stride, padding=padding),
-            nn.InstanceNorm2d(num_features=out_channels),
-            nn.LeakyReLU(negative_slope=0.2)
-        )
 
-    @staticmethod
-    def _dilated_res_blocks(num_features, kernel_size, stride=1, dilation=2):
-        return nn.Sequential(
-            DilatedResidualBlock(in_channels=num_features, out_channels=num_features, kernel_size=kernel_size, stride=stride, dilation=dilation),
-            DilatedResidualBlock(in_channels=num_features, out_channels=num_features, kernel_size=kernel_size, stride=stride, dilation=dilation),
-            DilatedResidualBlock(in_channels=num_features, out_channels=num_features, kernel_size=kernel_size, stride=stride, dilation=dilation),
-            DilatedResidualBlock(in_channels=num_features, out_channels=num_features, kernel_size=kernel_size, stride=stride, dilation=dilation),
-            DilatedResidualBlock(in_channels=num_features, out_channels=num_features, kernel_size=kernel_size, stride=stride, dilation=dilation)
-        )
-
-    @staticmethod
-    def _lstm_block(vocab_size, embedding_dim=32, hidden_dim=1024, n_layers=3, output_size=128):
-        return nn.Sequential(
-            LSTMModule(vocab_size, embedding_dim, hidden_dim, n_layers, output_size)
-        )
-
-    @staticmethod
-    def _upsampling_in_lrelu_block(in_channels, out_channels, mode='bilinear', scale_factor=2.0, padding=0):
-        return nn.Sequential(
-            nn.Upsample(mode=mode, scale_factor=scale_factor),
-            nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=1, padding=padding),
-            nn.InstanceNorm2d(num_features=out_channels),
-            nn.LeakyReLU(negative_slope=0.2)
-        )
-
-    @staticmethod
-    def _upsampling_tanh_block(in_channels, out_channels, mode='bilinear', scale_factor=2.0, padding=0):
-        return nn.Sequential(
-            nn.Upsample(mode=mode, scale_factor=scale_factor),
-            nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=1, padding=padding),
-            nn.Tanh()
-        )
-
-    @staticmethod
-    def _1x1conv_lrelu_block(in_channels, out_channels):
-        return nn.Sequential(
-            nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=1),
-            nn.LeakyReLU()
-        )
-
-
-class CoarseNet(nn.Module):
+class CoarseNet(Net):
     def __init__(self, vocab_size):
         super(CoarseNet, self).__init__()
-        # Encoder
-        self.block_1 = self._conv_in_lrelu_block(in_channels=3, out_channels=32, kernel_size=7, stride=2, padding=3)
-        self.block_2 = self._conv_in_lrelu_block(in_channels=32, out_channels=64, kernel_size=5, stride=2, padding=2)
-        self.block_3 = self._conv_in_lrelu_block(in_channels=64, out_channels=128, kernel_size=5, stride=2, padding=2)
-
-        # Dilated Residual Blocks
-        self.dilated_res_blocks = self._dilated_res_blocks(num_features=128, kernel_size=3)
 
         # Self-Attention
         self.self_attention = SelfAttention(in_channels=128)
 
-        # Visual features for concatenating with textual features
-        self.block_4 = self._conv_in_lrelu_block(in_channels=128, out_channels=64, kernel_size=5, stride=2, padding=2)
         self.block_5 = self._conv_in_lrelu_block(in_channels=64, out_channels=128, kernel_size=5, stride=2, padding=2)
-        self.avg_pooling = nn.AdaptiveAvgPool2d(output_size=(1, 1))
 
         # LSTM
         self.lstm_block = self._lstm_block(vocab_size)
@@ -420,13 +440,8 @@ class CoarseNet(nn.Module):
         self._1x1conv_6 = self._1x1conv_lrelu_block(in_channels=16, out_channels=32)
         self.block_7 = self._upsampling_in_lrelu_block(in_channels=32, out_channels=32)
         self._1x1conv_7 = self._1x1conv_lrelu_block(in_channels=32, out_channels=128)
-        self.block_8 = self._upsampling_in_lrelu_block(in_channels=128, out_channels=128)
+
         self._1x1conv_8 = self._1x1conv_lrelu_block(in_channels=384, out_channels=64)
-        self.block_9 = self._upsampling_in_lrelu_block(in_channels=64, out_channels=64)
-        self._1x1conv_9 = self._1x1conv_lrelu_block(in_channels=128, out_channels=32)
-        self.block_10 = self._upsampling_in_lrelu_block(in_channels=32, out_channels=32)
-        self._1x1conv_10 = self._1x1conv_lrelu_block(in_channels=64, out_channels=16)
-        self.block_11 = self._upsampling_tanh_block(in_channels=16, out_channels=3)
 
     def forward(self, x, descriptions):
         x_1 = self.block_1(x)
@@ -459,59 +474,10 @@ class CoarseNet(nn.Module):
 
         x_10 = self.block_10(x_9)
         x_10 = torch.cat((x_1, x_10), dim=1)
-        x_10 = self._1x1conv_10(x_10)
 
         x_11 = self.block_11(x_10)
 
         return x_11
-
-    @staticmethod
-    def _conv_in_lrelu_block(in_channels, out_channels, kernel_size, stride=1, padding=0):
-        return nn.Sequential(
-            nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size, stride=stride, padding=padding),
-            nn.InstanceNorm2d(num_features=out_channels),
-            nn.LeakyReLU(negative_slope=0.2)
-        )
-
-    @staticmethod
-    def _dilated_res_blocks(num_features, kernel_size, stride=1, dilation=2):
-        return nn.Sequential(
-            DilatedResidualBlock(in_channels=num_features, out_channels=num_features, kernel_size=kernel_size, stride=stride, dilation=dilation),
-            DilatedResidualBlock(in_channels=num_features, out_channels=num_features, kernel_size=kernel_size, stride=stride, dilation=dilation),
-            DilatedResidualBlock(in_channels=num_features, out_channels=num_features, kernel_size=kernel_size, stride=stride, dilation=dilation),
-            DilatedResidualBlock(in_channels=num_features, out_channels=num_features, kernel_size=kernel_size, stride=stride, dilation=dilation),
-            DilatedResidualBlock(in_channels=num_features, out_channels=num_features, kernel_size=kernel_size, stride=stride, dilation=dilation)
-        )
-
-    @staticmethod
-    def _lstm_block(vocab_size, embedding_dim=32, hidden_dim=1024, n_layers=3, output_size=128):
-        return nn.Sequential(
-            LSTMModule(vocab_size, embedding_dim, hidden_dim, n_layers, output_size)
-        )
-
-    @staticmethod
-    def _upsampling_in_lrelu_block(in_channels, out_channels, mode='bilinear', scale_factor=2.0, padding=0):
-        return nn.Sequential(
-            nn.Upsample(mode=mode, scale_factor=scale_factor),
-            nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=1, padding=padding),
-            nn.InstanceNorm2d(num_features=out_channels),
-            nn.LeakyReLU(negative_slope=0.2)
-        )
-
-    @staticmethod
-    def _upsampling_tanh_block(in_channels, out_channels, mode='bilinear', scale_factor=2.0, padding=0):
-        return nn.Sequential(
-            nn.Upsample(mode=mode, scale_factor=scale_factor),
-            nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=1, padding=padding),
-            nn.Tanh()
-        )
-
-    @staticmethod
-    def _1x1conv_lrelu_block(in_channels, out_channels):
-        return nn.Sequential(
-            nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=1),
-            nn.LeakyReLU()
-        )
 
 
 class AdvancedNet(nn.Module):
@@ -644,3 +610,18 @@ class AdvancedNet(nn.Module):
             nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=1),
             nn.LeakyReLU()
         )
+
+
+if __name__ == '__main__':
+    train_transform = transforms.Compose([transforms.ToTensor(),
+                                          RandomCentralErasing(p=1.0, scale=(0.03, 0.12), ratio=(0.75, 1.25), value=1),
+                                          # transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
+                                          ])
+
+    fg_train = HDF5Dataset(filename='./Fashion-Gen/fashiongen_256_256_train.h5', transform=train_transform)
+    print("Sample size in training: {}".format(len(fg_train)))
+
+    coarse = CoarseNet(30000)
+    refine = RefineNet()
+    local = LocalDiscriminator()
+    _global = GlobalDiscriminator()

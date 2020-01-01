@@ -8,7 +8,7 @@ from tqdm import tqdm
 from colorama import Fore
 
 from utils import HDF5Dataset, RandomCentralErasing, UnNormalize
-from models import Net, AdvancedNet, DiscriminatorNet, CoarseNet, RefineNet
+from models import CoarseNet, RefineNet, LocalDiscriminator, GlobalDiscriminator
 from losses import CustomInpaintingLoss
 
 NUM_EPOCHS = 250
@@ -16,7 +16,7 @@ BATCH_SIZE = 256
 
 
 train_transform = transforms.Compose([transforms.ToTensor(),
-                                      RandomCentralErasing(p=1.0, scale=(0.03, 0.12), ratio=(0.75, 1.25), value=1),
+                                      RandomCentralErasing(p=1.0, scale=(0.0625, 0.125), ratio=(0.75, 1.25), value=1),
                                       # transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
                                       ])
 
@@ -34,7 +34,7 @@ val_loader = data.DataLoader(fg_val, batch_size=BATCH_SIZE, shuffle=False, num_w
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 net = CoarseNet(fg_train.vocab_size)  # RefineNet()   # Net(fg_train.vocab_size)
-d_net = DiscriminatorNet()
+d_net = LocalDiscriminator()
 if torch.cuda.device_count() > 1:
     print("Using {} GPUs...".format(torch.cuda.device_count()))
     net = nn.DataParallel(net)
