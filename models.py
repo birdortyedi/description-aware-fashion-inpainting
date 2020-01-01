@@ -240,9 +240,13 @@ class LocalDiscriminator(nn.Module):
         self.d_block_1 = self._conv_in_lrelu_block(in_channels=3, out_channels=32, kernel_size=3, padding=1)
         self.d_block_2 = self._conv_in_lrelu_block(in_channels=32, out_channels=64, kernel_size=3, stride=2, padding=1)
         self.d_block_3 = self._conv_in_lrelu_block(in_channels=64, out_channels=128, kernel_size=3, padding=1)
-        self.d_block_4 = self._conv_in_lrelu_block(in_channels=128, out_channels=64, kernel_size=3,  stride=2, padding=1)
+        self.d_block_4 = self._conv_in_lrelu_block(in_channels=128, out_channels=128, kernel_size=3, stride=2, padding=1)
+        self.d_block_5 = self._conv_in_lrelu_block(in_channels=128, out_channels=64, kernel_size=3, padding=1)
+        self.d_block_6 = self._conv_in_lrelu_block(in_channels=64, out_channels=64, kernel_size=3, stride=2, padding=1)
+        self.d_block_7 = self._conv_in_lrelu_block(in_channels=64, out_channels=32, kernel_size=3, padding=1)
+        self.d_block_8 = self._conv_in_lrelu_block(in_channels=32, out_channels=16, kernel_size=3, stride=2, padding=1)
         self.avg_pooling = nn.AdaptiveAvgPool2d(output_size=(1, 1))
-        self.d_block_5 = nn.Linear(in_features=16, out_features=1)
+        self.d_block_9 = nn.Linear(in_features=128, out_features=1)
 
     def forward(self, x):
         x = self.d_block_1(x)
@@ -253,9 +257,17 @@ class LocalDiscriminator(nn.Module):
         print(x.size())
         x = self.d_block_4(x)
         print(x.size())
+        x = self.d_block_5(x)
+        print(x.size())
+        x = self.d_block_6(x)
+        print(x.size())
+        x = self.d_block_7(x)
+        print(x.size())
+        x = self.d_block_8(x)
+        print(x.size())
         x = self.avg_pooling(x).squeeze()
         print(x.size())
-        x = torch.sigmoid(self.d_block_5(x))
+        x = torch.sigmoid(self.d_block_9(x))
         return x
 
     @staticmethod
