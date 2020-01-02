@@ -127,7 +127,7 @@ def train(epoch, loader, l_fns, optimizers, schedulers):
 
         refine_loss, refine_content, refine_style, refine_global, refine_local = l_fns["refine"](refine_output, y_train,
                                                                                                  refine_local_output, x_local)
-        refine_loss.backward()
+        refine_loss.backward(retain_graph=True)
         writer.add_scalar("Loss/on_step_refine_loss", refine_loss.mean().item(), epoch * len(loader) + batch_idx)
         writer.add_scalar("Loss/on_step_refine_content_loss", refine_content.mean().item(), epoch * len(loader) + batch_idx)
         writer.add_scalar("Loss/on_step_refine_style_loss", refine_style.mean().item(), epoch * len(loader) + batch_idx)
