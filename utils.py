@@ -1,6 +1,6 @@
 import torch
 from torchvision.transforms import functional as F
-from torchvision.transforms import Normalize, ToTensor
+from torchvision.transforms import Normalize, ToTensor, ToPILImage
 from torchtext.data import Field
 from torch.utils import data
 
@@ -36,7 +36,7 @@ class HDF5Dataset(data.Dataset):
         img = self.h5_file["input_image"][index, :, :]
         top, left, h, w, _ = RandomCentralErasing(p=1.0, scale=(0.0625, 0.125), ratio=(0.75, 1.25)).get_params(img, scale=(0.0625, 0.125),
                                                                                                             ratio=(0.75, 1.25))
-        local_img = F.crop(img, top, left, h, w)
+        local_img = F.crop(ToPILImage()(img), top, left, h, w)
         local_img = ToTensor()(local_img)
 
         if self.transform:
