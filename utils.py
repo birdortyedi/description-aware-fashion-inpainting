@@ -43,13 +43,12 @@ class HDF5Dataset(data.Dataset):
         if self.is_train:
             img = h_flip(img)
 
+        img = ToTensor()(img)
         erased, local, coords = rnd_central_eraser(img)
 
         print(erased.size())
         print(local.size())
         print(coords)
-
-        img = ToTensor()(img)
 
         return erased, desc, local, coords, img
 
@@ -98,7 +97,7 @@ class CentralErasing(object):
 
     def __call__(self, img):
         x, y, h, w, v = self.get_params(img, scale=self.scale, ratio=self.ratio, value=self.value)
-        return F.erase(img, x, y, h, w, v, self.inplace), F.crop(img, x, y, h, w), (x, y, h, w)
+        return F.erase(img, x, y, h, w, v, self.inplace), ToTensor()(F.crop(ToPILImage()(img), x, y, h, w)), (x, y, h, w)
 
 
 class UnNormalize(object):
