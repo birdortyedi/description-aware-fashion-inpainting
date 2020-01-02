@@ -3,7 +3,7 @@ from torch import nn
 from torch.nn import functional as F
 from torchvision import transforms
 
-from utils import HDF5Dataset, RandomCentralErasing
+from utils import HDF5Dataset, CentralErasing
 
 
 class Encoder(nn.Module):
@@ -628,11 +628,11 @@ class AdvancedNet(nn.Module):
 
 if __name__ == '__main__':
     train_transform = transforms.Compose([transforms.ToTensor(),
-                                          RandomCentralErasing(p=1.0, scale=(0.03, 0.12), ratio=(0.75, 1.25), value=1),
+                                          CentralErasing(scale=(0.03, 0.12), ratio=(0.75, 1.25), value=1),
                                           # transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
                                           ])
 
-    fg_train = HDF5Dataset(filename='./Fashion-Gen/fashiongen_256_256_train.h5', transform=train_transform)
+    fg_train = HDF5Dataset(filename='./Fashion-Gen/fashiongen_256_256_train.h5')
     print("Sample size in training: {}".format(len(fg_train)))
 
     coarse = CoarseNet(30000)
