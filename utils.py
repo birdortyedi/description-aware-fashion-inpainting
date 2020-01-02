@@ -1,6 +1,6 @@
 import torch
 from torchvision.transforms import functional as F
-from torchvision.transforms import Normalize, ToTensor, ToPILImage
+from torchvision.transforms import Normalize, ToTensor, ToPILImage, RandomHorizontalFlip
 from torchtext.data import Field
 from torch.utils import data
 
@@ -12,10 +12,10 @@ import h5py
 
 
 class HDF5Dataset(data.Dataset):
-    def __init__(self, filename, transform=None):
+    def __init__(self, filename, is_train=True):
         super().__init__()
         self.h5_file = h5py.File(filename, mode="r")
-        self.transform = transform
+        self.is_train = is_train
 
         self.descriptions = self._build_descriptions()
 
@@ -34,38 +34,35 @@ class HDF5Dataset(data.Dataset):
 
     def __getitem__(self, index):
         img = self.h5_file["input_image"][index, :, :]
-        # top, left, h, w, _ = RandomCentralErasing.get_params(img, scale=(0.0625, 0.125), ratio=(0.75, 1.25))
-
-        if self.transform:
-            x, top, left, h, w, v = self.transform(img)
-            local_img = F.crop(ToPILImage()(img), top, left, h, w)
-            local_img = ToTensor()(local_img)
-            print(local_img.size())
-            print((top, left, h, w))
-        else:
-            x = ToTensor()(img)
-
-        img = ToTensor()(img)  # Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
+        rnd_central_eraser = RandomCentralErasing(p=1.0, scale=(0.0625, 0.125), ratio=(0.75, 1.25), value=1)
+        h_flip = RandomHorizontalFlip(p=0.5)
 
         desc = self.descriptions[index].float()
 
-        return x, desc, local_img, (top, left, h, w), img
+        if self.is_train:
+            img = h_flip(img)
+
+        img = ToTensor()(img)
+        erased, local, coords = rnd_central_eraser(img)
+
+        print(erased.size())
+        print(local.size())
+        print(coords)
+
+        return erased, desc, local, coords, img
 
     def __len__(self):
         return self.h5_file["input_image"].shape[0]
 
 
-class RandomCentralErasing(object):
-    def __init__(self, p=0.5, scale=(0.02, 0.33), ratio=(0.3, 3.3), value=0, inplace=False):
+class CentralErasing(object):
+    def __init__(self, scale=(0.02, 0.33), ratio=(0.3, 3.3), value=0, inplace=False):
         assert isinstance(value, (numbers.Number, str, tuple, list))
         if (scale[0] > scale[1]) or (ratio[0] > ratio[1]):
             warnings.warn("range should be of kind (min, max)")
         if scale[0] < 0 or scale[1] > 1:
             raise ValueError("range of scale should be between 0 and 1")
-        if p < 0 or p > 1:
-            raise ValueError("range of random erasing probability should be between 0 and 1")
 
-        self.p = p
         self.scale = scale
         self.ratio = ratio
         self.value = value
@@ -98,10 +95,8 @@ class RandomCentralErasing(object):
         return 0, 0, img_h, img_w, img
 
     def __call__(self, img):
-        if random.uniform(0, 1) < self.p:
-            x, y, h, w, v = self.get_params(img, scale=self.scale, ratio=self.ratio, value=self.value)
-            return F.erase(img, x, y, h, w, v, self.inplace)
-        return img, self.get_params(img, scale=self.scale, ratio=self.ratio, value=self.value)
+        x, y, h, w, v = self.get_params(img, scale=self.scale, ratio=self.ratio, value=self.value)
+        return F.erase(img, x, y, h, w, v, self.inplace), F.crop(img, x, y, h, w), (x, y, h, w)
 
 
 class UnNormalize(object):

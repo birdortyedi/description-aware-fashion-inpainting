@@ -15,18 +15,8 @@ from losses import CoarseLoss, RefineLoss
 NUM_EPOCHS = 250
 BATCH_SIZE = 256
 
-
-train_transform = transforms.Compose([transforms.ToTensor(),
-                                      RandomCentralErasing(p=1.0, scale=(0.0625, 0.125), ratio=(0.75, 1.25), value=1),
-                                      # transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
-                                      ])
-
-val_transform = transforms.Compose([transforms.ToTensor(),
-                                    # transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
-                                    ])
-
-fg_train = HDF5Dataset(filename='./Fashion-Gen/fashiongen_256_256_train.h5', transform=train_transform)
-fg_val = HDF5Dataset(filename='./Fashion-Gen/fashiongen_256_256_validation.h5', transform=val_transform)
+fg_train = HDF5Dataset(filename='./Fashion-Gen/fashiongen_256_256_train.h5')
+fg_val = HDF5Dataset(filename='./Fashion-Gen/fashiongen_256_256_validation.h5', is_train=False)
 
 print("Sample size in training: {}".format(len(fg_train)))
 
