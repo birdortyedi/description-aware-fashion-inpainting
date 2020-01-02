@@ -8,7 +8,7 @@ from tensorboardX import SummaryWriter
 from tqdm import tqdm
 from colorama import Fore
 
-from utils import HDF5Dataset, RandomCentralErasing
+from utils import HDF5Dataset
 from models import CoarseNet, RefineNet, LocalDiscriminator, GlobalDiscriminator
 from losses import CoarseLoss, RefineLoss
 
