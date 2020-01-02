@@ -208,15 +208,15 @@ def evaluate(epoch, loader, l_fn):
 if __name__ == '__main__':
     loss_fns = {"coarse": coarse_loss_fn,
                 "refine": refine_loss_fn,
-                # "global": d_loss_fn,
+                "global": d_loss_fn,
                 "local": d_loss_fn}
     optimizers = {"coarse": coarse_optimizer,
                   "refine": refine_optimizer,
-                  # "global": global_d_optimizer,
+                  "global": global_d_optimizer,
                   "local": local_d_optimizer}
     schedulers = {"coarse": coarse_scheduler,
                   "refine": refine_scheduler,
-                  # "global": global_d_scheduler,
+                  "global": global_d_scheduler,
                   "local": local_d_scheduler}
     for e in range(NUM_EPOCHS):
         train(e, train_loader, loss_fns, optimizers, schedulers)
