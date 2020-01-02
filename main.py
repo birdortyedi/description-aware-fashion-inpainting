@@ -106,14 +106,13 @@ def train(epoch, loader, l_fns, optimizers, schedulers):
         refine.zero_grad()
         refine_output = refine(coarse_output)
         for im, local_coord in zip(refine_output, local_coords):
-            print(im.size())
-            print(local_coord)
-            # refine_local_output = torch.stack(ToTensor()(Resize(size=(64, 64))(F.crop(ToPILImage()(im), x, y, h, w))))
+            top, left, h, w = local_coord
+            refine_local_output = torch.stack(ToTensor()(Resize(size=(64, 64))(F.crop(ToPILImage()(im), top, left, h, w))))
 
-        # local_d_fake_output = local_d(refine_local_output).view(-1)
-        # local_fake_loss = l_fns["local"](local_d_fake_output, fake_label)
-        # writer.add_scalar("Loss/on_step_local_fake_loss", local_fake_loss.mean().item(), epoch * len(loader) + batch_idx)
-        #local_fake_loss.backward()
+        local_d_fake_output = local_d(refine_local_output).view(-1)
+        local_fake_loss = l_fns["local"](local_d_fake_output, fake_label)
+        writer.add_scalar("Loss/on_step_local_fake_loss", local_fake_loss.mean().item(), epoch * len(loader) + batch_idx)
+        local_fake_loss.backward()
         optimizers["local"].step()
         schedulers["local"].step(epoch)
 
@@ -123,7 +122,7 @@ def train(epoch, loader, l_fns, optimizers, schedulers):
         writer.add_scalar("Metrics/on_step_local_d_acc_on_refine", local_d_accuracy_on_refine_local_output, epoch * len(loader) + batch_idx)
 
         refine_loss, refine_content, refine_style, refine_global, refine_local = l_fns["refine"](refine_output, y_train,
-                                                                                                      refine_local_output, x_local)
+                                                                                                 refine_local_output, x_local)
         refine_loss.backward()
         writer.add_scalar("Loss/on_step_refine_loss", refine_loss.mean().item(), epoch * len(loader) + batch_idx)
         writer.add_scalar("Loss/on_step_refine_content_loss", refine_content.mean().item(), epoch * len(loader) + batch_idx)
