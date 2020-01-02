@@ -47,10 +47,6 @@ class HDF5Dataset(data.Dataset):
         erased, local, coords = rnd_central_eraser(img)
         local = ToTensor()(Resize(size=(64, 64))(ToPILImage()(local)))
 
-        print(erased.size())
-        print(local.size())
-        print(coords)
-
         return erased, desc, local, coords, img
 
     def __len__(self):

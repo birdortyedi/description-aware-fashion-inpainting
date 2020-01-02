@@ -247,28 +247,18 @@ class LocalDiscriminator(nn.Module):
         self.d_block_7 = nn.Linear(in_features=64, out_features=1)
 
     def forward(self, x):
-        print(x.size())
         x = self.d_block_1(x)
-        print(x.size())
 
         x_1 = self.d_block_2(x)
-        print(x_1.size())
         x_2 = self.d_block_3(x_1)
-        print(x_2.size())
         x = torch.cat((x_1, x_2), dim=1)
-        print(x.size())
 
         x_1 = self.d_block_4(x)
-        print(x_1.size())
         x_2 = self.d_block_5(x_1)
-        print(x_2.size())
         x = torch.cat((x_1, x_2), dim=1)
-        print(x.size())
 
         x = self.d_block_6(x)
-        print(x.size())
         x = self.avg_pooling(x).squeeze()
-        print(x.size())
         x = torch.sigmoid(self.d_block_7(x))
         return x
 
