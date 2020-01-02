@@ -111,7 +111,14 @@ def train(epoch, loader, l_fns, optimizers, schedulers):
             local_output = ToTensor()(Resize(size=(64, 64))(F.crop(ToPILImage()(im.cpu()), top.item(), left.item(), h.item(), w.item())))
             refine_local_output.append(local_output)
         refine_local_output = torch.stack(refine_local_output).to(device)
-        print(refine_local_output.size())
+
+        local_d_fake_output = local_d(refine_local_output).view(-1)
+        local_fake_loss = l_fns["local"](local_d_fake_output, fake_label)
+        writer.add_scalar("Loss/on_step_local_fake_loss", local_fake_loss.mean().item(), epoch * len(loader) + batch_idx)
+        local_fake_loss.backward(retain_graph=True)
+        optimizers["local"].step()
+        schedulers["local"].step(epoch)
+
         refine_loss, refine_content, refine_style, refine_global, refine_local = l_fns["refine"](refine_output, y_train,
                                                                                                  refine_local_output, x_local)
         refine_loss.backward()
@@ -122,13 +129,6 @@ def train(epoch, loader, l_fns, optimizers, schedulers):
         writer.add_scalar("Loss/on_step_refine_local_loss", refine_local.mean().item(), epoch * len(loader) + batch_idx)
         optimizers["refine"].step()
         schedulers["refine"].step(epoch)
-
-        local_d_fake_output = local_d(refine_local_output).view(-1)
-        local_fake_loss = l_fns["local"](local_d_fake_output, fake_label)
-        writer.add_scalar("Loss/on_step_local_fake_loss", local_fake_loss.mean().item(), epoch * len(loader) + batch_idx)
-        local_fake_loss.backward()
-        optimizers["local"].step()
-        schedulers["local"].step(epoch)
 
         global_d_accuracy_on_refine_output = torch.mean((global_d(refine_output).view(-1) > 0.5).float(), dim=0)
         writer.add_scalar("Metrics/on_step_global_d_acc_on_refine", global_d_accuracy_on_refine_output, epoch * len(loader) + batch_idx)
