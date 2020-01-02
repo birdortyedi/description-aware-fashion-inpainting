@@ -13,7 +13,7 @@ from models import CoarseNet, RefineNet, LocalDiscriminator, GlobalDiscriminator
 from losses import CoarseLoss, RefineLoss
 
 NUM_EPOCHS = 250
-BATCH_SIZE = 256
+BATCH_SIZE = 128
 
 fg_train = HDF5Dataset(filename='./Fashion-Gen/fashiongen_256_256_train.h5')
 fg_val = HDF5Dataset(filename='./Fashion-Gen/fashiongen_256_256_validation.h5', is_train=False)
@@ -27,17 +27,17 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 coarse = CoarseNet(fg_train.vocab_size)
 refine = RefineNet()
 local_d = LocalDiscriminator()
-# global_d = GlobalDiscriminator()
+global_d = GlobalDiscriminator()
 if torch.cuda.device_count() > 1:
     print("Using {} GPUs...".format(torch.cuda.device_count()))
     coarse = nn.DataParallel(coarse)
     refine = nn.DataParallel(refine)
     local_d = nn.DataParallel(local_d)
-    # global_d = nn.DataParallel(global_d)
+    global_d = nn.DataParallel(global_d)
 coarse.to(device)
 refine.to(device)
 local_d.to(device)
-# global_d.to(device)
+global_d.to(device)
 
 coarse_loss_fn = CoarseLoss()
 coarse_loss_fn = coarse_loss_fn.to(device)
@@ -51,12 +51,12 @@ lr = 0.0002
 coarse_optimizer = optim.Adam(coarse.parameters(), lr=lr, betas=(0.9, 0.999))
 refine_optimizer = optim.Adam(refine.parameters(), lr=lr, betas=(0.5, 0.999))
 local_d_optimizer = optim.Adam(local_d.parameters(), lr=lr, betas=(0.5, 0.999))
-# global_d_optimizer = optim.Adam(global_d.parameters(), lr=lr, betas=(0.5, 0.999))
+global_d_optimizer = optim.Adam(global_d.parameters(), lr=lr, betas=(0.5, 0.999))
 
 coarse_scheduler = optim.lr_scheduler.ExponentialLR(coarse_optimizer, gamma=0.95)
 refine_scheduler = optim.lr_scheduler.ExponentialLR(refine_optimizer, gamma=0.95)
 local_d_scheduler = optim.lr_scheduler.ExponentialLR(local_d_optimizer, gamma=0.95)
-# global_d_scheduler = optim.lr_scheduler.ExponentialLR(global_d_optimizer, gamma=0.95)
+global_d_scheduler = optim.lr_scheduler.ExponentialLR(global_d_optimizer, gamma=0.95)
 
 writer = SummaryWriter()
 
@@ -80,23 +80,19 @@ def train(epoch, loader, l_fns, optimizers, schedulers):
         writer.add_scalar("Loss/on_step_coarse_loss", coarse_loss.mean().item(), epoch * len(loader) + batch_idx)
         writer.add_scalar("Loss/on_step_coarse_content_loss", coarse_content.mean().item(), epoch * len(loader) + batch_idx)
         writer.add_scalar("Loss/on_step_coarse_style_loss", coarse_style.mean().item(), epoch * len(loader) + batch_idx)
-        optimizers["coarse"].step()
-        schedulers["coarse"].step(epoch)
 
-        # global_d.zero_grad()
-        # global_d_real_output = global_d(x_train).view(-1)
-        # real_label = torch.ones_like(global_d_real_output).to(device)
-        # global_real_loss = l_fns["global"](global_d_real_output, real_label)
+        global_d.zero_grad()
+        global_d_real_output = global_d(x_train).view(-1)
+        real_label = torch.ones_like(global_d_real_output).to(device)
+        global_real_loss = l_fns["global"](global_d_real_output, real_label)
         # global_real_loss.backward()
-        # writer.add_scalar("Loss/on_step_global_real_loss", global_real_loss.mean().item(), epoch * len(loader) + batch_idx)
-        # global_d_fake_output = global_d(refine(x_train)).view(-1)
-        # fake_label = torch.zeros_like(global_d_fake_output).to(device)
-        # global_fake_loss = l_fns["global"](global_d_fake_output, fake_label)
-        # writer.add_scalar("Loss/on_step_global_fake_loss", global_fake_loss.mean().item(), epoch * len(loader) + batch_idx)
+        writer.add_scalar("Loss/on_step_global_real_loss", global_real_loss.mean().item(), epoch * len(loader) + batch_idx)
+        global_d_fake_output = global_d(refine(x_train)).view(-1)
+        fake_label = torch.zeros_like(global_d_fake_output).to(device)
+        global_fake_loss = l_fns["global"](global_d_fake_output, fake_label)
+        writer.add_scalar("Loss/on_step_global_fake_loss", global_fake_loss.mean().item(), epoch * len(loader) + batch_idx)
         # global_fake_loss.backward()
-        # global_loss = global_real_loss + global_fake_loss
-        # optimizers["global"].step()
-        # schedulers["global"].step(epoch)
+        global_loss = global_real_loss + global_fake_loss
 
         local_d.zero_grad()
         local_d_real_output = local_d(x_local).view(-1)
@@ -120,8 +116,6 @@ def train(epoch, loader, l_fns, optimizers, schedulers):
         writer.add_scalar("Loss/on_step_local_fake_loss", local_fake_loss.mean().item(), epoch * len(loader) + batch_idx)
         # local_fake_loss.backward()
         local_loss = local_real_loss + local_fake_loss
-        optimizers["local"].step()
-        schedulers["local"].step(epoch)
 
         refine_loss, refine_content, refine_style, refine_global, refine_local = l_fns["refine"](refine_output, y_train,
                                                                                                  refine_local_output, x_local)
@@ -131,11 +125,18 @@ def train(epoch, loader, l_fns, optimizers, schedulers):
         writer.add_scalar("Loss/on_step_refine_style_loss", refine_style.mean().item(), epoch * len(loader) + batch_idx)
         writer.add_scalar("Loss/on_step_refine_global_loss", refine_global.mean().item(), epoch * len(loader) + batch_idx)
         writer.add_scalar("Loss/on_step_refine_local_loss", refine_local.mean().item(), epoch * len(loader) + batch_idx)
+
+        loss = coarse_loss + global_loss + local_loss + refine_loss
+        loss.backward()
+
+        optimizers["coarse"].step()
+        schedulers["coarse"].step(epoch)
+        optimizers["global"].step()
+        schedulers["global"].step(epoch)
+        optimizers["local"].step()
+        schedulers["local"].step(epoch)
         optimizers["refine"].step()
         schedulers["refine"].step(epoch)
-
-        loss = coarse_loss + local_loss + refine_loss
-        loss.backward()
 
         # global_d_accuracy_on_refine_output = torch.mean((global_d(refine_output).view(-1) > 0.5).float(), dim=0)
         # writer.add_scalar("Metrics/on_step_global_d_acc_on_refine", global_d_accuracy_on_refine_output, epoch * len(loader) + batch_idx)

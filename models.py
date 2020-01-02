@@ -325,10 +325,6 @@ class Net(nn.Module):
         self.block_10 = self._upsampling_in_lrelu_block(in_channels=32, out_channels=32)
         self.block_11 = self._upsampling_tanh_block(in_channels=64, out_channels=3)
 
-    def forward(self, x, descriptions):
-        raise NotImplementedError
-        pass
-
     @staticmethod
     def _conv_in_lrelu_block(in_channels, out_channels, kernel_size, stride=1, padding=0):
         return nn.Sequential(
