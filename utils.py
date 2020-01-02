@@ -34,7 +34,7 @@ class HDF5Dataset(data.Dataset):
 
     def __getitem__(self, index):
         img = self.h5_file["input_image"][index, :, :]
-        rnd_central_eraser = RandomCentralErasing(p=1.0, scale=(0.0625, 0.125), ratio=(0.75, 1.25), value=1)
+        rnd_central_eraser = CentralErasing(scale=(0.0625, 0.125), ratio=(0.75, 1.25), value=1)
         h_flip = RandomHorizontalFlip(p=0.5)
 
         desc = self.descriptions[index].float()
