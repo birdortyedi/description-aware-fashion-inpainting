@@ -34,14 +34,14 @@ class HDF5Dataset(data.Dataset):
 
     def __getitem__(self, index):
         img = self.h5_file["input_image"][index, :, :]
-        top, left, h, w, _ = RandomCentralErasing.get_params(img, scale=(0.0625, 0.125), ratio=(0.75, 1.25))
-        local_img = F.crop(ToPILImage()(img), top, left, h, w)
-        local_img = ToTensor()(local_img)
-        print(local_img.size())
-        print((top, left, h, w))
+        # top, left, h, w, _ = RandomCentralErasing.get_params(img, scale=(0.0625, 0.125), ratio=(0.75, 1.25))
 
         if self.transform:
-            x = self.transform(img)
+            x, top, left, h, w, v = self.transform(img)
+            local_img = F.crop(ToPILImage()(img), top, left, h, w)
+            local_img = ToTensor()(local_img)
+            print(local_img.size())
+            print((top, left, h, w))
         else:
             x = ToTensor()(img)
 
@@ -101,7 +101,7 @@ class RandomCentralErasing(object):
         if random.uniform(0, 1) < self.p:
             x, y, h, w, v = self.get_params(img, scale=self.scale, ratio=self.ratio, value=self.value)
             return F.erase(img, x, y, h, w, v, self.inplace)
-        return img
+        return img, self.get_params(img, scale=self.scale, ratio=self.ratio, value=self.value)
 
 
 class UnNormalize(object):
