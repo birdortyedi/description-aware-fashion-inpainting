@@ -43,12 +43,13 @@ class HDF5Dataset(data.Dataset):
         if self.is_train:
             img = h_flip(img)
 
-        img = ToTensor()(img)
         erased, local, coords = rnd_central_eraser(img)
 
         print(erased.size())
         print(local.size())
         print(coords)
+
+        img = ToTensor()(img)
 
         return erased, desc, local, coords, img
 
