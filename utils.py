@@ -94,7 +94,7 @@ class CentralErasing(object):
 
     def __call__(self, img):
         x, y, h, w, v = self.get_params(img, scale=self.scale, ratio=self.ratio, value=self.value)
-        return F.erase(img, x, y, h, w, v, self.inplace), ToTensor()(F.crop(ToPILImage()(img), x, y, h, w)), (x, y, h, w)
+        return F.erase(img, x, y, h, w, v, self.inplace), ToTensor()(F.crop(ToPILImage()(img), x, y, h, w)), torch.Tensor([x, y, h, w])
 
 
 class UnNormalize(object):

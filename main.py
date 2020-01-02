@@ -105,9 +105,9 @@ def train(epoch, loader, l_fns, optimizers, schedulers):
 
         refine.zero_grad()
         refine_output = refine(coarse_output)
-        for im, a in zip(refine_output, local_coords):
+        for im, local_coord in zip(refine_output, local_coords):
             print(im.size())
-            print(a)
+            print(local_coord)
             # refine_local_output = torch.stack(ToTensor()(Resize(size=(64, 64))(F.crop(ToPILImage()(im), x, y, h, w))))
 
         # local_d_fake_output = local_d(refine_local_output).view(-1)
