@@ -34,6 +34,9 @@ class HDF5Dataset(data.Dataset):
 
     def __getitem__(self, index):
         img = self.h5_file["input_image"][index, :, :]
+        top, left, h, w = self.transform.RandomCentralErasing.get_params(img, output_size=(256, 256))
+        local_img = F.crop(img, top, left, h, w)
+        local_img = ToTensor()(local_img)
 
         if self.transform:
             x = self.transform(img)
@@ -44,7 +47,7 @@ class HDF5Dataset(data.Dataset):
 
         desc = self.descriptions[index].float()
 
-        return x, desc, img
+        return x, desc, local_img, (top, left, h, w), img
 
     def __len__(self):
         return self.h5_file["input_image"].shape[0]

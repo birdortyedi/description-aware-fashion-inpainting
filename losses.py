@@ -63,3 +63,31 @@ class CustomInpaintingLoss(nn.Module):
                self.structural_weight * str_loss + \
                self.adversarial_weight * adv_loss, \
                con_loss, sty_loss, str_loss, adv_loss
+
+
+class CoarseLoss(nn.Module):
+    def __init__(self):
+        super(CoarseLoss, self).__init__()
+        self.content_loss = ContentLoss()
+        self.style_loss = StyleLoss()
+
+    def forward(self, x, out):
+        c_loss = self.content_loss(x, out.detach())
+        s_loss = self.style_loss(x, out.detach())
+        return 1.0 * c_loss + 5.0 * s_loss, c_loss, s_loss
+
+
+class RefineLoss(nn.Module):
+    def __init__(self):
+        super(RefineLoss, self).__init__()
+        self.content_loss = ContentLoss()
+        self.style_loss = StyleLoss()
+        self.global_loss = nn.BCELoss()
+        self.local_loss = nn.BCELoss()
+
+    def forward(self, x, out, d_x, d_out):
+        c_loss = self.content_loss(x, out.detach())
+        s_loss = self.style_loss(x, out.detach())
+        g_loss = self.global_loss(d_x, d_out.detach())
+        l_loss = self.local_loss(d_x, d_out.detach())
+        return 2.0 * c_loss + 10.0 * s_loss + 0.2 * g_loss + 0.8 * l_loss, c_loss, s_loss, g_loss, l_loss
