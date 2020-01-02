@@ -170,7 +170,7 @@ def train(epoch, loader, l_fns, optimizers, schedulers):
                   "[{}/{} ".format(batch_idx * len(x_train), len(train_loader.dataset)),
                   "({}%)]\t".format(int(100 * batch_idx / float(len(train_loader)))),
                   "Loss: {:.4f}  ".format(refine_loss.mean().item()),
-                  "Content: {:.4f}  ".format(refine_content.mean().item()),
+                  "Content: {:.4f}  ".format(refine_pixel.mean().item()),
                   "Style: {:.4f}  ".format(refine_style.mean().item()),
                   "Global: {:.4f}  ".format(refine_global.mean().item()),
                   "Local: {:.4f} ".format(refine_local.mean().item()))
