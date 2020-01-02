@@ -10,7 +10,7 @@ from colorama import Fore
 
 from utils import HDF5Dataset
 from models import CoarseNet, RefineNet, LocalDiscriminator, GlobalDiscriminator
-from losses import CoarseLoss, RefineLoss
+from losses import CoarseLoss, RefineLoss, TVLoss
 
 NUM_EPOCHS = 250
 BATCH_SIZE = 128
@@ -43,6 +43,8 @@ coarse_loss_fn = CoarseLoss()
 coarse_loss_fn = coarse_loss_fn.to(device)
 refine_loss_fn = RefineLoss()
 refine_loss_fn = refine_loss_fn.to(device)
+tv_loss_fn = TVLoss()
+tv_loss_fn.to(device)
 
 d_loss_fn = nn.BCELoss()
 d_loss_fn = d_loss_fn.to(device)
@@ -75,10 +77,10 @@ def train(epoch, loader, l_fns, optimizers, schedulers):
 
         coarse.zero_grad()
         coarse_output = coarse(x_train, x_desc)
-        coarse_loss, coarse_content, coarse_style = l_fns["coarse"](coarse_output, y_train)
+        coarse_loss, coarse_pixel, coarse_style = l_fns["coarse"](coarse_output, y_train)
         # coarse_loss.backward()
         writer.add_scalar("Loss/on_step_coarse_loss", coarse_loss.mean().item(), epoch * len(loader) + batch_idx)
-        writer.add_scalar("Loss/on_step_coarse_content_loss", coarse_content.mean().item(), epoch * len(loader) + batch_idx)
+        writer.add_scalar("Loss/on_step_coarse_pixel_loss", coarse_pixel.mean().item(), epoch * len(loader) + batch_idx)
         writer.add_scalar("Loss/on_step_coarse_style_loss", coarse_style.mean().item(), epoch * len(loader) + batch_idx)
 
         global_d.zero_grad()
@@ -117,16 +119,23 @@ def train(epoch, loader, l_fns, optimizers, schedulers):
         # local_fake_loss.backward()
         local_loss = local_real_loss + local_fake_loss
 
-        refine_loss, refine_content, refine_style, refine_global, refine_local = l_fns["refine"](refine_output, y_train,
-                                                                                                 refine_local_output, x_local)
+        refine_loss, refine_pixel, refine_style, refine_global, refine_local = l_fns["refine"](refine_output, y_train,
+                                                                                               refine_local_output, x_local)
         # refine_loss.backward()
         writer.add_scalar("Loss/on_step_refine_loss", refine_loss.mean().item(), epoch * len(loader) + batch_idx)
-        writer.add_scalar("Loss/on_step_refine_content_loss", refine_content.mean().item(), epoch * len(loader) + batch_idx)
+        writer.add_scalar("Loss/on_step_refine_pixel_loss", refine_pixel.mean().item(), epoch * len(loader) + batch_idx)
         writer.add_scalar("Loss/on_step_refine_style_loss", refine_style.mean().item(), epoch * len(loader) + batch_idx)
         writer.add_scalar("Loss/on_step_refine_global_loss", refine_global.mean().item(), epoch * len(loader) + batch_idx)
         writer.add_scalar("Loss/on_step_refine_local_loss", refine_local.mean().item(), epoch * len(loader) + batch_idx)
 
-        loss = coarse_loss + global_loss + local_loss + refine_loss
+        tv_global_loss = tv_loss_fn(refine_output)
+        tv_local_loss = tv_loss_fn(refine_local_output)
+        tv_loss = tv_global_loss + tv_local_loss
+        writer.add_scalar("Loss/on_step_tv_loss", tv_loss.mean().item(), epoch * len(loader) + batch_idx)
+        writer.add_scalar("Loss/on_step_tv_global_loss", tv_global_loss.mean().item(), epoch * len(loader) + batch_idx)
+        writer.add_scalar("Loss/on_step_tv_local_loss", tv_local_loss.mean().item(), epoch * len(loader) + batch_idx)
+
+        loss = coarse_loss + global_loss + local_loss + refine_loss + (0.01 * tv_loss)
         loss.backward()
 
         optimizers["coarse"].step()

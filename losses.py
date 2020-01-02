@@ -3,10 +3,10 @@ from torch import nn
 import pytorch_msssim
 
 
-class ContentLoss(nn.Module):
+class PixelLoss(nn.Module):
     def __init__(self):
-        super(ContentLoss, self).__init__()
-        self.loss_fn = nn.L1Loss()
+        super(PixelLoss, self).__init__()
+        self.loss_fn = nn.SmoothL1Loss()
 
     def forward(self, x, out):
         return self.loss_fn(x, out)
@@ -31,6 +31,16 @@ class StyleLoss(nn.Module):
         return G
 
 
+class TVLoss(nn.Module):
+    def __init__(self):
+        super(TVLoss, self).__init__()
+
+    def forward(self, x):
+        var_w = torch.sum(torch.pow(x[:, :, :, :-1] - x[:, :, :, 1:], 2))
+        var_h = torch.sum(torch.pow(x[:, :, :-1, :] - x[:, :, 1:, :], 2))
+        return var_w + var_h
+
+
 class AdverserialLoss(nn.Module):
     def __init__(self):
         super(AdverserialLoss, self).__init__()
@@ -43,7 +53,7 @@ class AdverserialLoss(nn.Module):
 class CustomInpaintingLoss(nn.Module):
     def __init__(self):
         super(CustomInpaintingLoss, self).__init__()
-        self.content_loss = ContentLoss()  # (x, out) := (the original image, inpainting)
+        self.content_loss = PixelLoss()  # (x, out) := (the original image, inpainting)
         self.content_weight = 25.0
         self.style_loss = StyleLoss()  # (x, out) := (the original image, inpainting)
         self.style_weight = 100.0
@@ -68,26 +78,26 @@ class CustomInpaintingLoss(nn.Module):
 class CoarseLoss(nn.Module):
     def __init__(self):
         super(CoarseLoss, self).__init__()
-        self.content_loss = ContentLoss()
+        self.pixel_loss = PixelLoss()
         self.style_loss = StyleLoss()
 
     def forward(self, x, out):
-        c_loss = self.content_loss(x, out.detach())
+        c_loss = self.pixel_loss(x, out.detach())
         s_loss = self.style_loss(x, out.detach())
-        return 1.0 * c_loss + 5.0 * s_loss, c_loss, s_loss
+        return 1.0 * c_loss + 20.0 * s_loss, c_loss, s_loss
 
 
 class RefineLoss(nn.Module):
     def __init__(self):
         super(RefineLoss, self).__init__()
-        self.content_loss = ContentLoss()
+        self.pixel_loss = PixelLoss()
         self.style_loss = StyleLoss()
         self.global_loss = nn.BCELoss()
         self.local_loss = nn.BCELoss()
 
     def forward(self, x, out, d_x, d_out):
-        c_loss = self.content_loss(x, out.detach())
+        c_loss = self.pixel_loss(x, out.detach())
         s_loss = self.style_loss(x, out.detach())
         g_loss = self.global_loss(d_x, d_out.detach())
         l_loss = self.local_loss(d_x, d_out.detach())
-        return 2.0 * c_loss + 10.0 * s_loss + 0.2 * g_loss + 0.8 * l_loss, c_loss, s_loss, g_loss, l_loss
+        return 1.0 * c_loss + 25.0 * s_loss + 0.25 * g_loss + 0.75 * l_loss, c_loss, s_loss, g_loss, l_loss

@@ -329,7 +329,7 @@ class Net(nn.Module):
     def _conv_in_lrelu_block(in_channels, out_channels, kernel_size, stride=1, padding=0):
         return nn.Sequential(
             nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size, stride=stride, padding=padding),
-            nn.InstanceNorm2d(num_features=out_channels),
+            nn.InstanceNorm2d(num_features=out_channels, affine=True),
             nn.LeakyReLU(negative_slope=0.2)
         )
 
@@ -353,8 +353,9 @@ class Net(nn.Module):
     def _upsampling_in_lrelu_block(in_channels, out_channels, mode='bilinear', scale_factor=2.0, padding=0):
         return nn.Sequential(
             nn.Upsample(mode=mode, scale_factor=scale_factor),
-            nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=1, padding=padding),
-            nn.InstanceNorm2d(num_features=out_channels),
+            nn.ReflectionPad2d(1),
+            nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=3, padding=padding),
+            nn.InstanceNorm2d(num_features=out_channels, affine=True),
             nn.LeakyReLU(negative_slope=0.2)
         )
 
@@ -362,7 +363,8 @@ class Net(nn.Module):
     def _upsampling_tanh_block(in_channels, out_channels, mode='bilinear', scale_factor=2.0, padding=0):
         return nn.Sequential(
             nn.Upsample(mode=mode, scale_factor=scale_factor),
-            nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=1, padding=padding),
+            nn.ReflectionPad2d(1),
+            nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=3, padding=padding),
             nn.Tanh()
         )
 
