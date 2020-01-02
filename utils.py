@@ -38,6 +38,8 @@ class HDF5Dataset(data.Dataset):
                                                                                                             ratio=(0.75, 1.25))
         local_img = F.crop(ToPILImage()(img), top, left, h, w)
         local_img = ToTensor()(local_img)
+        print(local_img.size())
+        print((top, left, h, w))
 
         if self.transform:
             x = self.transform(img)
