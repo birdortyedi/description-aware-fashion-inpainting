@@ -105,10 +105,14 @@ def train(epoch, loader, l_fns, optimizers, schedulers):
 
         refine.zero_grad()
         refine_output = refine(coarse_output)
+        refine_local_output = list()
         for im, local_coord in zip(refine_output, local_coords):
             top, left, h, w = local_coord
-            refine_local_output = torch.stack(ToTensor()(Resize(size=(64, 64))(F.crop(ToPILImage()(im.cpu()), top.item(), left.item(), h.item(), w.item()))))
+            local_output = ToTensor()(Resize(size=(64, 64))(F.crop(ToPILImage()(im.cpu()), top.item(), left.item(), h.item(), w.item())))
+            refine_local_output.append(local_output)
 
+        refine_local_output = torch.stack(refine_local_output)
+        print(refine_local_output.size())
         local_d_fake_output = local_d(refine_local_output).view(-1)
         local_fake_loss = l_fns["local"](local_d_fake_output, fake_label)
         writer.add_scalar("Loss/on_step_local_fake_loss", local_fake_loss.mean().item(), epoch * len(loader) + batch_idx)
