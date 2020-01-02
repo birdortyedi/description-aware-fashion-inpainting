@@ -105,13 +105,17 @@ def train(epoch, loader, l_fns, optimizers, schedulers):
 
         refine.zero_grad()
         refine_output = refine(coarse_output)
-        for im, (x, y, h, w) in zip(refine_output.cpu().detach().numpy(), local_coords):
-            refine_local_output = torch.stack(ToTensor()(Resize(size=(64, 64))(F.crop(ToPILImage()(im), x, y, h, w))))
+        for im, a, b, c in zip(refine_output.cpu().detach().numpy(), local_coords):
+            print(im.size())
+            print(a)
+            print(b)
+            print(c)
+            # refine_local_output = torch.stack(ToTensor()(Resize(size=(64, 64))(F.crop(ToPILImage()(im), x, y, h, w))))
 
-        local_d_fake_output = local_d(refine_local_output).view(-1)
-        local_fake_loss = l_fns["local"](local_d_fake_output, fake_label)
-        writer.add_scalar("Loss/on_step_local_fake_loss", local_fake_loss.mean().item(), epoch * len(loader) + batch_idx)
-        local_fake_loss.backward()
+        # local_d_fake_output = local_d(refine_local_output).view(-1)
+        # local_fake_loss = l_fns["local"](local_d_fake_output, fake_label)
+        # writer.add_scalar("Loss/on_step_local_fake_loss", local_fake_loss.mean().item(), epoch * len(loader) + batch_idx)
+        #local_fake_loss.backward()
         optimizers["local"].step()
         schedulers["local"].step(epoch)
 
