@@ -76,7 +76,7 @@ def train(epoch, loader, l_fns, optimizers, schedulers):
         coarse.zero_grad()
         coarse_output = coarse(x_train, x_desc)
         coarse_loss, coarse_content, coarse_style = l_fns["coarse"](coarse_output, y_train)
-        coarse_loss.backward()
+        # coarse_loss.backward()
         writer.add_scalar("Loss/on_step_coarse_loss", coarse_loss.mean().item(), epoch * len(loader) + batch_idx)
         writer.add_scalar("Loss/on_step_coarse_content_loss", coarse_content.mean().item(), epoch * len(loader) + batch_idx)
         writer.add_scalar("Loss/on_step_coarse_style_loss", coarse_style.mean().item(), epoch * len(loader) + batch_idx)
@@ -87,13 +87,14 @@ def train(epoch, loader, l_fns, optimizers, schedulers):
         global_d_real_output = global_d(x_train).view(-1)
         real_label = torch.ones_like(global_d_real_output).to(device)
         global_real_loss = l_fns["global"](global_d_real_output, real_label)
-        global_real_loss.backward()
+        # global_real_loss.backward()
         writer.add_scalar("Loss/on_step_global_real_loss", global_real_loss.mean().item(), epoch * len(loader) + batch_idx)
         global_d_fake_output = global_d(refine(x_train)).view(-1)
         fake_label = torch.zeros_like(global_d_fake_output).to(device)
         global_fake_loss = l_fns["global"](global_d_fake_output, fake_label)
         writer.add_scalar("Loss/on_step_global_fake_loss", global_fake_loss.mean().item(), epoch * len(loader) + batch_idx)
-        global_fake_loss.backward()
+        # global_fake_loss.backward()
+        global_loss = global_real_loss + global_fake_loss
         optimizers["global"].step()
         schedulers["global"].step(epoch)
 
@@ -101,7 +102,7 @@ def train(epoch, loader, l_fns, optimizers, schedulers):
         local_d_real_output = local_d(x_local).view(-1)
         local_real_loss = l_fns["local"](local_d_real_output, real_label)
         writer.add_scalar("Loss/on_step_local_real_loss", local_real_loss.mean().item(), epoch * len(loader) + batch_idx)
-        local_real_loss.backward()
+        # local_real_loss.backward()
 
         refine.zero_grad()
         refine_output = refine(coarse_output)
@@ -115,13 +116,14 @@ def train(epoch, loader, l_fns, optimizers, schedulers):
         local_d_fake_output = local_d(refine_local_output).view(-1)
         local_fake_loss = l_fns["local"](local_d_fake_output, fake_label)
         writer.add_scalar("Loss/on_step_local_fake_loss", local_fake_loss.mean().item(), epoch * len(loader) + batch_idx)
-        local_fake_loss.backward(retain_graph=True)
+        # local_fake_loss.backward()
+        local_loss = local_real_loss + local_fake_loss
         optimizers["local"].step()
         schedulers["local"].step(epoch)
 
         refine_loss, refine_content, refine_style, refine_global, refine_local = l_fns["refine"](refine_output, y_train,
                                                                                                  refine_local_output, x_local)
-        refine_loss.backward()
+        # refine_loss.backward()
         writer.add_scalar("Loss/on_step_refine_loss", refine_loss.mean().item(), epoch * len(loader) + batch_idx)
         writer.add_scalar("Loss/on_step_refine_content_loss", refine_content.mean().item(), epoch * len(loader) + batch_idx)
         writer.add_scalar("Loss/on_step_refine_style_loss", refine_style.mean().item(), epoch * len(loader) + batch_idx)
@@ -129,6 +131,9 @@ def train(epoch, loader, l_fns, optimizers, schedulers):
         writer.add_scalar("Loss/on_step_refine_local_loss", refine_local.mean().item(), epoch * len(loader) + batch_idx)
         optimizers["refine"].step()
         schedulers["refine"].step(epoch)
+
+        loss = coarse_loss + global_loss + local_loss + refine_loss
+        loss.backward()
 
         global_d_accuracy_on_refine_output = torch.mean((global_d(refine_output).view(-1) > 0.5).float(), dim=0)
         writer.add_scalar("Metrics/on_step_global_d_acc_on_refine", global_d_accuracy_on_refine_output, epoch * len(loader) + batch_idx)
