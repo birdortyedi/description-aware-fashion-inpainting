@@ -34,7 +34,7 @@ class HDF5Dataset(data.Dataset):
 
     def __getitem__(self, index):
         img = self.h5_file["input_image"][index, :, :]
-        top, left, h, w = RandomCentralErasing(p=1.0, scale=(0.0625, 0.125), ratio=(0.75, 1.25)).get_params(img, scale=(0.0625, 0.125),
+        top, left, h, w, _ = RandomCentralErasing(p=1.0, scale=(0.0625, 0.125), ratio=(0.75, 1.25)).get_params(img, scale=(0.0625, 0.125),
                                                                                                             ratio=(0.75, 1.25))
         local_img = F.crop(img, top, left, h, w)
         local_img = ToTensor()(local_img)
