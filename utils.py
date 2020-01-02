@@ -1,6 +1,6 @@
 import torch
 from torchvision.transforms import functional as F
-from torchvision.transforms import Normalize, ToTensor, ToPILImage, RandomHorizontalFlip
+from torchvision.transforms import Normalize, ToTensor, ToPILImage, RandomHorizontalFlip, Resize
 from torchtext.data import Field
 from torch.utils import data
 
@@ -45,6 +45,7 @@ class HDF5Dataset(data.Dataset):
 
         img = ToTensor()(img)
         erased, local, coords = rnd_central_eraser(img)
+        local = Resize(size=(64, 64))(local)
 
         print(erased.size())
         print(local.size())
