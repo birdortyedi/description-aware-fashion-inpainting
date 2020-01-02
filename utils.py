@@ -40,7 +40,7 @@ class HDF5Dataset(data.Dataset):
         desc = self.descriptions[index].float()
 
         if self.is_train:
-            img = h_flip(img)
+            img = h_flip(ToPILImage()(img))
 
         img = ToTensor()(img)
         erased, local, coords = rnd_central_eraser(img)
