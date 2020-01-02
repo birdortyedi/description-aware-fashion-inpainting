@@ -111,7 +111,7 @@ def train(epoch, loader, l_fns, optimizers, schedulers):
             local_output = ToTensor()(Resize(size=(64, 64))(F.crop(ToPILImage()(im.cpu()), top.item(), left.item(), h.item(), w.item())))
             refine_local_output.append(local_output)
 
-        refine_local_output = torch.stack(refine_local_output)
+        refine_local_output = torch.stack(refine_local_output).to(device)
         print(refine_local_output.size())
         local_d_fake_output = local_d(refine_local_output).view(-1)
         local_fake_loss = l_fns["local"](local_d_fake_output, fake_label)
