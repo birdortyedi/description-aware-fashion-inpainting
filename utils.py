@@ -45,7 +45,7 @@ class HDF5Dataset(data.Dataset):
 
         img = ToTensor()(img)
         erased, local, coords = rnd_central_eraser(img)
-        local = ToTensor()(Resize(size=(64, 64))(ToPILImage(local)))
+        local = ToTensor()(Resize(size=(64, 64))(ToPILImage()(local)))
 
         print(erased.size())
         print(local.size())
