@@ -402,7 +402,7 @@ class RefineNet(Net):
 
         self._1x1conv_8 = self._1x1conv_lrelu_block(in_channels=256, out_channels=64)
 
-    def forward(self, x, descriptions):
+    def forward(self, x):
         x_1 = self.block_1(x)
         x_2 = self.block_2(x_1)
         x_3 = self.block_3(x_2)
