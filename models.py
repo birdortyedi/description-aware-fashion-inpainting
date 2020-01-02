@@ -244,7 +244,7 @@ class LocalDiscriminator(nn.Module):
         self.d_block_5 = self._conv_in_lrelu_block(in_channels=128, out_channels=64, kernel_size=3, padding=1)
         self.d_block_6 = self._conv_in_lrelu_block(in_channels=192, out_channels=64, kernel_size=3, stride=2, padding=1)
         self.avg_pooling = nn.AdaptiveAvgPool2d(output_size=(1, 1))
-        self.d_block_9 = nn.Linear(in_features=64, out_features=1)
+        self.d_block_7 = nn.Linear(in_features=64, out_features=1)
 
     def forward(self, x):
         print(x.size())

@@ -2,6 +2,7 @@ import torch
 from torch import nn, optim
 from torch.utils import data
 from torchvision import transforms
+from torchvision.transforms import functional as F
 from tensorboardX import SummaryWriter
 
 from tqdm import tqdm
@@ -114,10 +115,8 @@ def train(epoch, loader, l_fns, optimizers, schedulers):
 
         refine.zero_grad()
         refine_output = refine(coarse_output)
-        refine_local_output = list()
-        for im, (x, y, _, _) in zip(refine_output, local_coords):
-            refine_local_output.append(im[:, x:x+32, y:y+32])
-        refine_local_output = torch.FloatTensor(refine_local_output)  # TODO
+        for im, (x, y, _, _) in zip(refine_output.cpu().detach().numpy(), local_coords.numpy()):
+            refine_local_output = torch.stack(transforms.ToTensor()(F.crop(transforms.ToPILImage()(im), x, y, 32, 32)))
 
         local_d_fake_output = local_d(refine_local_output).view(-1)
         local_fake_loss = l_fns["local"](local_d_fake_output, fake_label)
