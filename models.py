@@ -247,6 +247,7 @@ class LocalDiscriminator(nn.Module):
         self.d_block_9 = nn.Linear(in_features=64, out_features=1)
 
     def forward(self, x):
+        print(x.size())
         x = self.d_block_1(x)
         print(x.size())
 

@@ -115,8 +115,8 @@ def train(epoch, loader, l_fns, optimizers, schedulers):
         refine.zero_grad()
         refine_output = refine(coarse_output)
         refine_local_output = list()
-        for im, (x, y, h, w) in zip(refine_output, local_coords):
-            refine_local_output.append(im[:, x:x+w, y:y+h])
+        for im, (x, y, _, _) in zip(refine_output, local_coords):
+            refine_local_output.append(im[:, x:x+32, y:y+32])
         refine_local_output = torch.FloatTensor(refine_local_output)  # TODO
 
         local_d_fake_output = local_d(refine_local_output).view(-1)
