@@ -387,9 +387,8 @@ class RefineNet(Net):
 
         # Decoder
         self.block_6 = self._upsampling_in_lrelu_block(in_channels=16, out_channels=32)
-        self._1x1conv_6 = self._1x1conv_lrelu_block(in_channels=32, out_channels=64)
+        self._1x1conv_6 = self._1x1conv_lrelu_block(in_channels=288, out_channels=64)
         self.block_7 = self._upsampling_in_lrelu_block(in_channels=64, out_channels=64)
-        self._1x1conv_7 = self._1x1conv_lrelu_block(in_channels=64, out_channels=128)
 
         self._1x1conv_8 = self._1x1conv_lrelu_block(in_channels=256, out_channels=64)
 
@@ -406,10 +405,11 @@ class RefineNet(Net):
         visual_embedding = self.avg_pooling(x_5).squeeze()
 
         x_6 = self.block_6(visual_embedding.view(-1, 16, 4, 4))
+        x_6 = torch.cat((x_5, x_6), dim=1)
         x_6 = self._1x1conv_6(x_6)
 
         x_7 = self.block_7(x_6)
-        x_7 = self._1x1conv_7(x_7)
+        x_7 = torch.cat((x_4, x_7), dim=1)
 
         x_8 = self.block_8(x_7)
         x_8 = torch.cat((x_3, x_8), dim=1)
@@ -432,7 +432,7 @@ class CoarseNet(Net):
         super(CoarseNet, self).__init__()
 
         # Self-Attention
-        # self.self_attention = SelfAttention(in_channels=128)
+        self.self_attention = SelfAttention(in_channels=128)
 
         self.block_5 = self._conv_in_lrelu_block(in_channels=64, out_channels=128, kernel_size=5, stride=2, padding=2)
 
@@ -441,11 +441,11 @@ class CoarseNet(Net):
 
         # Decoder
         self.block_6 = self._upsampling_in_lrelu_block(in_channels=16, out_channels=16)
-        self._1x1conv_6 = self._1x1conv_lrelu_block(in_channels=16, out_channels=32)
+        self._1x1conv_6 = self._1x1conv_lrelu_block(in_channels=144, out_channels=32)
         self.block_7 = self._upsampling_in_lrelu_block(in_channels=32, out_channels=32)
-        self._1x1conv_7 = self._1x1conv_lrelu_block(in_channels=32, out_channels=128)
+        self._1x1conv_7 = self._1x1conv_lrelu_block(in_channels=96, out_channels=128)
 
-        self._1x1conv_8 = self._1x1conv_lrelu_block(in_channels=128, out_channels=64)
+        self._1x1conv_8 = self._1x1conv_lrelu_block(in_channels=384, out_channels=64)
 
     def forward(self, x, descriptions):
         x_1 = self.block_1(x)
@@ -453,7 +453,7 @@ class CoarseNet(Net):
         x_3 = self.block_3(x_2)
 
         dil_res_x_3 = self.dilated_res_blocks(x_3)
-        # attention_map, _ = self.self_attention(dil_res_x_3)
+        attention_map, _ = self.self_attention(dil_res_x_3)
 
         x_4 = self.block_4(x_3)
         x_5 = self.block_5(x_4)
@@ -463,13 +463,15 @@ class CoarseNet(Net):
         embedding = torch.cat((visual_embedding, textual_embedding), dim=1)
 
         x_6 = self.block_6(embedding.view(-1, 16, 4, 4))
+        x_6 = torch.cat((x_5, x_6), dim=1)
         x_6 = self._1x1conv_6(x_6)
 
         x_7 = self.block_7(x_6)
+        x_7 = torch.cat((x_4, x_7), dim=1)
         x_7 = self._1x1conv_7(x_7)
 
         x_8 = self.block_8(x_7)
-        # x_8 = torch.cat((x_3, x_8, attention_map), dim=1)
+        x_8 = torch.cat((x_3, x_8, attention_map), dim=1)
         x_8 = self._1x1conv_8(x_8)
 
         x_9 = self.block_9(x_8)
