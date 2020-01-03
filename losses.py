@@ -79,25 +79,56 @@ class CoarseLoss(nn.Module):
     def __init__(self):
         super(CoarseLoss, self).__init__()
         self.pixel_loss = PixelLoss()
-        self.style_loss = StyleLoss()
+        self.content_loss = nn.MSELoss()
+        self.style_loss = nn.MSELoss()
 
-    def forward(self, x, out):
-        c_loss = self.pixel_loss(x, out.detach())
-        s_loss = self.style_loss(x, out.detach())
-        return 1.0 * c_loss + 20.0 * s_loss, c_loss, s_loss
+    def forward(self, x, out, features_x, features_out):
+        p_loss = self.pixel_loss(x, out.detach())
+        c_loss = self.content_loss(features_x.relu2_2.detach(), features_out.relu2_2.detach())
+        s_loss = 0.0
+        for f_x, f_out in zip(features_x, features_out):
+            G_f_x = self._gram_matrix(f_x.detach())
+            G_f_out = self._gram_matrix(f_out.detach())
+            s_loss += self.style_loss(G_f_x, G_f_out)
+        return 1.0 * p_loss + 3.0 * c_loss + 20.0 * s_loss, p_loss, c_loss, s_loss
+
+    @staticmethod
+    def _gram_matrix(mat):
+        b, ch, h, w = mat.size()
+        m = mat.view(b, ch, w * h)
+        m_transposed = m.transpose(1, 2)
+        G = m.bmm(m_transposed) / (h * w * ch)
+        return G
 
 
 class RefineLoss(nn.Module):
     def __init__(self):
         super(RefineLoss, self).__init__()
         self.pixel_loss = PixelLoss()
-        self.style_loss = StyleLoss()
+        self.content_loss = nn.MSELoss()
+        self.style_loss = nn.MSELoss()
         self.global_loss = nn.BCELoss()
         self.local_loss = nn.BCELoss()
+        self.tv_loss = TVLoss()
 
-    def forward(self, x, out, d_x, d_out):
-        c_loss = self.pixel_loss(x, out.detach())
-        s_loss = self.style_loss(x, out.detach())
+    def forward(self, x, out, d_x, d_out, features_x, features_out):
+        p_loss = self.pixel_loss(x, out.detach())
+        c_loss = self.content_loss(features_x.relu2_2.detach(), features_out.relu2_2.detach())
+        s_loss = 0.0
+        for f_x, f_out in zip(features_x, features_out):
+            G_f_x = self._gram_matrix(f_x.detach())
+            G_f_out = self._gram_matrix(f_out.detach())
+            s_loss += self.style_loss(G_f_x, G_f_out)
         g_loss = self.global_loss(d_x, d_out.detach())
         l_loss = self.local_loss(d_x, d_out.detach())
-        return 1.0 * c_loss + 25.0 * s_loss + 0.25 * g_loss + 0.75 * l_loss, c_loss, s_loss, g_loss, l_loss
+        t_loss = self.tv_loss(x, out.detach())
+        return 1.0 * p_loss + 3.0 * c_loss + 25.0 * s_loss + 0.25 * g_loss + 0.75 * l_loss + 0.1 * t_loss, \
+            p_loss, c_loss, s_loss, g_loss, l_loss, t_loss
+
+    @staticmethod
+    def _gram_matrix(mat):
+        b, ch, h, w = mat.size()
+        m = mat.view(b, ch, w * h)
+        m_transposed = m.transpose(1, 2)
+        G = m.bmm(m_transposed) / (h * w * ch)
+        return G

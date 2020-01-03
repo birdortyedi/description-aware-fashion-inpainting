@@ -8,9 +8,9 @@ from tensorboardX import SummaryWriter
 from tqdm import tqdm
 from colorama import Fore
 
-from utils import HDF5Dataset
-from models import CoarseNet, RefineNet, LocalDiscriminator, GlobalDiscriminator
-from losses import CoarseLoss, RefineLoss, TVLoss
+from utils import HDF5Dataset, normalize_batch
+from models import CoarseNet, RefineNet, LocalDiscriminator, GlobalDiscriminator, VGG16
+from losses import CoarseLoss, RefineLoss
 
 NUM_EPOCHS = 250
 BATCH_SIZE = 128
@@ -28,34 +28,35 @@ coarse = CoarseNet(fg_train.vocab_size)
 refine = RefineNet()
 local_d = LocalDiscriminator()
 global_d = GlobalDiscriminator()
+vgg = VGG16(requires_grad=False)
 if torch.cuda.device_count() > 1:
     print("Using {} GPUs...".format(torch.cuda.device_count()))
     coarse = nn.DataParallel(coarse)
     refine = nn.DataParallel(refine)
     local_d = nn.DataParallel(local_d)
     global_d = nn.DataParallel(global_d)
+    vgg = nn.DataParallel(vgg)
 coarse.to(device)
 refine.to(device)
 local_d.to(device)
 global_d.to(device)
+vgg.to(device)
 
 coarse_loss_fn = CoarseLoss()
 coarse_loss_fn = coarse_loss_fn.to(device)
 refine_loss_fn = RefineLoss()
 refine_loss_fn = refine_loss_fn.to(device)
-tv_loss_fn = TVLoss()
-tv_loss_fn.to(device)
 
 d_loss_fn = nn.BCELoss()
 d_loss_fn = d_loss_fn.to(device)
 
-lr = 0.0002
-coarse_optimizer = optim.Adam(coarse.parameters(), lr=lr, betas=(0.9, 0.999))
+coarse_lr, lr = 0.001, 0.0002
+coarse_optimizer = optim.Adam(coarse.parameters(), lr=coarse_lr, betas=(0.9, 0.999))
 refine_optimizer = optim.Adam(refine.parameters(), lr=lr, betas=(0.5, 0.999))
 local_d_optimizer = optim.Adam(local_d.parameters(), lr=lr, betas=(0.5, 0.999))
 global_d_optimizer = optim.Adam(global_d.parameters(), lr=lr, betas=(0.5, 0.999))
 
-coarse_scheduler = optim.lr_scheduler.ExponentialLR(coarse_optimizer, gamma=0.95)
+coarse_scheduler = optim.lr_scheduler.ExponentialLR(coarse_optimizer, gamma=0.9)
 refine_scheduler = optim.lr_scheduler.ExponentialLR(refine_optimizer, gamma=0.95)
 local_d_scheduler = optim.lr_scheduler.ExponentialLR(local_d_optimizer, gamma=0.95)
 global_d_scheduler = optim.lr_scheduler.ExponentialLR(global_d_optimizer, gamma=0.95)
@@ -77,10 +78,15 @@ def train(epoch, loader, l_fns, optimizers, schedulers):
 
         coarse.zero_grad()
         coarse_output = coarse(x_train, x_desc)
-        coarse_loss, coarse_pixel, coarse_style = l_fns["coarse"](coarse_output, y_train)
+        coarse_vgg_features = vgg(normalize_batch(x_train))
+        coarse_output_vgg_features = vgg(normalize_batch(coarse_output))
+        coarse_loss, coarse_pixel, \
+            coarse_content, coarse_style = l_fns["coarse"](coarse_output, y_train,
+                                                           coarse_vgg_features, coarse_output_vgg_features)
         # coarse_loss.backward()
         writer.add_scalar("Loss/on_step_coarse_loss", coarse_loss.mean().item(), epoch * len(loader) + batch_idx)
         writer.add_scalar("Loss/on_step_coarse_pixel_loss", coarse_pixel.mean().item(), epoch * len(loader) + batch_idx)
+        writer.add_scalar("Loss/on_step_coarse_content_loss", coarse_content.mean().item(), epoch * len(loader) + batch_idx)
         writer.add_scalar("Loss/on_step_coarse_style_loss", coarse_style.mean().item(), epoch * len(loader) + batch_idx)
 
         global_d.zero_grad()
@@ -105,6 +111,7 @@ def train(epoch, loader, l_fns, optimizers, schedulers):
 
         refine.zero_grad()
         refine_output = refine(coarse_output)
+        refine_output_vgg_features = vgg(normalize_batch(refine_output))
         refine_local_output = list()
         for im, local_coord in zip(refine_output, local_coords):
             top, left, h, w = local_coord
@@ -119,23 +126,20 @@ def train(epoch, loader, l_fns, optimizers, schedulers):
         # local_fake_loss.backward()
         local_loss = local_real_loss + local_fake_loss
 
-        refine_loss, refine_pixel, refine_style, refine_global, refine_local = l_fns["refine"](refine_output, y_train,
-                                                                                               refine_local_output, x_local)
+        refine_loss, refine_pixel, refine_content, refine_style, \
+            refine_global, refine_local, refine_tv = l_fns["refine"](refine_output, y_train,
+                                                                     refine_local_output, x_local,
+                                                                     coarse_output_vgg_features, refine_output_vgg_features)
         # refine_loss.backward()
         writer.add_scalar("Loss/on_step_refine_loss", refine_loss.mean().item(), epoch * len(loader) + batch_idx)
         writer.add_scalar("Loss/on_step_refine_pixel_loss", refine_pixel.mean().item(), epoch * len(loader) + batch_idx)
+        writer.add_scalar("Loss/on_step_refine_content_loss", refine_content.mean().item(), epoch * len(loader) + batch_idx)
         writer.add_scalar("Loss/on_step_refine_style_loss", refine_style.mean().item(), epoch * len(loader) + batch_idx)
         writer.add_scalar("Loss/on_step_refine_global_loss", refine_global.mean().item(), epoch * len(loader) + batch_idx)
         writer.add_scalar("Loss/on_step_refine_local_loss", refine_local.mean().item(), epoch * len(loader) + batch_idx)
+        writer.add_scalar("Loss/on_step_refine_tv_loss", refine_tv.mean().item(), epoch * len(loader) + batch_idx)
 
-        tv_global_loss = tv_loss_fn(refine_output)
-        tv_local_loss = tv_loss_fn(refine_local_output)
-        tv_loss = tv_global_loss + tv_local_loss
-        writer.add_scalar("Loss/on_step_tv_loss", tv_loss.mean().item(), epoch * len(loader) + batch_idx)
-        writer.add_scalar("Loss/on_step_tv_global_loss", tv_global_loss.mean().item(), epoch * len(loader) + batch_idx)
-        writer.add_scalar("Loss/on_step_tv_local_loss", tv_local_loss.mean().item(), epoch * len(loader) + batch_idx)
-
-        loss = coarse_loss + global_loss + local_loss + refine_loss + (0.01 * tv_loss)
+        loss = (2.0 * coarse_loss) + (0.1 * global_loss) + (0.5 * local_loss) + (5.0 * refine_loss)
         loss.backward()
 
         optimizers["coarse"].step()
@@ -147,8 +151,8 @@ def train(epoch, loader, l_fns, optimizers, schedulers):
         optimizers["refine"].step()
         schedulers["refine"].step(epoch)
 
-        # global_d_accuracy_on_refine_output = torch.mean((global_d(refine_output).view(-1) > 0.5).float(), dim=0)
-        # writer.add_scalar("Metrics/on_step_global_d_acc_on_refine", global_d_accuracy_on_refine_output, epoch * len(loader) + batch_idx)
+        global_d_accuracy_on_refine_output = torch.mean((global_d(refine_output).view(-1) > 0.5).float(), dim=0)
+        writer.add_scalar("Metrics/on_step_global_d_acc_on_refine", global_d_accuracy_on_refine_output, epoch * len(loader) + batch_idx)
         local_d_accuracy_on_refine_local_output = torch.mean((local_d(refine_local_output).view(-1) > 0.5).float(), dim=0)
         writer.add_scalar("Metrics/on_step_local_d_acc_on_refine", local_d_accuracy_on_refine_local_output, epoch * len(loader) + batch_idx)
 
@@ -158,7 +162,7 @@ def train(epoch, loader, l_fns, optimizers, schedulers):
             local_0 = (x_local[0].cpu()).detach().numpy()
             coarse_0 = (coarse_output[0].squeeze(0).cpu()).detach().numpy()
             refine_0 = (refine_output[0].squeeze(0).cpu()).detach().numpy()
-            refine_local_0 =(refine_local_output[0].squeeze(0).cpu()).detach().numpy()
+            refine_local_0 = (refine_local_output[0].squeeze(0).cpu()).detach().numpy()
             writer.add_image("train_x/epoch_{}".format(epoch), x_0, num_step)
             writer.add_image("original/epoch_{}".format(epoch), y_0, num_step)
             writer.add_image("local_x/epoch_{}".format(epoch), local_0, num_step)
