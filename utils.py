@@ -35,7 +35,7 @@ class HDF5Dataset(data.Dataset):
     def __getitem__(self, index):
         img = self.h5_file["input_image"][index, :, :]
         img = ToPILImage()(img)
-        rnd_central_eraser = CentralErasing(scale=(0.0625, 0.125), ratio=(0.75, 1.25), value=1)
+        rnd_central_eraser = CentralErasing(scale=(0.03125, 0.0625), ratio=(0.75, 1.25), value=1)
         h_flip = RandomHorizontalFlip(p=0.5)
 
         desc = self.descriptions[index].float()
@@ -45,7 +45,7 @@ class HDF5Dataset(data.Dataset):
 
         img = ToTensor()(img)
         erased, local, coords = rnd_central_eraser(img)
-        local = ToTensor()(Resize(size=(64, 64))(ToPILImage()(local)))
+        local = ToTensor()(Resize(size=(32, 32))(ToPILImage()(local)))
 
         return erased, desc, local, coords, img
 
