@@ -91,7 +91,7 @@ class CoarseLoss(nn.Module):
             G_f_out = self._gram_matrix(f_out).detach()
             s_loss += self.style_loss(G_f_x, G_f_out)
             c_loss += self.content_loss(f_x.detach(), f_out.detach()) / 255.
-        return 2.0 * p_loss + 1.0 * c_loss + 10.0 * s_loss, p_loss, c_loss, s_loss
+        return 5.0 * p_loss + 3.0 * c_loss + 100.0 * s_loss, p_loss, c_loss, s_loss
 
     @staticmethod
     def _gram_matrix(mat):
@@ -124,7 +124,7 @@ class RefineLoss(nn.Module):
         g_loss = self.global_loss(d_x, d_out.detach())
         l_loss = self.local_loss(d_x, d_out.detach())
         t_loss = self.tv_loss(out.detach())
-        return 20.0 * p_loss + 10.0 * c_loss + 100.0 * s_loss + 0.25 * g_loss + 0.75 * l_loss + 0.00001 * t_loss, \
+        return 25.0 * p_loss + 15.0 * c_loss + 100.0 * s_loss + 0.2 * g_loss + 0.8 * l_loss + 0.0001 * t_loss, \
             p_loss, c_loss, s_loss, g_loss, l_loss, t_loss
 
     @staticmethod

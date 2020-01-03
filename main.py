@@ -49,11 +49,11 @@ refine_loss_fn = refine_loss_fn.to(device)
 d_loss_fn = nn.BCELoss()
 d_loss_fn = d_loss_fn.to(device)
 
-lr = 0.0002
+lr, d_lr = 0.0002, 0.00001
 coarse_optimizer = optim.Adam(coarse.parameters(), lr=lr, betas=(0.9, 0.999))
 refine_optimizer = optim.Adam(refine.parameters(), lr=lr, betas=(0.5, 0.999))
-local_d_optimizer = optim.Adam(local_d.parameters(), lr=lr, betas=(0.5, 0.999))
-global_d_optimizer = optim.Adam(global_d.parameters(), lr=lr, betas=(0.5, 0.999))
+local_d_optimizer = optim.Adam(local_d.parameters(), lr=d_lr, betas=(0.5, 0.999))
+global_d_optimizer = optim.Adam(global_d.parameters(), lr=d_lr, betas=(0.5, 0.999))
 
 coarse_scheduler = optim.lr_scheduler.ExponentialLR(coarse_optimizer, gamma=0.95)
 refine_scheduler = optim.lr_scheduler.ExponentialLR(refine_optimizer, gamma=0.95)
@@ -138,7 +138,7 @@ def train(epoch, loader, l_fns, optimizers, schedulers):
         writer.add_scalar("Loss/on_step_refine_local_loss", refine_local.mean().item(), epoch * len(loader) + batch_idx)
         writer.add_scalar("Loss/on_step_refine_tv_loss", refine_tv.mean().item(), epoch * len(loader) + batch_idx)
 
-        loss = (1.0 * coarse_loss) + (0.2 * global_loss) + (0.8 * local_loss) + (2.0 * refine_loss)
+        loss = (1.0 * coarse_loss) + (0.1 * global_loss) + (0.9 * local_loss) + (2.0 * refine_loss)
         loss.backward()
 
         optimizers["coarse"].step()
