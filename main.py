@@ -114,7 +114,7 @@ def train(epoch, loader, l_fns, optimizers, schedulers):
         refine_local_output = list()
         for im, local_coord in zip(refine_output, local_coords):
             top, left, h, w = local_coord
-            local_output = ToTensor()(Resize(size=(64, 64))(F.crop(ToPILImage()(im.cpu()), top.item(), left.item(), h.item(), w.item())))
+            local_output = ToTensor()(Resize(size=(32, 32))(F.crop(ToPILImage()(im.cpu()), top.item(), left.item(), h.item(), w.item())))
             refine_local_output.append(local_output)
         refine_local_output = torch.stack(refine_local_output).to(device)
 
