@@ -445,7 +445,7 @@ class CoarseNet(Net):
         self.block_7 = self._upsampling_in_lrelu_block(in_channels=32, out_channels=32)
         self._1x1conv_7 = self._1x1conv_lrelu_block(in_channels=32, out_channels=128)
 
-        self._1x1conv_8 = self._1x1conv_lrelu_block(in_channels=256, out_channels=64)
+        self._1x1conv_8 = self._1x1conv_lrelu_block(in_channels=128, out_channels=64)
 
     def forward(self, x, descriptions):
         x_1 = self.block_1(x)
