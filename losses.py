@@ -84,12 +84,13 @@ class CoarseLoss(nn.Module):
 
     def forward(self, x, out, features_x, features_out):
         p_loss = self.pixel_loss(x, out.detach())
-        c_loss = self.content_loss(features_x.relu2_2.detach(), features_out.relu2_2.detach())
+        c_loss = 0.0
         s_loss = 0.0
-        for f_x, f_out in zip(features_x, features_out):
-            G_f_x = self._gram_matrix(f_x.detach())
-            G_f_out = self._gram_matrix(f_out.detach())
+        for f_x, f_out in zip(features_x.detach(), features_out.detach()):
+            G_f_x = self._gram_matrix(f_x)
+            G_f_out = self._gram_matrix(f_out)
             s_loss += self.style_loss(G_f_x, G_f_out)
+            c_loss += self.content_loss(f_x, f_out)
         return 1.0 * p_loss + 3.0 * c_loss + 20.0 * s_loss, p_loss, c_loss, s_loss
 
     @staticmethod
@@ -113,12 +114,13 @@ class RefineLoss(nn.Module):
 
     def forward(self, x, out, d_x, d_out, features_x, features_out):
         p_loss = self.pixel_loss(x, out.detach())
-        c_loss = self.content_loss(features_x.relu2_2.detach(), features_out.relu2_2.detach())
+        c_loss = 0.0
         s_loss = 0.0
-        for f_x, f_out in zip(features_x, features_out):
-            G_f_x = self._gram_matrix(f_x.detach())
-            G_f_out = self._gram_matrix(f_out.detach())
+        for f_x, f_out in zip(features_x.detach(), features_out.detach()):
+            G_f_x = self._gram_matrix(f_x)
+            G_f_out = self._gram_matrix(f_out)
             s_loss += self.style_loss(G_f_x, G_f_out)
+            c_loss += self.content_loss(f_x, f_out)
         g_loss = self.global_loss(d_x, d_out.detach())
         l_loss = self.local_loss(d_x, d_out.detach())
         t_loss = self.tv_loss(x, out.detach())
