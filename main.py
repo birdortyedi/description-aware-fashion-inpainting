@@ -35,7 +35,6 @@ if torch.cuda.device_count() > 1:
     refine = nn.DataParallel(refine)
     local_d = nn.DataParallel(local_d)
     global_d = nn.DataParallel(global_d)
-    vgg = nn.DataParallel(vgg)
 coarse.to(device)
 refine.to(device)
 local_d.to(device)
