@@ -221,6 +221,7 @@ class DilatedResidualBlock(nn.Module):
         self.in_1 = nn.InstanceNorm2d(num_features=out_channels)
         self.conv_2 = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=1, stride=stride)
         self.in_2 = nn.InstanceNorm2d(num_features=out_channels)
+        self.dropout = nn.Dropout2d(p=0.3)
 
     def forward(self, x):
         residual = x
@@ -231,7 +232,7 @@ class DilatedResidualBlock(nn.Module):
         x = self.conv_2(x)
         x = self.in_2(x)
         x += residual
-        x = F.dropout2d(F.relu(x))
+        x = self.dropout((F.relu(x)))
 
         return x
 
@@ -245,18 +246,19 @@ class LocalDiscriminator(nn.Module):
         self.d_block_4 = self._conv_in_lrelu_block(in_channels=96, out_channels=128, kernel_size=3, stride=2, padding=1)
         self.d_block_5 = self._conv_in_lrelu_block(in_channels=128, out_channels=64, kernel_size=3, padding=1)
         self.d_block_6 = self._conv_in_lrelu_block(in_channels=192, out_channels=64, kernel_size=3, stride=2, padding=1)
+        self.dropout = nn.Dropout2d(p=0.3)
         self.avg_pooling = nn.AdaptiveAvgPool2d(output_size=(1, 1))
         self.d_block_7 = nn.Linear(in_features=64, out_features=1)
 
     def forward(self, x):
         x = self.d_block_1(x)
 
-        x_1 = self.d_block_2(x)
-        x_2 = self.d_block_3(x_1)
+        x_1 = self.dropout(self.d_block_2(x))
+        x_2 = self.dropout(self.d_block_3(x_1))
         x = torch.cat((x_1, x_2), dim=1)
 
-        x_1 = self.d_block_4(x)
-        x_2 = self.d_block_5(x_1)
+        x_1 = self.dropout(self.d_block_4(x))
+        x_2 = self.dropout(self.d_block_5(x_1))
         x = torch.cat((x_1, x_2), dim=1)
 
         x = self.d_block_6(x)
@@ -283,15 +285,16 @@ class GlobalDiscriminator(nn.Module):
         self.d_block_4 = self._conv_in_lrelu_block(in_channels=128, out_channels=64, kernel_size=5, stride=2, padding=1)
         self.d_block_5 = self._conv_in_lrelu_block(in_channels=64, out_channels=32, kernel_size=3, stride=2, padding=1)
         self.d_block_6 = self._conv_in_lrelu_block(in_channels=32, out_channels=16, kernel_size=3, stride=2, padding=1)
+        self.dropout = nn.Dropout2d(p=0.3)
         self.avg_pooling = nn.AdaptiveAvgPool2d(output_size=(1, 1))
         self.d_block_7 = nn.Linear(in_features=16, out_features=1)
 
     def forward(self, x):
         x = self.d_block_1(x)
-        x = self.d_block_2(x)
-        x = self.d_block_3(x)
-        x = self.d_block_4(x)
-        x = self.d_block_5(x)
+        x = self.dropout(self.d_block_2(x))
+        x = self.dropout(self.d_block_3(x))
+        x = self.dropout(self.d_block_4(x))
+        x = self.dropout(self.d_block_5(x))
         x = self.d_block_6(x)
         x = self.avg_pooling(x)
         x = torch.sigmoid(self.d_block_7(x.squeeze()))
@@ -326,6 +329,8 @@ class Net(nn.Module):
         self._1x1conv_9 = self._1x1conv_lrelu_block(in_channels=128, out_channels=32)
         self.block_10 = self._upsampling_in_lrelu_block(in_channels=32, out_channels=32)
         self.block_11 = self._upsampling_tanh_block(in_channels=64, out_channels=3)
+
+        self.dropout = nn.Dropout2d(p=0.3)
 
     @staticmethod
     def _conv_in_lrelu_block(in_channels, out_channels, kernel_size, stride=1, padding=0):
@@ -394,30 +399,30 @@ class RefineNet(Net):
 
     def forward(self, x):
         x_1 = self.block_1(x)
-        x_2 = F.dropout2d(self.block_2(x_1))
-        x_3 = F.dropout2d(self.block_3(x_2))
+        x_2 = self.dropout(self.block_2(x_1))
+        x_3 = self.dropout(self.block_3(x_2))
 
         dil_res_x_3 = self.dilated_res_blocks(x_3)
 
-        x_4 = F.dropout2d(self.block_4(dil_res_x_3))
-        x_5 = F.dropout2d(self.block_5(x_4))
+        x_4 = self.dropout(self.block_4(dil_res_x_3))
+        x_5 = self.dropout(self.block_5(x_4))
 
         visual_embedding = self.avg_pooling(x_5).squeeze()
 
         x_6 = self.block_6(visual_embedding.view(-1, 16, 4, 4))
         x_6 = torch.cat((x_5, x_6), dim=1)
-        x_6 = F.dropout2d(self._1x1conv_6(x_6))
+        x_6 = self.dropout(self._1x1conv_6(x_6))
 
         x_7 = self.block_7(x_6)
-        x_7 = F.dropout2d(torch.cat((x_4, x_7), dim=1))
+        x_7 = self.dropout(torch.cat((x_4, x_7), dim=1))
 
         x_8 = self.block_8(x_7)
         x_8 = torch.cat((x_3, x_8), dim=1)
-        x_8 = F.dropout2d(self._1x1conv_8(x_8))
+        x_8 = self.dropout(self._1x1conv_8(x_8))
 
         x_9 = self.block_9(x_8)
         x_9 = torch.cat((x_2, x_9), dim=1)
-        x_9 = F.dropout2d(self._1x1conv_9(x_9))
+        x_9 = self.dropout(self._1x1conv_9(x_9))
 
         x_10 = self.block_10(x_9)
         x_10 = torch.cat((x_1, x_10), dim=1)
@@ -449,14 +454,14 @@ class CoarseNet(Net):
 
     def forward(self, x, descriptions):
         x_1 = self.block_1(x)
-        x_2 = F.dropout2d(self.block_2(x_1))
-        x_3 = F.dropout2d(self.block_3(x_2))
+        x_2 = self.dropout(self.block_2(x_1))
+        x_3 = self.dropout(self.block_3(x_2))
 
         dil_res_x_3 = self.dilated_res_blocks(x_3)
         attention_map, _ = self.self_attention(dil_res_x_3)
 
-        x_4 = F.dropout2d(self.block_4(x_3))
-        x_5 = F.dropout2d(self.block_5(x_4))
+        x_4 = self.dropout(self.block_4(x_3))
+        x_5 = self.dropout(self.block_5(x_4))
 
         visual_embedding = self.avg_pooling(x_5).squeeze()
         textual_embedding = self.lstm_block(descriptions)
@@ -464,19 +469,19 @@ class CoarseNet(Net):
 
         x_6 = self.block_6(embedding.view(-1, 16, 4, 4))
         x_6 = torch.cat((x_5, x_6), dim=1)
-        x_6 = F.dropout2d(self._1x1conv_6(x_6))
+        x_6 = self.dropout(self._1x1conv_6(x_6))
 
         x_7 = self.block_7(x_6)
         x_7 = torch.cat((x_4, x_7), dim=1)
-        x_7 = F.dropout2d(self._1x1conv_7(x_7))
+        x_7 = self.dropout(self._1x1conv_7(x_7))
 
         x_8 = self.block_8(x_7)
         x_8 = torch.cat((x_3, x_8, attention_map), dim=1)
-        x_8 = F.dropout2d(self._1x1conv_8(x_8))
+        x_8 = self.dropout(self._1x1conv_8(x_8))
 
         x_9 = self.block_9(x_8)
         x_9 = torch.cat((x_2, x_9), dim=1)
-        x_9 = F.dropout2d(self._1x1conv_9(x_9))
+        x_9 = self.dropout(self._1x1conv_9(x_9))
 
         x_10 = self.block_10(x_9)
         x_10 = torch.cat((x_1, x_10), dim=1)
