@@ -49,13 +49,13 @@ refine_loss_fn = refine_loss_fn.to(device)
 d_loss_fn = nn.BCELoss()
 d_loss_fn = d_loss_fn.to(device)
 
-lr, d_lr = 0.0002, 0.00001
-coarse_optimizer = optim.Adam(coarse.parameters(), lr=lr, betas=(0.5, 0.999))
-refine_optimizer = optim.Adam(refine.parameters(), lr=lr, betas=(0.5, 0.999))
+c_lr, r_lr, d_lr = 0.0002, 0.001, 0.0001
+coarse_optimizer = optim.Adam(coarse.parameters(), lr=c_lr, betas=(0.5, 0.999))
+refine_optimizer = optim.Adam(refine.parameters(), lr=r_lr, betas=(0.5, 0.999))
 local_d_optimizer = optim.Adam(local_d.parameters(), lr=d_lr, betas=(0.5, 0.999))
 global_d_optimizer = optim.Adam(global_d.parameters(), lr=d_lr, betas=(0.5, 0.999))
 
-coarse_scheduler = optim.lr_scheduler.ExponentialLR(coarse_optimizer, gamma=0.95)
+coarse_scheduler = optim.lr_scheduler.ExponentialLR(coarse_optimizer, gamma=0.9)
 refine_scheduler = optim.lr_scheduler.ExponentialLR(refine_optimizer, gamma=0.95)
 local_d_scheduler = optim.lr_scheduler.ExponentialLR(local_d_optimizer, gamma=0.95)
 global_d_scheduler = optim.lr_scheduler.ExponentialLR(global_d_optimizer, gamma=0.95)
@@ -138,7 +138,7 @@ def train(epoch, loader, l_fns, optimizers, schedulers):
         writer.add_scalar("Loss/on_step_refine_local_loss", refine_local.mean().item(), epoch * len(loader) + batch_idx)
         writer.add_scalar("Loss/on_step_refine_tv_loss", refine_tv.mean().item(), epoch * len(loader) + batch_idx)
 
-        loss = (2.0 * coarse_loss) + (0.1 * global_loss) + (0.9 * local_loss) + (2.0 * refine_loss)
+        loss = (1.0 * coarse_loss) + (0.1 * global_loss) + (0.9 * local_loss) + (2.0 * refine_loss)
         loss.backward()
 
         optimizers["coarse"].step()
@@ -172,11 +172,11 @@ def train(epoch, loader, l_fns, optimizers, schedulers):
                   "Epoch: {}".format(epoch),
                   "[{}/{} ".format(batch_idx * len(x_train), len(train_loader.dataset)),
                   "({}%)]\t".format(int(100 * batch_idx / float(len(train_loader)))),
-                  "Loss: {:.4f}  ".format(refine_loss.mean().item()),
-                  "Content: {:.4f}  ".format(refine_pixel.mean().item()),
-                  "Style: {:.4f}  ".format(refine_style.mean().item()),
-                  "Global: {:.4f}  ".format(refine_global.mean().item()),
-                  "Local: {:.4f} ".format(refine_local.mean().item()))
+                  "Loss: {:.6f}  ".format(refine_loss.mean().item()),
+                  "Content: {:.6f}  ".format(refine_pixel.mean().item()),
+                  "Style: {:.6f}  ".format(refine_style.mean().item()),
+                  "Global: {:.6f}  ".format(refine_global.mean().item()),
+                  "Local: {:.6f} ".format(refine_local.mean().item()))
 
 
 def evaluate(epoch, loader, l_fn):

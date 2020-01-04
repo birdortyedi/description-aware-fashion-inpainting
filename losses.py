@@ -78,7 +78,7 @@ class CustomInpaintingLoss(nn.Module):
 class CoarseLoss(nn.Module):
     def __init__(self):
         super(CoarseLoss, self).__init__()
-        self.pixel_loss = PixelLoss()
+        self.pixel_loss = nn.SmoothL1Loss()
         self.content_loss = nn.MSELoss()
         self.style_loss = nn.MSELoss()
 
@@ -91,7 +91,7 @@ class CoarseLoss(nn.Module):
             G_f_out = self._gram_matrix(f_out).detach()
             s_loss += self.style_loss(G_f_x, G_f_out)
             c_loss += self.content_loss(f_x.detach(), f_out.detach()) / 255.
-        return 5.0 * p_loss + 3.0 * c_loss + 100.0 * s_loss, p_loss, c_loss, s_loss
+        return 25.0 * p_loss + 15.0 * c_loss + 100.0 * s_loss, p_loss, c_loss, s_loss
 
     @staticmethod
     def _gram_matrix(mat):
@@ -105,7 +105,7 @@ class CoarseLoss(nn.Module):
 class RefineLoss(nn.Module):
     def __init__(self):
         super(RefineLoss, self).__init__()
-        self.pixel_loss = PixelLoss()
+        self.pixel_loss = nn.SmoothL1Loss()
         self.content_loss = nn.MSELoss()
         self.style_loss = nn.MSELoss()
         self.global_loss = nn.BCELoss()

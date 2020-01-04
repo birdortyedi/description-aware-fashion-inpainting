@@ -231,7 +231,7 @@ class DilatedResidualBlock(nn.Module):
         x = self.conv_2(x)
         x = self.in_2(x)
         x += residual
-        x = F.relu(x)
+        x = F.dropout2d(F.relu(x))
 
         return x
 
@@ -394,30 +394,30 @@ class RefineNet(Net):
 
     def forward(self, x):
         x_1 = self.block_1(x)
-        x_2 = self.block_2(x_1)
-        x_3 = self.block_3(x_2)
+        x_2 = F.dropout2d(self.block_2(x_1))
+        x_3 = F.dropout2d(self.block_3(x_2))
 
         dil_res_x_3 = self.dilated_res_blocks(x_3)
 
-        x_4 = self.block_4(dil_res_x_3)
-        x_5 = self.block_5(x_4)
+        x_4 = F.dropout2d(self.block_4(dil_res_x_3))
+        x_5 = F.dropout2d(self.block_5(x_4))
 
         visual_embedding = self.avg_pooling(x_5).squeeze()
 
         x_6 = self.block_6(visual_embedding.view(-1, 16, 4, 4))
         x_6 = torch.cat((x_5, x_6), dim=1)
-        x_6 = self._1x1conv_6(x_6)
+        x_6 = F.dropout2d(self._1x1conv_6(x_6))
 
         x_7 = self.block_7(x_6)
-        x_7 = torch.cat((x_4, x_7), dim=1)
+        x_7 = F.dropout2d(torch.cat((x_4, x_7), dim=1))
 
         x_8 = self.block_8(x_7)
         x_8 = torch.cat((x_3, x_8), dim=1)
-        x_8 = self._1x1conv_8(x_8)
+        x_8 = F.dropout2d(self._1x1conv_8(x_8))
 
         x_9 = self.block_9(x_8)
         x_9 = torch.cat((x_2, x_9), dim=1)
-        x_9 = self._1x1conv_9(x_9)
+        x_9 = F.dropout2d(self._1x1conv_9(x_9))
 
         x_10 = self.block_10(x_9)
         x_10 = torch.cat((x_1, x_10), dim=1)
@@ -449,14 +449,14 @@ class CoarseNet(Net):
 
     def forward(self, x, descriptions):
         x_1 = self.block_1(x)
-        x_2 = self.block_2(x_1)
-        x_3 = self.block_3(x_2)
+        x_2 = F.dropout2d(self.block_2(x_1))
+        x_3 = F.dropout2d(self.block_3(x_2))
 
         dil_res_x_3 = self.dilated_res_blocks(x_3)
         attention_map, _ = self.self_attention(dil_res_x_3)
 
-        x_4 = self.block_4(x_3)
-        x_5 = self.block_5(x_4)
+        x_4 = F.dropout2d(self.block_4(x_3))
+        x_5 = F.dropout2d(self.block_5(x_4))
 
         visual_embedding = self.avg_pooling(x_5).squeeze()
         textual_embedding = self.lstm_block(descriptions)
@@ -464,19 +464,19 @@ class CoarseNet(Net):
 
         x_6 = self.block_6(embedding.view(-1, 16, 4, 4))
         x_6 = torch.cat((x_5, x_6), dim=1)
-        x_6 = self._1x1conv_6(x_6)
+        x_6 = F.dropout2d(self._1x1conv_6(x_6))
 
         x_7 = self.block_7(x_6)
         x_7 = torch.cat((x_4, x_7), dim=1)
-        x_7 = self._1x1conv_7(x_7)
+        x_7 = F.dropout2d(self._1x1conv_7(x_7))
 
         x_8 = self.block_8(x_7)
         x_8 = torch.cat((x_3, x_8, attention_map), dim=1)
-        x_8 = self._1x1conv_8(x_8)
+        x_8 = F.dropout2d(self._1x1conv_8(x_8))
 
         x_9 = self.block_9(x_8)
         x_9 = torch.cat((x_2, x_9), dim=1)
-        x_9 = self._1x1conv_9(x_9)
+        x_9 = F.dropout2d(self._1x1conv_9(x_9))
 
         x_10 = self.block_10(x_9)
         x_10 = torch.cat((x_1, x_10), dim=1)
