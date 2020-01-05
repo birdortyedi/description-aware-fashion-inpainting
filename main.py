@@ -117,7 +117,7 @@ def train_refine(num_step, coarse_output, coarse_output_vgg_features, y_train, l
     writer.add_scalar("Loss/on_step_refine_tv_loss", refine_tv.mean().item(), num_step)
     writer.add_scalar("Loss/on_step_refine_global_loss", refine_global_loss.mean().item(), num_step)
     writer.add_scalar("Loss/on_step_refine_local_loss", refine_local_loss.mean().item(), num_step)
-    loss = (2.0 * refine_loss)
+    loss = (0.4 * refine_global_loss) + (0.6 * refine_local_loss) + (2.0 * refine_loss)
     loss.backward()
 
     return refine_output, refine_local_output, (refine_loss, refine_pixel, refine_style, refine_tv, refine_global_loss, refine_local_loss)
@@ -129,19 +129,19 @@ def train_discriminator(num_step, x_train, x_desc, x_local, local_coords, l_fns)
     real_label = torch.ones_like(global_d_real_output).to(device)
     global_real_loss = l_fns["discriminator"](global_d_real_output, real_label)
     writer.add_scalar("Loss/on_step_global_real_loss", global_real_loss.mean().item(), num_step)
-    global_real_loss.backward()
+    global_real_loss.backward(retain_graph=True)
     global_fake_output = refine(coarse(x_train, x_desc))
     global_d_fake_output = global_d(global_fake_output).view(-1)
     fake_label = torch.zeros_like(global_d_fake_output).to(device)
     global_fake_loss = l_fns["discriminator"](global_d_fake_output, fake_label)
     writer.add_scalar("Loss/on_step_global_fake_loss", global_fake_loss.mean().item(), num_step)
-    global_fake_loss.backward()
+    global_fake_loss.backward(retain_graph=True)
 
     local_d.zero_grad()
     local_d_real_output = local_d(x_local).view(-1)
     local_real_loss = l_fns["discriminator"](local_d_real_output, real_label)
     writer.add_scalar("Loss/on_step_local_real_loss", local_real_loss.mean().item(), num_step)
-    local_real_loss.backward()
+    local_real_loss.backward(retain_graph=True)
     out_local = list()
     for im, local_coord in zip(global_fake_output, local_coords):
         top, left, h, w = local_coord
@@ -151,7 +151,7 @@ def train_discriminator(num_step, x_train, x_desc, x_local, local_coords, l_fns)
     local_d_fake_output = local_d(out_local).view(-1)
     local_fake_loss = l_fns["discriminator"](local_d_fake_output, fake_label)
     writer.add_scalar("Loss/on_step_local_fake_loss", local_fake_loss.mean().item(), num_step)
-    local_fake_loss.backward()
+    local_fake_loss.backward(retain_graph=True)
 
 
 def train_coarse(num_step, x_train, x_desc, y_train, l_fns):
@@ -167,7 +167,7 @@ def train_coarse(num_step, x_train, x_desc, y_train, l_fns):
     writer.add_scalar("Loss/on_step_coarse_content_loss", coarse_content.mean().item(), num_step)
     writer.add_scalar("Loss/on_step_coarse_style_loss", coarse_style.mean().item(), num_step)
 
-    coarse_loss.backward()
+    coarse_loss.backward(retain_graph=True)
 
     return coarse_output, coarse_output_vgg_features
 
