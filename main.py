@@ -99,7 +99,7 @@ def train_refine(num_step, coarse_output, coarse_output_vgg_features, y_train, l
     refine_output = refine(coarse_output)
     refine_output_vgg_features = vgg(normalize_batch(refine_output))
     refine_local_output = list()
-    for im, local_coord in zip(refine_local_output, local_coords):
+    for im, local_coord in zip(refine_output, local_coords):
         top, left, h, w = local_coord
         single_out = ToTensor()(Resize(size=(32, 32))(F.crop(ToPILImage()(im.cpu()), top.item(), left.item(), h.item(), w.item())))
         refine_local_output.append(single_out)
@@ -142,7 +142,7 @@ def train_discriminator(num_step, x_train, x_local, local_coords, l_fns):
     writer.add_scalar("Loss/on_step_local_real_loss", local_real_loss.mean().item(), num_step)
     local_real_loss.backward()
     out_local = list()
-    for im, local_coord in zip(out_local, local_coords):
+    for im, local_coord in zip(global_d_fake_output, local_coords):
         top, left, h, w = local_coord
         single_out = ToTensor()(Resize(size=(32, 32))(F.crop(ToPILImage()(im.cpu()), top.item(), left.item(), h.item(), w.item())))
         out_local.append(single_out)
