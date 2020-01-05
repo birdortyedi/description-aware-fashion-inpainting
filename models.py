@@ -318,7 +318,7 @@ class Net(nn.Module):
         self.block_3 = self._conv_in_lrelu_block(in_channels=64, out_channels=128, kernel_size=5, stride=2, padding=2)
 
         # Dilated Residual Blocks
-        self.dilated_res_blocks = self._dilated_res_blocks(num_features=128, kernel_size=3)
+        self.dilated_res_blocks = self._dilated_res_blocks(num_features=128, kernel_size=5)
 
         # Visual features for concatenating with textual features
         self.block_4 = self._conv_in_lrelu_block(in_channels=128, out_channels=64, kernel_size=5, stride=2, padding=2)
@@ -456,8 +456,9 @@ class CoarseNet(Net):
         x_1 = self.block_1(x)
         x_2 = self.dropout(self.block_2(x_1))
         x_3 = self.dropout(self.block_3(x_2))
-
+        print(x_3.size())
         dil_res_x_3 = self.dilated_res_blocks(x_3)
+        print(dil_res_x_3.size())
         attention_map, _ = self.self_attention(dil_res_x_3)
 
         x_4 = self.dropout(self.block_4(x_3))
