@@ -106,8 +106,8 @@ def train_refine(num_step, coarse_output, coarse_output_vgg_features, y_train, l
     refine_local_output = torch.stack(refine_local_output).to(device)
 
     real_label = torch.ones((y_train.size(0),)).to(device)
-    refine_global_loss = loss_fns["discriminator"](global_d(refine_output), real_label)
-    refine_local_loss = loss_fns["discriminator"](local_d(refine_local_output), real_label)
+    refine_global_loss = nn.BCELoss()(global_d(refine_output), real_label)
+    refine_local_loss = nn.BCELoss()(local_d(refine_local_output), real_label)
     refine_loss, refine_pixel, refine_content, refine_style, refine_tv = l_fns["refine"](refine_output, y_train,
                                                                                          coarse_output_vgg_features, refine_output_vgg_features)
     writer.add_scalar("Loss/on_step_refine_loss", refine_loss.mean().item(), num_step)
