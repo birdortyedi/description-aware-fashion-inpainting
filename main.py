@@ -130,7 +130,8 @@ def train_discriminator(num_step, x_train, x_local, local_coords, l_fns):
     global_real_loss = l_fns["discriminator"](global_d_real_output, real_label)
     writer.add_scalar("Loss/on_step_global_real_loss", global_real_loss.mean().item(), num_step)
     global_real_loss.backward()
-    global_d_fake_output = global_d(refine(x_train)).view(-1)
+    global_fake_output = refine(coarse(x_train))
+    global_d_fake_output = global_d(global_fake_output).view(-1)
     fake_label = torch.zeros_like(global_d_fake_output).to(device)
     global_fake_loss = l_fns["discriminator"](global_d_fake_output, fake_label)
     writer.add_scalar("Loss/on_step_global_fake_loss", global_fake_loss.mean().item(), num_step)
@@ -142,7 +143,7 @@ def train_discriminator(num_step, x_train, x_local, local_coords, l_fns):
     writer.add_scalar("Loss/on_step_local_real_loss", local_real_loss.mean().item(), num_step)
     local_real_loss.backward()
     out_local = list()
-    for im, local_coord in zip(global_d_fake_output, local_coords):
+    for im, local_coord in zip(global_fake_output, local_coords):
         top, left, h, w = local_coord
         single_out = ToTensor()(Resize(size=(32, 32))(F.crop(ToPILImage()(im.cpu()), top.item(), left.item(), h.item(), w.item())))
         out_local.append(single_out)
