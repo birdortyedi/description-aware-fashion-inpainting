@@ -212,12 +212,12 @@ class SelfAttention(nn.Module):
 
 
 class DilatedResidualBlock(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size, stride, dilation):
+    def __init__(self, in_channels, out_channels, kernel_size, stride, dilation, padding):
         super(DilatedResidualBlock, self).__init__()
         self.in_channels = in_channels
         self.out_channels = out_channels
 
-        self.conv_1 = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size, stride=stride, padding=dilation, dilation=dilation)
+        self.conv_1 = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size, stride=stride, padding=padding, dilation=dilation)
         self.in_1 = nn.InstanceNorm2d(num_features=out_channels)
         self.conv_2 = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=1, stride=stride)
         self.in_2 = nn.InstanceNorm2d(num_features=out_channels)
