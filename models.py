@@ -456,9 +456,8 @@ class CoarseNet(Net):
         x_1 = self.block_1(x)
         x_2 = self.dropout(self.block_2(x_1))
         x_3 = self.dropout(self.block_3(x_2))
-        print(x_3.size())
+
         dil_res_x_3 = self.dilated_res_blocks(x_3)
-        print(dil_res_x_3.size())
         attention_map, _ = self.self_attention(dil_res_x_3)
 
         x_4 = self.dropout(self.block_4(x_3))

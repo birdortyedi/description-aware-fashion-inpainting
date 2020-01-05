@@ -52,13 +52,11 @@ d_loss_fn = d_loss_fn.to(device)
 c_lr, r_lr, d_lr = 0.0002, 0.001, 0.0001
 coarse_optimizer = optim.Adam(coarse.parameters(), lr=c_lr, betas=(0.5, 0.999))
 refine_optimizer = optim.Adam(refine.parameters(), lr=r_lr, betas=(0.5, 0.999))
-local_d_optimizer = optim.Adam(local_d.parameters(), lr=d_lr, betas=(0.5, 0.999))
-global_d_optimizer = optim.Adam(global_d.parameters(), lr=d_lr, betas=(0.5, 0.999))
+d_optimizer = optim.Adam(local_d.parameters(), lr=d_lr, betas=(0.5, 0.999))
 
 coarse_scheduler = optim.lr_scheduler.ExponentialLR(coarse_optimizer, gamma=0.9)
 refine_scheduler = optim.lr_scheduler.ExponentialLR(refine_optimizer, gamma=0.95)
-local_d_scheduler = optim.lr_scheduler.ExponentialLR(local_d_optimizer, gamma=0.95)
-global_d_scheduler = optim.lr_scheduler.ExponentialLR(global_d_optimizer, gamma=0.95)
+d_scheduler = optim.lr_scheduler.ExponentialLR(d_optimizer, gamma=0.95)
 
 writer = SummaryWriter()
 
@@ -75,108 +73,130 @@ def train(epoch, loader, l_fns, optimizers, schedulers):
         x_local = x_local.float().to(device)
         y_train = y_train.float().to(device)
 
-        coarse.zero_grad()
-        coarse_output = coarse(x_train, x_desc)
-        coarse_vgg_features = vgg(normalize_batch(x_train))
-        coarse_output_vgg_features = vgg(normalize_batch(coarse_output))
-        coarse_loss, coarse_pixel, \
-            coarse_content, coarse_style = l_fns["coarse"](coarse_output, y_train,
-                                                           coarse_vgg_features, coarse_output_vgg_features)
-        # coarse_loss.backward()
-        writer.add_scalar("Loss/on_step_coarse_loss", coarse_loss.mean().item(), epoch * len(loader) + batch_idx)
-        writer.add_scalar("Loss/on_step_coarse_pixel_loss", coarse_pixel.mean().item(), epoch * len(loader) + batch_idx)
-        writer.add_scalar("Loss/on_step_coarse_content_loss", coarse_content.mean().item(), epoch * len(loader) + batch_idx)
-        writer.add_scalar("Loss/on_step_coarse_style_loss", coarse_style.mean().item(), epoch * len(loader) + batch_idx)
+        train_discriminator(num_step, x_train, x_local, local_coords, l_fns)
+        optimizers["discriminator"].step()
+        schedulers["discriminator"].step(epoch)
 
-        global_d.zero_grad()
-        global_d_real_output = global_d(x_train).view(-1)
-        real_label = torch.ones_like(global_d_real_output).to(device)
-        global_real_loss = l_fns["global"](global_d_real_output, real_label)
-        # global_real_loss.backward()
-        writer.add_scalar("Loss/on_step_global_real_loss", global_real_loss.mean().item(), epoch * len(loader) + batch_idx)
-        global_d_fake_output = global_d(refine(x_train)).view(-1)
-        fake_label = torch.zeros_like(global_d_fake_output).to(device)
-        global_fake_loss = l_fns["global"](global_d_fake_output, fake_label)
-        writer.add_scalar("Loss/on_step_global_fake_loss", global_fake_loss.mean().item(), epoch * len(loader) + batch_idx)
-        # global_fake_loss.backward()
-        global_loss = global_real_loss + global_fake_loss
-
-        local_d.zero_grad()
-        local_d_real_output = local_d(x_local).view(-1)
-        real_label = torch.ones_like(local_d_real_output).to(device)
-        local_real_loss = l_fns["local"](local_d_real_output, real_label)
-        writer.add_scalar("Loss/on_step_local_real_loss", local_real_loss.mean().item(), epoch * len(loader) + batch_idx)
-        # local_real_loss.backward()
-
-        refine.zero_grad()
-        refine_output = refine(coarse_output)
-        refine_output_vgg_features = vgg(normalize_batch(refine_output))
-        refine_local_output = list()
-        for im, local_coord in zip(refine_output, local_coords):
-            top, left, h, w = local_coord
-            local_output = ToTensor()(Resize(size=(32, 32))(F.crop(ToPILImage()(im.cpu()), top.item(), left.item(), h.item(), w.item())))
-            refine_local_output.append(local_output)
-        refine_local_output = torch.stack(refine_local_output).to(device)
-
-        local_d_fake_output = local_d(refine_local_output).view(-1)
-        fake_label = torch.zeros_like(local_d_fake_output).to(device)
-        local_fake_loss = l_fns["local"](local_d_fake_output, fake_label)
-        writer.add_scalar("Loss/on_step_local_fake_loss", local_fake_loss.mean().item(), epoch * len(loader) + batch_idx)
-        # local_fake_loss.backward()
-        local_loss = local_real_loss + local_fake_loss
-
-        refine_loss, refine_pixel, refine_content, refine_style, \
-            refine_global, refine_local, refine_tv = l_fns["refine"](refine_output, y_train,
-                                                                     refine_local_output, x_local,
-                                                                     coarse_output_vgg_features, refine_output_vgg_features)
-        # refine_loss.backward()
-        writer.add_scalar("Loss/on_step_refine_loss", refine_loss.mean().item(), epoch * len(loader) + batch_idx)
-        writer.add_scalar("Loss/on_step_refine_pixel_loss", refine_pixel.mean().item(), epoch * len(loader) + batch_idx)
-        writer.add_scalar("Loss/on_step_refine_content_loss", refine_content.mean().item(), epoch * len(loader) + batch_idx)
-        writer.add_scalar("Loss/on_step_refine_style_loss", refine_style.mean().item(), epoch * len(loader) + batch_idx)
-        writer.add_scalar("Loss/on_step_refine_global_loss", refine_global.mean().item(), epoch * len(loader) + batch_idx)
-        writer.add_scalar("Loss/on_step_refine_local_loss", refine_local.mean().item(), epoch * len(loader) + batch_idx)
-        writer.add_scalar("Loss/on_step_refine_tv_loss", refine_tv.mean().item(), epoch * len(loader) + batch_idx)
-
-        loss = (1.0 * coarse_loss) + (0.1 * global_loss) + (0.9 * local_loss) + (2.0 * refine_loss)
-        loss.backward()
-
+        coarse_output, coarse_output_vgg_features = train_coarse(num_step, x_train, x_desc, y_train, l_fns)
         optimizers["coarse"].step()
         schedulers["coarse"].step(epoch)
-        optimizers["global"].step()
-        schedulers["global"].step(epoch)
-        optimizers["local"].step()
-        schedulers["local"].step(epoch)
+
+        refine_output, refine_local_output, refine_losses = train_refine(num_step, coarse_output, coarse_output_vgg_features, y_train, local_coords, l_fns)
         optimizers["refine"].step()
         schedulers["refine"].step(epoch)
 
         global_d_accuracy_on_refine_output = torch.mean((global_d(refine_output).view(-1) > 0.5).float(), dim=0)
-        writer.add_scalar("Metrics/on_step_global_d_acc_on_refine", global_d_accuracy_on_refine_output, epoch * len(loader) + batch_idx)
+        writer.add_scalar("Metrics/on_step_global_d_acc_on_refine", global_d_accuracy_on_refine_output, num_step)
         local_d_accuracy_on_refine_local_output = torch.mean((local_d(refine_local_output).view(-1) > 0.5).float(), dim=0)
-        writer.add_scalar("Metrics/on_step_local_d_acc_on_refine", local_d_accuracy_on_refine_local_output, epoch * len(loader) + batch_idx)
+        writer.add_scalar("Metrics/on_step_local_d_acc_on_refine", local_d_accuracy_on_refine_local_output, num_step)
 
         if batch_idx % 50 == 0:
-            x_0 = (x_train[0].cpu()).detach().numpy()  # UnNormalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
-            y_0 = (y_train[0].cpu()).detach().numpy()
-            local_0 = (x_local[0].cpu()).detach().numpy()
-            coarse_0 = (coarse_output[0].squeeze(0).cpu()).detach().numpy()
-            refine_0 = (refine_output[0].squeeze(0).cpu()).detach().numpy()
-            refine_local_0 = (refine_local_output[0].squeeze(0).cpu()).detach().numpy()
-            writer.add_image("train_x/epoch_{}".format(epoch), x_0, num_step)
-            writer.add_image("original/epoch_{}".format(epoch), y_0, num_step)
-            writer.add_image("local_x/epoch_{}".format(epoch), local_0, num_step)
-            writer.add_image("coarse_out/epoch_{}".format(epoch), coarse_0, num_step)
-            writer.add_image("refine_out/epoch_{}".format(epoch), refine_0, num_step)
-            writer.add_image("refine_local_out/epoch_{}".format(epoch), refine_local_0, num_step)
-            print("Step: {}\t".format(num_step),
-                  "Epoch: {}".format(epoch),
-                  "[{}/{} ".format(batch_idx * len(x_train), len(train_loader.dataset)),
-                  "({}%)]\t".format(int(100 * batch_idx / float(len(train_loader)))),
-                  "Loss: {:.6f}  ".format(refine_loss.mean().item()),
-                  "Content: {:.6f}  ".format(refine_pixel.mean().item()),
-                  "Style: {:.6f}  ".format(refine_style.mean().item()),
-                  "Global: {:.6f}  ".format(refine_global.mean().item()),
-                  "Local: {:.6f} ".format(refine_local.mean().item()))
+            make_verbose(x_train, x_local, y_train, coarse_output, refine_output, refine_local_output, refine_losses, num_step, batch_idx, epoch)
+
+
+def train_refine(num_step, coarse_output, coarse_output_vgg_features, y_train, local_coords, l_fns):
+    refine.zero_grad()
+    refine_output = refine(coarse_output)
+    refine_output_vgg_features = vgg(normalize_batch(refine_output))
+    refine_local_output = list()
+    for im, local_coord in zip(refine_local_output, local_coords):
+        top, left, h, w = local_coord
+        single_out = ToTensor()(Resize(size=(32, 32))(F.crop(ToPILImage()(im.cpu()), top.item(), left.item(), h.item(), w.item())))
+        refine_local_output.append(single_out)
+    refine_local_output = torch.stack(refine_local_output).to(device)
+
+    real_label = torch.ones_like(y_train.size(0)).to(device)
+    refine_global_loss = loss_fns["discriminator"](global_d(refine_output), real_label)
+    refine_local_loss = loss_fns["discriminator"](local_d(refine_local_output), real_label)
+    refine_loss, refine_pixel, refine_content, refine_style, refine_tv = l_fns["refine"](refine_output, y_train,
+                                                                                         coarse_output_vgg_features, refine_output_vgg_features)
+    writer.add_scalar("Loss/on_step_refine_loss", refine_loss.mean().item(), num_step)
+    writer.add_scalar("Loss/on_step_refine_pixel_loss", refine_pixel.mean().item(), num_step)
+    writer.add_scalar("Loss/on_step_refine_content_loss", refine_content.mean().item(), num_step)
+    writer.add_scalar("Loss/on_step_refine_style_loss", refine_style.mean().item(), num_step)
+    writer.add_scalar("Loss/on_step_refine_tv_loss", refine_tv.mean().item(), num_step)
+    writer.add_scalar("Loss/on_step_refine_global_loss", refine_global_loss.mean().item(), num_step)
+    writer.add_scalar("Loss/on_step_refine_local_loss", refine_local_loss.mean().item(), num_step)
+    loss = (0.4 * refine_global_loss) + (0.6 * refine_local_loss) + (2.0 * refine_loss)
+    loss.backward()
+
+    return refine_output, refine_local_output, (refine_loss, refine_pixel, refine_style, refine_tv, refine_global_loss, refine_local_loss)
+
+
+def train_discriminator(num_step, x_train, x_local, local_coords, l_fns):
+    real_label = torch.ones_like(x_train.size(0)).to(device)
+    fake_label = torch.zeros_like(x_train.size(0)).to(device)
+
+    global_d.zero_grad()
+    global_d_real_output = global_d(x_train).view(-1)
+    global_real_loss = l_fns["discriminator"](global_d_real_output, real_label)
+    writer.add_scalar("Loss/on_step_global_real_loss", global_real_loss.mean().item(), num_step)
+    global_real_loss.backward()
+    global_d_fake_output = global_d(refine(x_train)).view(-1)
+    global_fake_loss = l_fns["discriminator"](global_d_fake_output, fake_label)
+    writer.add_scalar("Loss/on_step_global_fake_loss", global_fake_loss.mean().item(), num_step)
+    global_fake_loss.backward()
+
+    local_d.zero_grad()
+    local_d_real_output = local_d(x_local).view(-1)
+    local_real_loss = l_fns["discriminator"](local_d_real_output, real_label)
+    writer.add_scalar("Loss/on_step_local_real_loss", local_real_loss.mean().item(), num_step)
+    local_real_loss.backward()
+    out_local = list()
+    for im, local_coord in zip(out_local, local_coords):
+        top, left, h, w = local_coord
+        single_out = ToTensor()(Resize(size=(32, 32))(F.crop(ToPILImage()(im.cpu()), top.item(), left.item(), h.item(), w.item())))
+        out_local.append(single_out)
+    out_local = torch.stack(out_local).to(device)
+    local_d_fake_output = local_d(out_local).view(-1)
+    local_fake_loss = l_fns["discriminator"](local_d_fake_output, fake_label)
+    writer.add_scalar("Loss/on_step_local_fake_loss", local_fake_loss.mean().item(), num_step)
+    local_fake_loss.backward()
+
+
+def train_coarse(num_step, x_train, x_desc, y_train, l_fns):
+    coarse.zero_grad()
+    coarse_output = coarse(x_train, x_desc)
+    coarse_vgg_features = vgg(normalize_batch(x_train))
+    coarse_output_vgg_features = vgg(normalize_batch(coarse_output))
+    coarse_loss, coarse_pixel, \
+        coarse_content, coarse_style = l_fns["coarse"](coarse_output, y_train, coarse_vgg_features, coarse_output_vgg_features)
+
+    writer.add_scalar("Loss/on_step_coarse_loss", coarse_loss.mean().item(), num_step)
+    writer.add_scalar("Loss/on_step_coarse_pixel_loss", coarse_pixel.mean().item(), num_step)
+    writer.add_scalar("Loss/on_step_coarse_content_loss", coarse_content.mean().item(), num_step)
+    writer.add_scalar("Loss/on_step_coarse_style_loss", coarse_style.mean().item(), num_step)
+
+    coarse_loss.backward()
+
+    return coarse_output, coarse_output_vgg_features
+
+
+def make_verbose(x_train, x_local, y_train, coarse_output, refine_output, refine_local_output, refine_losses, num_step, batch_idx, epoch):
+    x_0 = (x_train[0].cpu()).detach().numpy()  # UnNormalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
+    y_0 = (y_train[0].cpu()).detach().numpy()
+    local_0 = (x_local[0].cpu()).detach().numpy()
+    coarse_0 = (coarse_output[0].squeeze(0).cpu()).detach().numpy()
+    refine_0 = (refine_output[0].squeeze(0).cpu()).detach().numpy()
+    refine_local_0 = (refine_local_output[0].squeeze(0).cpu()).detach().numpy()
+    writer.add_image("train_x/epoch_{}".format(epoch), x_0, num_step)
+    writer.add_image("original/epoch_{}".format(epoch), y_0, num_step)
+    writer.add_image("local_x/epoch_{}".format(epoch), local_0, num_step)
+    writer.add_image("coarse_out/epoch_{}".format(epoch), coarse_0, num_step)
+    writer.add_image("refine_out/epoch_{}".format(epoch), refine_0, num_step)
+    writer.add_image("refine_local_out/epoch_{}".format(epoch), refine_local_0, num_step)
+
+    refine_loss, refine_pixel, refine_style, refine_tv, refine_global, refine_local = refine_losses
+    print("Step: {}\t".format(num_step),
+          "Epoch: {}".format(epoch),
+          "[{}/{} ".format(batch_idx * len(x_train), len(train_loader.dataset)),
+          "({}%)]\t".format(int(100 * batch_idx / float(len(train_loader)))),
+          "Loss: {:.6f}  ".format(refine_loss.mean().item()),
+          "Content: {:.6f}  ".format(refine_pixel.mean().item()),
+          "Style: {:.6f}  ".format(refine_style.mean().item()),
+          "TV: {:.6f}  ".format(refine_tv.mean().item()),
+          "Global: {:.6f}  ".format(refine_global.mean().item()),
+          "Local: {:.6f} ".format(refine_local.mean().item()))
 
 
 def evaluate(epoch, loader, l_fn):
@@ -220,16 +240,13 @@ def evaluate(epoch, loader, l_fn):
 if __name__ == '__main__':
     loss_fns = {"coarse": coarse_loss_fn,
                 "refine": refine_loss_fn,
-                "global": d_loss_fn,
-                "local": d_loss_fn}
+                "discriminator": d_loss_fn}
     optimizers = {"coarse": coarse_optimizer,
                   "refine": refine_optimizer,
-                  "global": global_d_optimizer,
-                  "local": local_d_optimizer}
+                  "discriminator": d_optimizer}
     schedulers = {"coarse": coarse_scheduler,
                   "refine": refine_scheduler,
-                  "global": global_d_scheduler,
-                  "local": local_d_scheduler}
+                  "discriminator": d_scheduler}
     for e in range(NUM_EPOCHS):
         train(e, train_loader, loss_fns, optimizers, schedulers)
         # evaluate(e, val_loader, (d_loss_fn, loss_fn))
