@@ -73,7 +73,7 @@ def train(epoch, loader, l_fns, optimizers, schedulers):
         x_local = x_local.float().to(device)
         y_train = y_train.float().to(device)
 
-        train_discriminator(num_step, x_train, x_local, local_coords, l_fns)
+        train_discriminator(num_step, x_train, x_desc, x_local, local_coords, l_fns)
         optimizers["discriminator"].step()
         schedulers["discriminator"].step(epoch)
 
@@ -123,14 +123,14 @@ def train_refine(num_step, coarse_output, coarse_output_vgg_features, y_train, l
     return refine_output, refine_local_output, (refine_loss, refine_pixel, refine_style, refine_tv, refine_global_loss, refine_local_loss)
 
 
-def train_discriminator(num_step, x_train, x_local, local_coords, l_fns):
+def train_discriminator(num_step, x_train, x_desc, x_local, local_coords, l_fns):
     global_d.zero_grad()
     global_d_real_output = global_d(x_train).view(-1)
     real_label = torch.ones_like(global_d_real_output).to(device)
     global_real_loss = l_fns["discriminator"](global_d_real_output, real_label)
     writer.add_scalar("Loss/on_step_global_real_loss", global_real_loss.mean().item(), num_step)
     global_real_loss.backward()
-    global_fake_output = refine(coarse(x_train))
+    global_fake_output = refine(coarse(x_train, x_desc))
     global_d_fake_output = global_d(global_fake_output).view(-1)
     fake_label = torch.zeros_like(global_d_fake_output).to(device)
     global_fake_loss = l_fns["discriminator"](global_d_fake_output, fake_label)
