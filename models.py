@@ -318,7 +318,7 @@ class Net(nn.Module):
         self.block_3 = self._conv_in_lrelu_block(in_channels=64, out_channels=128, kernel_size=5, stride=2, padding=2)
 
         # Dilated Residual Blocks
-        self.dilated_res_blocks = self._dilated_res_blocks(num_features=128, kernel_size=5, dilation=3)
+        self.dilated_res_blocks = self._dilated_res_blocks(num_features=128, kernel_size=5, padding=3)
 
         # Visual features for concatenating with textual features
         self.block_4 = self._conv_in_lrelu_block(in_channels=128, out_channels=64, kernel_size=5, stride=2, padding=2)
@@ -341,13 +341,13 @@ class Net(nn.Module):
         )
 
     @staticmethod
-    def _dilated_res_blocks(num_features, kernel_size, stride=1, dilation=2):
+    def _dilated_res_blocks(num_features, kernel_size=3, stride=1, dilation=2, padding=2):
         return nn.Sequential(
-            DilatedResidualBlock(in_channels=num_features, out_channels=num_features, kernel_size=kernel_size, stride=stride, dilation=dilation),
-            DilatedResidualBlock(in_channels=num_features, out_channels=num_features, kernel_size=kernel_size, stride=stride, dilation=dilation),
-            DilatedResidualBlock(in_channels=num_features, out_channels=num_features, kernel_size=kernel_size, stride=stride, dilation=dilation),
-            DilatedResidualBlock(in_channels=num_features, out_channels=num_features, kernel_size=kernel_size, stride=stride, dilation=dilation),
-            DilatedResidualBlock(in_channels=num_features, out_channels=num_features, kernel_size=kernel_size, stride=stride, dilation=dilation)
+            DilatedResidualBlock(in_channels=num_features, out_channels=num_features, kernel_size=kernel_size, stride=stride, dilation=dilation, padding=padding),
+            DilatedResidualBlock(in_channels=num_features, out_channels=num_features, kernel_size=kernel_size, stride=stride, dilation=dilation, padding=padding),
+            DilatedResidualBlock(in_channels=num_features, out_channels=num_features, kernel_size=kernel_size, stride=stride, dilation=dilation, padding=padding),
+            DilatedResidualBlock(in_channels=num_features, out_channels=num_features, kernel_size=kernel_size, stride=stride, dilation=dilation, padding=padding),
+            DilatedResidualBlock(in_channels=num_features, out_channels=num_features, kernel_size=kernel_size, stride=stride, dilation=dilation, padding=padding)
         )
 
     @staticmethod
