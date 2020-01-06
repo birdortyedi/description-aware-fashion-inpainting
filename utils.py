@@ -22,8 +22,8 @@ class HDF5Dataset(data.Dataset):
 
         self.indices = self._filter_by_category()
         self.descriptions = self._build_descriptions()
-        self.imgs = self.h5_file['input_image'][self.indices]
-        print("Indices len: {}".format(len(self.indices)))
+        self.imgs = self.h5_file['input_image'][self.indices, :, :]
+
         print("Description len: {}".format(len(self.descriptions)))
         print("Images len: {}".format(len(self.imgs)))
 
@@ -32,7 +32,7 @@ class HDF5Dataset(data.Dataset):
         for i in range(len(self.h5_file['input_category'])):
             if self.h5_file['input_category'][i][0].decode("latin-1") in categories:
                 indices.append(i)
-
+        print("Indices len: {}".format(len(self.indices)))
         return indices
 
     def _build_descriptions(self):
@@ -66,7 +66,7 @@ class HDF5Dataset(data.Dataset):
         return erased, desc, local, coords, img
 
     def __len__(self):
-        return len(self.indices)
+        return len(self.descriptions)
 
 
 class CentralErasing(object):
