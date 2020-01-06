@@ -99,10 +99,10 @@ class CentralErasing(object):
 
     def __call__(self, img):
         x, y, h, w, v = self.get_params(img, scale=self.scale, ratio=self.ratio, value=self.value)
-        mask = torch.zeros_like(img)
-        mask[x:x+w, y:y+h, :] = 1
+        mask = torch.zeros_like(img).float()
+        mask[x:x+w, y:y+h, :] = 1.0
         return F.erase(img, x, y, h, w, v, self.inplace), \
-            ToTensor()(mask),\
+            ToTensor()(ToPILImage()(mask)),\
             ToTensor()(F.crop(ToPILImage()(img), x, y, h, w)), \
             torch.Tensor([x, y, h, w])
 
