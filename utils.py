@@ -11,7 +11,7 @@ import random
 import h5py
 
 
-categories = ['TOPS', 'SWEATERS', 'PANTS', 'JEANS', 'SHIRTS', 'DRESSES', 'SHORTS', 'SKIRTS']
+categories = ['TOPS', 'SWEATERS', 'PANTS', 'JEANS', 'SHIRTS', 'DRESSES', 'SHORTS', 'SKIRTS', 'JACKETS & COATS']
 
 
 class HDF5Dataset(data.Dataset):
@@ -30,7 +30,6 @@ class HDF5Dataset(data.Dataset):
     def _filter_by_category(self):
         indices = []
         for i in range(len(self.h5_file['input_category'])):
-            print(self.h5_file['input_category'][i][0].decode("latin-1"))
             if self.h5_file['input_category'][i][0].decode("latin-1") in categories:
                 indices.append(i)
 
