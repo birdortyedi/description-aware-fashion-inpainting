@@ -20,8 +20,9 @@ class HDF5Dataset(data.Dataset):
         self.h5_file = h5py.File(filename, mode="r")
         self.is_train = is_train
 
-        self._filter_by_category()
+        self.indices = self._filter_by_category()
         self.descriptions = self._build_descriptions()
+        self.imgs = self.h5_file['input_image'][self.indices]
 
     def _filter_by_category(self):
         indices = []
@@ -29,10 +30,10 @@ class HDF5Dataset(data.Dataset):
             if self.h5_file['input_category'][i] in categories:
                 indices.append(i)
 
-        self.h5_file = self.h5_file[indices]
+        return indices
 
     def _build_descriptions(self):
-        descriptions = self.h5_file["input_description"][:]
+        descriptions = self.h5_file["input_description"][self.indices]
         descriptions = [list(map(lambda k: k.decode("latin-1").replace(".", " <eos>").split(" "), desc)) for desc in descriptions]
         descriptions = [desc[0] for desc in descriptions]
 
@@ -45,7 +46,7 @@ class HDF5Dataset(data.Dataset):
         return descriptions
 
     def __getitem__(self, index):
-        img = self.h5_file["input_image"][index, :, :]
+        img = self.imgs[index, :, :]
         img = ToPILImage()(img)
         rnd_central_eraser = CentralErasing(scale=(0.03125, 0.0625), ratio=(0.75, 1.25), value=1)
         h_flip = RandomHorizontalFlip(p=0.5)
