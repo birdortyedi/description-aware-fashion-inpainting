@@ -64,10 +64,9 @@ writer = SummaryWriter()
 def train(epoch, loader, l_fns, optimizers, schedulers):
     coarse.train()
     refine.train()
-    num_step = 0
     for batch_idx, (x_train, x_desc, x_local, local_coords, y_train) in tqdm(enumerate(loader), ncols=50, desc="Training",
                                                                              bar_format="{l_bar}%s{bar}%s{r_bar}" % (Fore.GREEN, Fore.RESET)):
-        num_step += 1
+        num_step = epoch * len(loader) + batch_idx
         x_train = x_train.float().to(device)
         x_desc = x_desc.long().to(device)
         x_local = x_local.float().to(device)
@@ -117,7 +116,7 @@ def train_refine(num_step, coarse_output, coarse_output_vgg_features, y_train, l
     writer.add_scalar("Loss/on_step_refine_tv_loss", refine_tv.mean().item(), num_step)
     writer.add_scalar("Loss/on_step_refine_global_loss", refine_global_loss.mean().item(), num_step)
     writer.add_scalar("Loss/on_step_refine_local_loss", refine_local_loss.mean().item(), num_step)
-    loss = (0.4 * refine_global_loss) + (0.6 * refine_local_loss) + (2.0 * refine_loss)
+    loss = (1.0 * refine_global_loss) + (1.2 * refine_local_loss) + (2.0 * refine_loss)
     loss.backward()
 
     return refine_output, refine_local_output, (refine_loss, refine_pixel, refine_style, refine_tv, refine_global_loss, refine_local_loss)
