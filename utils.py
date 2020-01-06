@@ -23,6 +23,7 @@ class HDF5Dataset(data.Dataset):
         self.indices = self._filter_by_category()
         self.descriptions = self._build_descriptions()
         self.imgs = self.h5_file['input_image'][self.indices]
+        print("Indices len: {}".format(len(self.indices)))
         print("Description len: {}".format(len(self.descriptions)))
         print("Images len: {}".format(len(self.imgs)))
 
