@@ -46,7 +46,7 @@ class HDF5Dataset(data.Dataset):
         return descriptions
 
     def __getitem__(self, index):
-        img = self.imgs[index, :, :]
+        img = self.imgs[index]
         img = ToPILImage()(img)
         rnd_central_eraser = CentralErasing(scale=(0.03125, 0.0625), ratio=(0.75, 1.25), value=1)
         h_flip = RandomHorizontalFlip(p=0.5)
