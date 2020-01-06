@@ -21,11 +21,11 @@ class HDF5Dataset(data.Dataset):
         self.is_train = is_train
 
         # self.indices = self._filter_by_category()
-        self.descriptions = self._build_descriptions()
+        # self.descriptions = self._build_descriptions()
         print(self.h5_file['input_category'][:])
         self.imgs = self.h5_file['input_image'][self.h5_file['input_category'][:, 0].decode("latin-1") in categories, :, :]
 
-        print("Description len: {}".format(len(self.descriptions)))
+        # print("Description len: {}".format(len(self.descriptions)))
         print("Images len: {}".format(len(self.imgs)))
 
     def _filter_by_category(self):
@@ -37,7 +37,7 @@ class HDF5Dataset(data.Dataset):
         return indices
 
     def _build_descriptions(self):
-        descriptions = self.h5_file["input_description"][self.h5_file['input_category'][:][0].decode("latin-1") in categories]
+        descriptions = self.h5_file["input_description"]
         descriptions = [list(map(lambda k: k.decode("latin-1").replace(".", " <eos>").split(" "), desc)) for desc in descriptions]
         descriptions = [desc[0] for desc in descriptions]
 
