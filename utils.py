@@ -63,7 +63,7 @@ class HDF5Dataset(data.Dataset):
         return erased, desc, local, coords, img
 
     def __len__(self):
-        return self.imgs.shape[0]
+        return self.imgs[:, :, :].shape[0]
 
 
 class CentralErasing(object):
