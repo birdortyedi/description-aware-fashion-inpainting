@@ -49,7 +49,7 @@ refine_loss_fn = refine_loss_fn.to(device)
 d_loss_fn = nn.BCELoss()
 d_loss_fn = d_loss_fn.to(device)
 
-c_lr, r_lr, d_lr = 0.0002, 0.001, 0.0001
+c_lr, r_lr, d_lr = 0.00002, 0.00001, 0.0001
 coarse_optimizer = optim.Adam(coarse.parameters(), lr=c_lr, betas=(0.5, 0.999))
 refine_optimizer = optim.Adam(refine.parameters(), lr=r_lr, betas=(0.5, 0.999))
 d_optimizer = optim.Adam(local_d.parameters(), lr=d_lr, betas=(0.5, 0.999))
