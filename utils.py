@@ -22,7 +22,7 @@ class HDF5Dataset(data.Dataset):
 
         self.indices = self._filter_by_category()
         self.descriptions = self._build_descriptions()
-        self.imgs = self.h5_file['input_image'][self.indices]
+        self.imgs = self.h5_file['input_image'][self.indices, :, :]
 
     def _filter_by_category(self):
         indices = []
