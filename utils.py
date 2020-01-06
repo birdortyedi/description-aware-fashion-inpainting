@@ -22,21 +22,9 @@ class HDF5Dataset(data.Dataset):
 
         self.indices = list(i for i, c in enumerate(self.h5_file['input_category'][:]) if c[0].decode("latin-1") in categories)
         self.descriptions = self._build_descriptions()
-        self.imgs = self.h5_file['input_image'][self.indices, :, :]
-
-        print("Description len: {}".format(len(self.descriptions)))
-        print("Images len: {}".format(len(self.imgs)))
-
-    def _filter_by_category(self):
-        indices = []
-        for i in range(len(self.h5_file['input_category'])):
-            if self.h5_file['input_category'][i][0].decode("latin-1") in categories:
-                indices.append(i)
-        print("Indices len: {}".format(len(self.indices)))
-        return indices
 
     def _build_descriptions(self):
-        descriptions = self.h5_file["input_description"][self.indices]
+        descriptions = self.h5_file["input_description"]
         descriptions = [list(map(lambda k: k.decode("latin-1").replace(".", " <eos>").split(" "), desc)) for desc in descriptions]
         descriptions = [desc[0] for desc in descriptions]
 
@@ -49,12 +37,13 @@ class HDF5Dataset(data.Dataset):
         return descriptions
 
     def __getitem__(self, index):
-        img = self.imgs[index, :, :]
+        i = self.indices[index]
+        img = self.h5_file["input_image"][i, :, :]
         img = ToPILImage()(img)
         rnd_central_eraser = CentralErasing(scale=(0.03125, 0.0625), ratio=(0.75, 1.25), value=1)
         h_flip = RandomHorizontalFlip(p=0.5)
 
-        desc = self.descriptions[index].float()
+        desc = self.descriptions[i].float()
 
         if self.is_train:
             img = h_flip(img)
@@ -66,7 +55,7 @@ class HDF5Dataset(data.Dataset):
         return erased, desc, local, coords, img
 
     def __len__(self):
-        return len(self.descriptions)
+        return len(self.indices)
 
 
 class CentralErasing(object):
