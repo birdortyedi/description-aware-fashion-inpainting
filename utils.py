@@ -20,16 +20,11 @@ class HDF5Dataset(data.Dataset):
         self.h5_file = h5py.File(filename, mode="r")
         self.is_train = is_train
 
-        # self.indices = self._filter_by_category()
-        # self.descriptions = self._build_descriptions()
-        indices = list(c[0].decode("latin-1") for c in self.h5_file['input_category'][:])
-        print(indices)
-        indices = list(i for i, c in enumerate(indices) if c in categories)
-        print(indices)
-        print(len(indices))
-        self.imgs = self.h5_file['input_image'][self.h5_file['input_category'][:, 0].decode("latin-1") in categories, :, :]
+        self.indices = list(i for i, c in enumerate(self.h5_file['input_category'][:]) if c[0].decode("latin-1") in categories)
+        self.descriptions = self._build_descriptions()
+        self.imgs = self.h5_file['input_image'][self.indices, :, :]
 
-        # print("Description len: {}".format(len(self.descriptions)))
+        print("Description len: {}".format(len(self.descriptions)))
         print("Images len: {}".format(len(self.imgs)))
 
     def _filter_by_category(self):
@@ -41,7 +36,7 @@ class HDF5Dataset(data.Dataset):
         return indices
 
     def _build_descriptions(self):
-        descriptions = self.h5_file["input_description"]
+        descriptions = self.h5_file["input_description"][self.indices]
         descriptions = [list(map(lambda k: k.decode("latin-1").replace(".", " <eos>").split(" "), desc)) for desc in descriptions]
         descriptions = [desc[0] for desc in descriptions]
 
