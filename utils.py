@@ -22,7 +22,7 @@ class HDF5Dataset(data.Dataset):
 
         # self.indices = self._filter_by_category()
         # self.descriptions = self._build_descriptions()
-        indices = list(c.decode("latin-1") for c in self.h5_file['input_category'][:])
+        indices = list(c[0].decode("latin-1") for c in self.h5_file['input_category'][:])
         print(indices)
         indices = list(i for i, c in enumerate(indices) if c in categories)
         print(indices)
