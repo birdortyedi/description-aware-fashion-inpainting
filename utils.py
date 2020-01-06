@@ -49,10 +49,10 @@ class HDF5Dataset(data.Dataset):
             img = h_flip(img)
 
         img = ToTensor()(img)
-        erased, local, coords = rnd_central_eraser(img)
+        erased, mask, local, coords = rnd_central_eraser(img)
         local = ToTensor()(Resize(size=(32, 32))(ToPILImage()(local)))
 
-        return erased, desc, local, coords, img
+        return erased, desc, mask, local, coords, img
 
     def __len__(self):
         return len(self.indices)
@@ -99,7 +99,12 @@ class CentralErasing(object):
 
     def __call__(self, img):
         x, y, h, w, v = self.get_params(img, scale=self.scale, ratio=self.ratio, value=self.value)
-        return F.erase(img, x, y, h, w, v, self.inplace), ToTensor()(F.crop(ToPILImage()(img), x, y, h, w)), torch.Tensor([x, y, h, w])
+        mask = torch.zeros_like(img)
+        mask[x:x+w, y:y+h, :] = 1
+        return F.erase(img, x, y, h, w, v, self.inplace), \
+            ToTensor()(mask),\
+            ToTensor()(F.crop(ToPILImage()(img), x, y, h, w)), \
+            torch.Tensor([x, y, h, w])
 
 
 class UnNormalize(object):
