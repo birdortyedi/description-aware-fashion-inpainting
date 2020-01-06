@@ -80,7 +80,8 @@ def train(epoch, loader, l_fns, optimizers, schedulers):
         optimizers["coarse"].step()
         schedulers["coarse"].step(epoch)
 
-        refine_output, refine_local_output, refine_losses = train_refine(num_step, coarse_output, coarse_output_vgg_features, y_train, local_coords, l_fns)
+        refine_output, refine_local_output, refine_losses = train_refine(num_step, coarse_output, coarse_output_vgg_features,
+                                                                         x_mask, y_train, local_coords, l_fns)
         optimizers["refine"].step()
         schedulers["refine"].step(epoch)
 
