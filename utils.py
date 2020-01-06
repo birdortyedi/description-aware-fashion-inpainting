@@ -11,13 +11,25 @@ import random
 import h5py
 
 
+categories = ['TOPS', 'SWEATERS', 'PANTS', 'JEANS', 'SHIRTS', 'DRESSES', 'SHORTS', 'SKIRTS']
+
+
 class HDF5Dataset(data.Dataset):
     def __init__(self, filename, is_train=True):
         super().__init__()
         self.h5_file = h5py.File(filename, mode="r")
         self.is_train = is_train
 
+        self._filter_by_category()
         self.descriptions = self._build_descriptions()
+
+    def _filter_by_category(self):
+        indices = []
+        for i in range(len(self.h5_file['input_category'])):
+            if self.h5_file['input_category'][i] in categories:
+                indices.append(i)
+
+        self.h5_file = self.h5_file[indices]
 
     def _build_descriptions(self):
         descriptions = self.h5_file["input_description"][:]
