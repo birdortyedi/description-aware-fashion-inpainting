@@ -30,6 +30,7 @@ class HDF5Dataset(data.Dataset):
     def _filter_by_category(self):
         indices = []
         for i in range(len(self.h5_file['input_category'])):
+            print(self.h5_file['input_category'][i])
             if self.h5_file['input_category'][i] in categories:
                 indices.append(i)
 
@@ -66,7 +67,7 @@ class HDF5Dataset(data.Dataset):
         return erased, desc, local, coords, img
 
     def __len__(self):
-        return self.imgs[:, :, :].shape[0]
+        return len(self.indices)
 
 
 class CentralErasing(object):
