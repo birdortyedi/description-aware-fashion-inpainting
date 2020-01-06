@@ -22,7 +22,10 @@ class HDF5Dataset(data.Dataset):
 
         # self.indices = self._filter_by_category()
         # self.descriptions = self._build_descriptions()
-        print(self.h5_file['input_category'][:])
+        indices = list(map(lambda k: k.decode("latin-1"), c) for c in self.h5_file['input_category'][:])
+        indices = list(i for i, c in enumerate(indices) if c in categories)
+        print(indices)
+        print(len(indices))
         self.imgs = self.h5_file['input_image'][self.h5_file['input_category'][:, 0].decode("latin-1") in categories, :, :]
 
         # print("Description len: {}".format(len(self.descriptions)))
