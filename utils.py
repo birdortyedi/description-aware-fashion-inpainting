@@ -137,7 +137,7 @@ def normalize_img(im):
 
 
 def unnormalize_img(im):
-    im = (im * 127.5) + 127.5
+    im = ((im * 127.5) + 127.5) / 255.0
     return im
 
 
