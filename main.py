@@ -8,7 +8,7 @@ from tensorboardX import SummaryWriter
 from tqdm import tqdm
 from colorama import Fore
 
-from utils import HDF5Dataset, normalize_batch, weights_init
+from utils import HDF5Dataset, unnormalize_img, weights_init
 from models import CoarseNet, RefineNet, LocalDiscriminator, GlobalDiscriminator, VGG16
 from losses import CoarseLoss, RefineLoss
 
@@ -175,12 +175,12 @@ def train_coarse(num_step, x_train, x_desc, y_train, l_fns):
 
 
 def make_verbose(x_train, x_local, y_train, coarse_output, refine_output, refine_local_output, refine_losses, num_step, batch_idx, epoch):
-    x_0 = (x_train[0].cpu()).detach().numpy()  # UnNormalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
-    y_0 = (y_train[0].cpu()).detach().numpy()
-    local_0 = (x_local[0].cpu()).detach().numpy()
-    coarse_0 = (coarse_output[0].squeeze(0).cpu()).detach().numpy()
-    refine_0 = (refine_output[0].squeeze(0).cpu()).detach().numpy()
-    refine_local_0 = (refine_local_output[0].squeeze(0).cpu()).detach().numpy()
+    x_0 = (unnormalize_img(x_train[0]).cpu()).detach().numpy()  # UnNormalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
+    y_0 = (unnormalize_img(y_train[0]).cpu()).detach().numpy()
+    local_0 = (unnormalize_img(x_local[0]).cpu()).detach().numpy()
+    coarse_0 = (unnormalize_img(coarse_output[0]).squeeze(0).cpu()).detach().numpy()
+    refine_0 = (unnormalize_img(refine_output[0]).squeeze(0).cpu()).detach().numpy()
+    refine_local_0 = (unnormalize_img(refine_local_output[0]).squeeze(0).cpu()).detach().numpy()
     writer.add_image("train_x/epoch_{}".format(epoch), x_0, num_step)
     writer.add_image("original/epoch_{}".format(epoch), y_0, num_step)
     writer.add_image("local_x/epoch_{}".format(epoch), local_0, num_step)

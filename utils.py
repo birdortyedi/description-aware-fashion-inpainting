@@ -50,13 +50,13 @@ class HDF5Dataset(data.Dataset):
             img = h_flip(img)
 
         img = ToTensor()(img)
-        print(img)
         erased, mask, local, coords = rnd_central_eraser(img)
-        print(erased)
-        print(mask)
-        print(coords)
+
         local = ToTensor()(Resize(size=(32, 32))(ToPILImage()(local)))
-        print(local)
+
+        img = normalize_img(img)
+        erased = normalize_img(erased)
+        local = normalize_img(local)
 
         return erased, desc, mask, local, coords, img
 
@@ -131,12 +131,14 @@ class UnNormalize(object):
         return tensor
 
 
-def normalize_batch(batch):
-    batch *= 255.0
-    mean = batch.new_tensor([0.485, 0.456, 0.406]).view(-1, 1, 1)
-    std = batch.new_tensor([0.229, 0.224, 0.225]).view(-1, 1, 1)
-    batch = batch.div_(255.0)
-    return (batch - mean) / std
+def normalize_img(im):
+    im = (im * 255.0) / 127.5 - 1
+    return im
+
+
+def unnormalize_img(im):
+    im = (im * 127.5) + 127.5
+    return im
 
 
 def weights_init(m):
