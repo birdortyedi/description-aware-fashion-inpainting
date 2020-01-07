@@ -82,16 +82,18 @@ class CoarseLoss(nn.Module):
         self.content_loss = nn.MSELoss()
         self.style_loss = nn.MSELoss()
 
-    def forward(self, x, out, features_x, features_out):
+    def forward(self, x, out):  # , features_x, features_out):
         p_loss = self.pixel_loss(x, out.detach())
-        c_loss = 0.0
-        s_loss = 0.0
-        for f_x, f_out in zip(features_x, features_out):
-            G_f_x = self._gram_matrix(f_x).detach()
-            G_f_out = self._gram_matrix(f_out).detach()
-            s_loss += self.style_loss(G_f_x, G_f_out)
-            c_loss += self.content_loss(f_x.detach(), f_out.detach()) / 255.
-        return 5.0 * p_loss + 3.0 * c_loss + 20.0 * s_loss, p_loss, c_loss, s_loss
+        # c_loss = 0.0
+        G_x = self._gram_matrix(x).detach()
+        G_out = self._gram_matrix(out).detach()
+        s_loss = self.style_loss(G_x, G_out)
+        # for f_x, f_out in zip(features_x, features_out):
+        #     G_f_x = self._gram_matrix(f_x).detach()
+        #     G_f_out = self._gram_matrix(f_out).detach()
+        #     s_loss += self.style_loss(G_f_x, G_f_out)
+        #     c_loss += self.content_loss(f_x.detach(), f_out.detach()) / 255.
+        return 10.0 * p_loss + 25.0 * s_loss, p_loss, s_loss
 
     @staticmethod
     def _gram_matrix(mat):
@@ -112,18 +114,20 @@ class RefineLoss(nn.Module):
         self.local_loss = nn.BCELoss()
         self.tv_loss = TVLoss()
 
-    def forward(self, x, out, features_x, features_out):
+    def forward(self, x, out):  # , features_x, features_out):
         p_loss = self.pixel_loss(x, out.detach())
-        c_loss = 0.0
-        s_loss = 0.0
-        for f_x, f_out in zip(features_x, features_out):
-            G_f_x = self._gram_matrix(f_x).detach()
-            G_f_out = self._gram_matrix(f_out).detach()
-            s_loss += self.style_loss(G_f_x, G_f_out)
-            c_loss += self.content_loss(f_x.detach(), f_out.detach()) / 255.
+        # c_loss = 0.0
+        G_x = self._gram_matrix(x).detach()
+        G_out = self._gram_matrix(out).detach()
+        s_loss = self.style_loss(G_x, G_out)
+        # for f_x, f_out in zip(features_x, features_out):
+        #     G_f_x = self._gram_matrix(f_x).detach()
+        #     G_f_out = self._gram_matrix(f_out).detach()
+        #     s_loss += self.style_loss(G_f_x, G_f_out)
+        #     c_loss += self.content_loss(f_x.detach(), f_out.detach()) / 255.
         t_loss = self.tv_loss(out.detach())
-        return 5.0 * p_loss + 3.0 * c_loss + 20.0 * s_loss + 0.000001 * t_loss, \
-            p_loss, c_loss, s_loss, t_loss
+        return 5.0 * p_loss + 20.0 * s_loss + 0.000002 * t_loss, \
+            p_loss, s_loss, t_loss
 
     @staticmethod
     def _gram_matrix(mat):

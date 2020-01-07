@@ -13,7 +13,7 @@ from models import CoarseNet, RefineNet, LocalDiscriminator, GlobalDiscriminator
 from losses import CoarseLoss, RefineLoss
 
 NUM_EPOCHS = 250
-BATCH_SIZE = 96
+BATCH_SIZE = 128
 
 fg_train = HDF5Dataset(filename='./Fashion-Gen/fashiongen_256_256_train.h5')
 fg_val = HDF5Dataset(filename='./Fashion-Gen/fashiongen_256_256_validation.h5', is_train=False)
@@ -28,7 +28,7 @@ coarse = CoarseNet(fg_train.vocab_size)
 refine = RefineNet()
 local_d = LocalDiscriminator()
 global_d = GlobalDiscriminator()
-vgg = VGG16(requires_grad=False)
+# vgg = VGG16(requires_grad=False)
 if torch.cuda.device_count() > 1:
     print("Using {} GPUs...".format(torch.cuda.device_count()))
     coarse = nn.DataParallel(coarse)
@@ -39,7 +39,7 @@ coarse.to(device)
 refine.to(device)
 local_d.to(device)
 global_d.to(device)
-vgg.to(device)
+# vgg.to(device)
 
 coarse.apply(weights_init)
 refine.apply(weights_init)
@@ -81,12 +81,11 @@ def train(epoch, loader, l_fns, optimizers, schedulers):
         optimizers["discriminator"].step()
         schedulers["discriminator"].step(epoch)
 
-        coarse_output, coarse_output_vgg_features = train_coarse(num_step, x_train, x_desc, y_train, l_fns)
+        coarse_output = train_coarse(num_step, x_train, x_desc, y_train, l_fns)
         optimizers["coarse"].step()
         schedulers["coarse"].step(epoch)
 
-        refine_output, refine_local_output, refine_losses = train_refine(num_step, coarse_output, coarse_output_vgg_features,
-                                                                         x_mask, y_train, local_coords, l_fns)
+        refine_output, refine_local_output, refine_losses = train_refine(num_step, coarse_output, x_mask, y_train, local_coords, l_fns)
         optimizers["refine"].step()
         schedulers["refine"].step(epoch)
 
@@ -99,10 +98,10 @@ def train(epoch, loader, l_fns, optimizers, schedulers):
             make_verbose(x_train, x_local, y_train, coarse_output, refine_output, refine_local_output, refine_losses, num_step, batch_idx, epoch)
 
 
-def train_refine(num_step, coarse_output, coarse_output_vgg_features, x_mask, y_train, local_coords, l_fns):
+def train_refine(num_step, coarse_output, x_mask, y_train, local_coords, l_fns):
     refine.zero_grad()
     refine_output = (1.0 - x_mask) * y_train + x_mask * refine(coarse_output)
-    refine_output_vgg_features = vgg(normalize_batch(refine_output))
+    # refine_output_vgg_features = vgg(normalize_batch(refine_output))
     refine_local_output = list()
     for im, local_coord in zip(refine_output, local_coords):
         top, left, h, w = local_coord
@@ -113,11 +112,10 @@ def train_refine(num_step, coarse_output, coarse_output_vgg_features, x_mask, y_
     real_label = torch.ones((y_train.size(0), 1)).to(device)
     refine_global_loss = loss_fns["discriminator"](global_d(refine_output), real_label)
     refine_local_loss = loss_fns["discriminator"](local_d(refine_local_output), real_label)
-    refine_loss, refine_pixel, refine_content, refine_style, refine_tv = l_fns["refine"](refine_output, y_train,
-                                                                                         coarse_output_vgg_features, refine_output_vgg_features)
+    refine_loss, refine_pixel, refine_style, refine_tv = l_fns["refine"](refine_output, y_train)  # , coarse_output_vgg_features, refine_output_vgg_features)
     writer.add_scalar("Loss/on_step_refine_loss", refine_loss.mean().item(), num_step)
     writer.add_scalar("Loss/on_step_refine_pixel_loss", refine_pixel.mean().item(), num_step)
-    writer.add_scalar("Loss/on_step_refine_content_loss", refine_content.mean().item(), num_step)
+    # writer.add_scalar("Loss/on_step_refine_content_loss", refine_content.mean().item(), num_step)
     writer.add_scalar("Loss/on_step_refine_style_loss", refine_style.mean().item(), num_step)
     writer.add_scalar("Loss/on_step_refine_tv_loss", refine_tv.mean().item(), num_step)
     writer.add_scalar("Loss/on_step_refine_global_loss", refine_global_loss.mean().item(), num_step)
@@ -125,7 +123,7 @@ def train_refine(num_step, coarse_output, coarse_output_vgg_features, x_mask, y_
     loss = (0.4 * refine_global_loss) + (0.6 * refine_local_loss) + (2.0 * refine_loss)
     loss.backward()
 
-    return refine_output, refine_local_output, (refine_loss, refine_pixel, refine_content, refine_style, refine_tv, refine_global_loss, refine_local_loss)
+    return refine_output, refine_local_output, (refine_loss, refine_pixel, refine_style, refine_tv, refine_global_loss, refine_local_loss)
 
 
 def train_discriminator(num_step, x_train, x_desc, x_mask, x_local, y_train, local_coords, l_fns):
@@ -162,19 +160,18 @@ def train_discriminator(num_step, x_train, x_desc, x_mask, x_local, y_train, loc
 def train_coarse(num_step, x_train, x_desc, y_train, l_fns):
     coarse.zero_grad()
     coarse_output = coarse(x_train, x_desc)
-    coarse_vgg_features = vgg(normalize_batch(x_train))
-    coarse_output_vgg_features = vgg(normalize_batch(coarse_output))
-    coarse_loss, coarse_pixel, \
-        coarse_content, coarse_style = l_fns["coarse"](coarse_output, y_train, coarse_vgg_features, coarse_output_vgg_features)
+    # coarse_vgg_features = vgg(normalize_batch(x_train))
+    # coarse_output_vgg_features = vgg(normalize_batch(coarse_output))
+    coarse_loss, coarse_pixel, coarse_style = l_fns["coarse"](coarse_output, y_train)  # , coarse_vgg_features, coarse_output_vgg_features)
 
     writer.add_scalar("Loss/on_step_coarse_loss", coarse_loss.mean().item(), num_step)
     writer.add_scalar("Loss/on_step_coarse_pixel_loss", coarse_pixel.mean().item(), num_step)
-    writer.add_scalar("Loss/on_step_coarse_content_loss", coarse_content.mean().item(), num_step)
+    # writer.add_scalar("Loss/on_step_coarse_content_loss", coarse_content.mean().item(), num_step)
     writer.add_scalar("Loss/on_step_coarse_style_loss", coarse_style.mean().item(), num_step)
 
     coarse_loss.backward(retain_graph=True)
 
-    return coarse_output, coarse_output_vgg_features
+    return coarse_output  # , coarse_output_vgg_features
 
 
 def make_verbose(x_train, x_local, y_train, coarse_output, refine_output, refine_local_output, refine_losses, num_step, batch_idx, epoch):
