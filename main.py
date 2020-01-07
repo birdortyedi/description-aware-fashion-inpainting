@@ -188,14 +188,14 @@ def make_verbose(x_train, x_local, y_train, coarse_output, refine_output, refine
     writer.add_image("refine_out/epoch_{}".format(epoch), refine_0, num_step)
     writer.add_image("refine_local_out/epoch_{}".format(epoch), refine_local_0, num_step)
 
-    refine_loss, refine_pixel, refine_content, refine_style, refine_tv, refine_global, refine_local = refine_losses
+    refine_loss, refine_pixel, refine_style, refine_tv, refine_global, refine_local = refine_losses
     print("Step:{}\t".format(num_step),
           "Epoch:{}".format(epoch),
           "[{}/{} ".format(batch_idx * len(x_train), len(train_loader.dataset)),
           "({}%)]\t".format(int(100 * batch_idx / float(len(train_loader)))),
           "Loss: {:.6f} ".format(refine_loss.mean().item()),
           "Pixel: {:.6f} ".format(refine_pixel.mean().item()),
-          "Content: {:.5f} ".format(refine_content.mean().item()),
+          # "Content: {:.5f} ".format(refine_content.mean().item()),
           "Style: {:.6f} ".format(refine_style.mean().item()),
           "TV: {:.6f} ".format(refine_tv.mean().item()),
           "Global: {:.6f} ".format(refine_global.mean().item()),
