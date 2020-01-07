@@ -122,7 +122,7 @@ class RefineLoss(nn.Module):
             s_loss += self.style_loss(G_f_x, G_f_out)
             c_loss += self.content_loss(f_x.detach(), f_out.detach()) / 255.
         t_loss = self.tv_loss(out.detach())
-        return 5.0 * p_loss + 3.0 * c_loss + 20.0 * s_loss + 0.0001 * t_loss, \
+        return 5.0 * p_loss + 3.0 * c_loss + 20.0 * s_loss + 0.000001 * t_loss, \
             p_loss, c_loss, s_loss, t_loss
 
     @staticmethod
