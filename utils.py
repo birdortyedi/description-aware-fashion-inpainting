@@ -1,4 +1,5 @@
 import torch
+from torch import nn
 from torchvision.transforms import functional as F
 from torchvision.transforms import Normalize, ToTensor, ToPILImage, RandomHorizontalFlip, Resize
 from torchtext.data import Field
@@ -131,3 +132,12 @@ def normalize_batch(batch):
     std = batch.new_tensor([0.229, 0.224, 0.225]).view(-1, 1, 1)
     batch = batch.div_(255.0)
     return (batch - mean) / std
+
+
+def weights_init(m):
+    classname = m.__class__.__name__
+    if classname.find('Conv') != -1:
+        nn.init.normal_(m.weight.data, 0.0, 0.02)
+    elif classname.find('BatchNorm') != -1:
+        nn.init.normal_(m.weight.data, 1.0, 0.02)
+        nn.init.constant_(m.bias.data, 0)

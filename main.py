@@ -8,7 +8,7 @@ from tensorboardX import SummaryWriter
 from tqdm import tqdm
 from colorama import Fore
 
-from utils import HDF5Dataset, normalize_batch
+from utils import HDF5Dataset, normalize_batch, weights_init
 from models import CoarseNet, RefineNet, LocalDiscriminator, GlobalDiscriminator, VGG16
 from losses import CoarseLoss, RefineLoss
 
@@ -40,6 +40,11 @@ refine.to(device)
 local_d.to(device)
 global_d.to(device)
 vgg.to(device)
+
+coarse.apply(weights_init)
+refine.apply(weights_init)
+local_d.apply(weights_init)
+global_d.apply(weights_init)
 
 coarse_loss_fn = CoarseLoss()
 coarse_loss_fn = coarse_loss_fn.to(device)

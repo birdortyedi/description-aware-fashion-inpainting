@@ -240,12 +240,12 @@ class DilatedResidualBlock(nn.Module):
 class LocalDiscriminator(nn.Module):
     def __init__(self):
         super(LocalDiscriminator, self).__init__()
-        self.d_block_1 = self._conv_in_lrelu_block(in_channels=3, out_channels=16, kernel_size=3, padding=1)
-        self.d_block_2 = self._conv_in_lrelu_block(in_channels=16, out_channels=32, kernel_size=3, stride=2, padding=1)
-        self.d_block_3 = self._conv_in_lrelu_block(in_channels=32, out_channels=64, kernel_size=3, padding=1)
-        self.d_block_4 = self._conv_in_lrelu_block(in_channels=96, out_channels=128, kernel_size=3, stride=2, padding=1)
-        self.d_block_5 = self._conv_in_lrelu_block(in_channels=128, out_channels=64, kernel_size=3, padding=1)
-        self.d_block_6 = self._conv_in_lrelu_block(in_channels=192, out_channels=64, kernel_size=3, stride=2, padding=1)
+        self.d_block_1 = self._conv_lrelu_block(in_channels=3, out_channels=16, kernel_size=3, padding=1)
+        self.d_block_2 = self._conv_bn_lrelu_block(in_channels=16, out_channels=32, kernel_size=3, stride=2, padding=1)
+        self.d_block_3 = self._conv_bn_lrelu_block(in_channels=32, out_channels=64, kernel_size=3, padding=1)
+        self.d_block_4 = self._conv_bn_lrelu_block(in_channels=96, out_channels=128, kernel_size=3, stride=2, padding=1)
+        self.d_block_5 = self._conv_bn_lrelu_block(in_channels=128, out_channels=64, kernel_size=3, padding=1)
+        self.d_block_6 = self._conv_bn_lrelu_block(in_channels=192, out_channels=64, kernel_size=3, stride=2, padding=1)
         self.dropout = nn.Dropout2d(p=0.3)
         self.avg_pooling = nn.AdaptiveAvgPool2d(output_size=(1, 1))
         self.d_block_7 = nn.Linear(in_features=64, out_features=1)
@@ -274,17 +274,32 @@ class LocalDiscriminator(nn.Module):
             nn.LeakyReLU(negative_slope=0.2)
         )
 
+    @staticmethod
+    def _conv_bn_lrelu_block(in_channels, out_channels, kernel_size, stride=1, padding=0):
+        return nn.Sequential(
+            nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size, stride=stride, padding=padding),
+            nn.BatchNorm2d(num_features=out_channels),
+            nn.LeakyReLU(negative_slope=0.2)
+        )
+
+    @staticmethod
+    def _conv_lrelu_block(in_channels, out_channels, kernel_size, stride=1, padding=0):
+        return nn.Sequential(
+            nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size, stride=stride, padding=padding),
+            nn.LeakyReLU(negative_slope=0.2)
+        )
+
 
 class GlobalDiscriminator(nn.Module):
     def __init__(self):
         super(GlobalDiscriminator, self).__init__()
         # Discriminator
-        self.d_block_1 = self._conv_in_lrelu_block(in_channels=3, out_channels=32, kernel_size=7, stride=2, padding=1)
-        self.d_block_2 = self._conv_in_lrelu_block(in_channels=32, out_channels=64, kernel_size=5, stride=2, padding=1)
-        self.d_block_3 = self._conv_in_lrelu_block(in_channels=64, out_channels=128, kernel_size=5, stride=2, padding=1)
-        self.d_block_4 = self._conv_in_lrelu_block(in_channels=128, out_channels=64, kernel_size=5, stride=2, padding=1)
-        self.d_block_5 = self._conv_in_lrelu_block(in_channels=64, out_channels=32, kernel_size=3, stride=2, padding=1)
-        self.d_block_6 = self._conv_in_lrelu_block(in_channels=32, out_channels=16, kernel_size=3, stride=2, padding=1)
+        self.d_block_1 = self._conv_lrelu_block(in_channels=3, out_channels=32, kernel_size=7, stride=2, padding=1)
+        self.d_block_2 = self._conv_bn_lrelu_block(in_channels=32, out_channels=64, kernel_size=5, stride=2, padding=1)
+        self.d_block_3 = self._conv_bn_lrelu_block(in_channels=64, out_channels=128, kernel_size=5, stride=2, padding=1)
+        self.d_block_4 = self._conv_bn_lrelu_block(in_channels=128, out_channels=64, kernel_size=5, stride=2, padding=1)
+        self.d_block_5 = self._conv_bn_lrelu_block(in_channels=64, out_channels=32, kernel_size=3, stride=2, padding=1)
+        self.d_block_6 = self._conv_bn_lrelu_block(in_channels=32, out_channels=16, kernel_size=3, stride=2, padding=1)
         self.dropout = nn.Dropout2d(p=0.3)
         self.avg_pooling = nn.AdaptiveAvgPool2d(output_size=(1, 1))
         self.d_block_7 = nn.Linear(in_features=16, out_features=1)
@@ -308,14 +323,29 @@ class GlobalDiscriminator(nn.Module):
             nn.LeakyReLU(negative_slope=0.2)
         )
 
+    @staticmethod
+    def _conv_bn_lrelu_block(in_channels, out_channels, kernel_size, stride=1, padding=0):
+        return nn.Sequential(
+            nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size, stride=stride, padding=padding),
+            nn.BatchNorm2d(num_features=out_channels),
+            nn.LeakyReLU(negative_slope=0.2)
+        )
+
+    @staticmethod
+    def _conv_lrelu_block(in_channels, out_channels, kernel_size, stride=1, padding=0):
+        return nn.Sequential(
+            nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size, stride=stride, padding=padding),
+            nn.LeakyReLU(negative_slope=0.2)
+        )
+
 
 class Net(nn.Module):
     def __init__(self):
         super(Net, self).__init__()
         # Encoder
-        self.block_1 = self._conv_in_lrelu_block(in_channels=3, out_channels=32, kernel_size=7, stride=2, padding=3)
-        self.block_2 = self._conv_in_lrelu_block(in_channels=32, out_channels=64, kernel_size=5, stride=2, padding=2)
-        self.block_3 = self._conv_in_lrelu_block(in_channels=64, out_channels=128, kernel_size=5, stride=2, padding=2)
+        self.block_1 = self._conv_bn_lrelu_block(in_channels=3, out_channels=32, kernel_size=7, stride=2, padding=3)
+        self.block_2 = self._conv_bn_lrelu_block(in_channels=32, out_channels=64, kernel_size=5, stride=2, padding=2)
+        self.block_3 = self._conv_bn_lrelu_block(in_channels=64, out_channels=128, kernel_size=5, stride=2, padding=2)
 
         # Dilated Residual Blocks
         self.dilated_res_blocks = self._dilated_res_blocks(num_features=128, kernel_size=5, padding=4)
@@ -324,10 +354,10 @@ class Net(nn.Module):
         self.block_4 = self._conv_in_lrelu_block(in_channels=128, out_channels=64, kernel_size=5, stride=2, padding=2)
         self.avg_pooling = nn.AdaptiveAvgPool2d(output_size=(1, 1))
 
-        self.block_8 = self._upsampling_in_lrelu_block(in_channels=128, out_channels=128)
-        self.block_9 = self._upsampling_in_lrelu_block(in_channels=64, out_channels=64)
+        self.block_8 = self._upsampling_bn_lrelu_block(in_channels=128, out_channels=128)
+        self.block_9 = self._upsampling_bn_lrelu_block(in_channels=64, out_channels=64)
         self._1x1conv_9 = self._1x1conv_lrelu_block(in_channels=128, out_channels=32)
-        self.block_10 = self._upsampling_in_lrelu_block(in_channels=32, out_channels=32)
+        self.block_10 = self._upsampling_bn_lrelu_block(in_channels=32, out_channels=32)
         self.block_11 = self._upsampling_tanh_block(in_channels=64, out_channels=3)
 
         self.dropout = nn.Dropout2d(p=0.3)
@@ -337,6 +367,14 @@ class Net(nn.Module):
         return nn.Sequential(
             nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size, stride=stride, padding=padding),
             nn.InstanceNorm2d(num_features=out_channels, affine=True),
+            nn.LeakyReLU(negative_slope=0.2)
+        )
+
+    @staticmethod
+    def _conv_bn_lrelu_block(in_channels, out_channels, kernel_size, stride=1, padding=0):
+        return nn.Sequential(
+            nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size, stride=stride, padding=padding),
+            nn.BatchNorm2d(num_features=out_channels),
             nn.LeakyReLU(negative_slope=0.2)
         )
 
@@ -367,6 +405,16 @@ class Net(nn.Module):
         )
 
     @staticmethod
+    def _upsampling_bn_lrelu_block(in_channels, out_channels, mode='bilinear', scale_factor=2.0, padding=0):
+        return nn.Sequential(
+            nn.Upsample(mode=mode, scale_factor=scale_factor),
+            nn.ReflectionPad2d(1),
+            nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=3, padding=padding),
+            nn.BatchNorm2d(num_features=out_channels),
+            nn.LeakyReLU(negative_slope=0.2)
+        )
+
+    @staticmethod
     def _upsampling_tanh_block(in_channels, out_channels, mode='bilinear', scale_factor=2.0, padding=0):
         return nn.Sequential(
             nn.Upsample(mode=mode, scale_factor=scale_factor),
@@ -388,12 +436,12 @@ class RefineNet(Net):
         super(RefineNet, self).__init__()
 
         # Encoder c'ing
-        self.block_5 = self._conv_in_lrelu_block(in_channels=64, out_channels=256, kernel_size=5, stride=2, padding=2)
+        self.block_5 = self._conv_bn_lrelu_block(in_channels=64, out_channels=256, kernel_size=5, stride=2, padding=2)
 
         # Decoder
-        self.block_6 = self._upsampling_in_lrelu_block(in_channels=16, out_channels=32)
+        self.block_6 = self._upsampling_bn_lrelu_block(in_channels=16, out_channels=32)
         self._1x1conv_6 = self._1x1conv_lrelu_block(in_channels=288, out_channels=64)
-        self.block_7 = self._upsampling_in_lrelu_block(in_channels=64, out_channels=64)
+        self.block_7 = self._upsampling_bn_lrelu_block(in_channels=64, out_channels=64)
 
         self._1x1conv_8 = self._1x1conv_lrelu_block(in_channels=256, out_channels=64)
 
@@ -439,15 +487,15 @@ class CoarseNet(Net):
         # Self-Attention
         self.self_attention = SelfAttention(in_channels=128)
 
-        self.block_5 = self._conv_in_lrelu_block(in_channels=64, out_channels=128, kernel_size=5, stride=2, padding=2)
+        self.block_5 = self._conv_bn_lrelu_block(in_channels=64, out_channels=128, kernel_size=5, stride=2, padding=2)
 
         # LSTM
         self.lstm_block = self._lstm_block(vocab_size)
 
         # Decoder
-        self.block_6 = self._upsampling_in_lrelu_block(in_channels=16, out_channels=16)
+        self.block_6 = self._upsampling_bn_lrelu_block(in_channels=16, out_channels=16)
         self._1x1conv_6 = self._1x1conv_lrelu_block(in_channels=144, out_channels=32)
-        self.block_7 = self._upsampling_in_lrelu_block(in_channels=32, out_channels=32)
+        self.block_7 = self._upsampling_bn_lrelu_block(in_channels=32, out_channels=32)
         self._1x1conv_7 = self._1x1conv_lrelu_block(in_channels=96, out_channels=128)
 
         self._1x1conv_8 = self._1x1conv_lrelu_block(in_channels=384, out_channels=64)
