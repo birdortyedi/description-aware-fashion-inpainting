@@ -50,8 +50,13 @@ class HDF5Dataset(data.Dataset):
             img = h_flip(img)
 
         img = ToTensor()(img)
+        print(img)
         erased, mask, local, coords = rnd_central_eraser(img)
+        print(erased)
+        print(mask)
+        print(coords)
         local = ToTensor()(Resize(size=(32, 32))(ToPILImage()(local)))
+        print(local)
 
         return erased, desc, mask, local, coords, img
 
