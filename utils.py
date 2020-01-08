@@ -55,9 +55,9 @@ class HDF5Dataset(data.Dataset):
 
         img = normalize_img(img)
         erased = normalize_img(erased)
-        local = normalize_img(local)
 
         local = ToTensor()(Resize(size=(32, 32))(ToPILImage()(local)))
+        local = normalize_img(local)
 
         return erased, desc, mask, local, coords, img
 
