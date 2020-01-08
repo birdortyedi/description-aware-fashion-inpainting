@@ -36,8 +36,8 @@ class TVLoss(nn.Module):
         super(TVLoss, self).__init__()
 
     def forward(self, x):
-        var_w = torch.sum(torch.pow(x[:, :, :, :-1] - x[:, :, :, 1:], 2))
-        var_h = torch.sum(torch.pow(x[:, :, :-1, :] - x[:, :, 1:, :], 2))
+        var_w = torch.mean(torch.pow(x[:, :, :, :-1] - x[:, :, :, 1:], 2))
+        var_h = torch.mean(torch.pow(x[:, :, :-1, :] - x[:, :, 1:, :], 2))
         return var_w + var_h
 
 
@@ -100,7 +100,7 @@ class CoarseLoss(nn.Module):
         b, ch, h, w = mat.size()
         m = mat.view(b, ch, w * h)
         m_transposed = m.transpose(1, 2)
-        G = m.bmm(m_transposed) / (h * w * ch)
+        G = m.bmm(m_transposed)  # / (h * w * ch)
         return G
 
 
@@ -126,7 +126,7 @@ class RefineLoss(nn.Module):
         #     s_loss += self.style_loss(G_f_x, G_f_out)
         #     c_loss += self.content_loss(f_x.detach(), f_out.detach()) / 255.
         t_loss = self.tv_loss(out.detach())
-        return 20.0 * p_loss + 100.0 * s_loss + 0.00002 * t_loss, \
+        return 20.0 * p_loss + 100.0 * s_loss + 0.2 * t_loss, \
             p_loss, s_loss, t_loss
 
     @staticmethod
