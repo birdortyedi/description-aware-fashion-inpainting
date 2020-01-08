@@ -433,8 +433,7 @@ class Net(nn.Module):
     @staticmethod
     def _deconv_tanh_block(in_channels, out_channels, kernel_size, stride, padding=0):
         return nn.Sequential(
-            nn.ConvTranspose2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size, stride=stride, padding=0),
-            nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=3, padding=padding),
+            nn.ConvTranspose2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size, stride=stride, padding=padding),
             nn.Tanh()
         )
 
