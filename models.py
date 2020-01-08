@@ -354,11 +354,11 @@ class Net(nn.Module):
         self.block_4 = self._conv_in_lrelu_block(in_channels=128, out_channels=64, kernel_size=5, stride=2, padding=2)
         self.avg_pooling = nn.AdaptiveAvgPool2d(output_size=(1, 1))
 
-        self.block_8 = self._upsampling_in_lrelu_block(in_channels=128, out_channels=128)
-        self.block_9 = self._upsampling_in_lrelu_block(in_channels=64, out_channels=64)
+        self.block_8 = self._deconv_in_lrelu_block(in_channels=128, out_channels=128, kernel_size=2, stride=2)
+        self.block_9 = self._deconv_in_lrelu_block(in_channels=64, out_channels=64, kernel_size=2, stride=2)
         self._1x1conv_9 = self._1x1conv_lrelu_block(in_channels=128, out_channels=32)
-        self.block_10 = self._upsampling_in_lrelu_block(in_channels=32, out_channels=32)
-        self.block_11 = self._upsampling_tanh_block(in_channels=64, out_channels=3)
+        self.block_10 = self._deconv_in_lrelu_block(in_channels=32, out_channels=32, kernel_size=2, stride=2)
+        self.block_11 = self._deconv_tanh_block(in_channels=64, out_channels=3, kernel_size=2, stride=2)
 
         self.dropout = nn.Dropout2d(p=0.3)
 
@@ -404,6 +404,14 @@ class Net(nn.Module):
         )
 
     @staticmethod
+    def _deconv_in_lrelu_block(in_channels, out_channels, kernel_size, stride=2, padding=0):
+        return nn.Sequential(
+            nn.ConvTranspose2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size, stride=stride, padding=padding, output_padding=1),
+            nn.InstanceNorm2d(num_features=out_channels, affine=True),
+            nn.LeakyReLU(negative_slope=0.2)
+        )
+
+    @staticmethod
     def _upsampling_bn_lrelu_block(in_channels, out_channels, mode='bilinear', scale_factor=2.0, padding=0):
         return nn.Sequential(
             nn.Upsample(mode=mode, scale_factor=scale_factor),
@@ -418,6 +426,14 @@ class Net(nn.Module):
         return nn.Sequential(
             nn.Upsample(mode=mode, scale_factor=scale_factor),
             nn.ReflectionPad2d(1),
+            nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=3, padding=padding),
+            nn.Tanh()
+        )
+
+    @staticmethod
+    def _deconv_tanh_block(in_channels, out_channels, kernel_size, stride, padding=0):
+        return nn.Sequential(
+            nn.ConvTranspose2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size, stride=stride, padding=0),
             nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=3, padding=padding),
             nn.Tanh()
         )
@@ -438,9 +454,9 @@ class RefineNet(Net):
         self.block_5 = self._conv_in_lrelu_block(in_channels=64, out_channels=256, kernel_size=5, stride=2, padding=2)
 
         # Decoder
-        self.block_6 = self._upsampling_in_lrelu_block(in_channels=16, out_channels=32)
+        self.block_6 = self._deconv_in_lrelu_block(in_channels=16, out_channels=32, kernel_size=2, stride=2)
         self._1x1conv_6 = self._1x1conv_lrelu_block(in_channels=288, out_channels=64)
-        self.block_7 = self._upsampling_in_lrelu_block(in_channels=64, out_channels=64)
+        self.block_7 = self._deconv_in_lrelu_block(in_channels=64, out_channels=64, kernel_size=2, stride=2)
 
         self._1x1conv_8 = self._1x1conv_lrelu_block(in_channels=256, out_channels=64)
 
@@ -492,9 +508,9 @@ class CoarseNet(Net):
         self.lstm_block = self._lstm_block(vocab_size)
 
         # Decoder
-        self.block_6 = self._upsampling_in_lrelu_block(in_channels=16, out_channels=16)
+        self.block_6 = self._deconv_in_lrelu_block(in_channels=16, out_channels=16, kernel_size=2, stride=2)
         self._1x1conv_6 = self._1x1conv_lrelu_block(in_channels=144, out_channels=32)
-        self.block_7 = self._upsampling_in_lrelu_block(in_channels=32, out_channels=32)
+        self.block_7 = self._deconv_in_lrelu_block(in_channels=32, out_channels=32, kernel_size=2, stride=2)
         self._1x1conv_7 = self._1x1conv_lrelu_block(in_channels=96, out_channels=128)
 
         self._1x1conv_8 = self._1x1conv_lrelu_block(in_channels=384, out_channels=64)
@@ -518,22 +534,33 @@ class CoarseNet(Net):
         x_6 = torch.cat((x_5, x_6), dim=1)
         x_6 = self.dropout(self._1x1conv_6(x_6))
 
+        print(x_6.size())
+
         x_7 = self.block_7(x_6)
         x_7 = torch.cat((x_4, x_7), dim=1)
         x_7 = self.dropout(self._1x1conv_7(x_7))
+        print(x_7.size())
 
         x_8 = self.block_8(x_7)
         x_8 = torch.cat((x_3, x_8, attention_map), dim=1)
         x_8 = self.dropout(self._1x1conv_8(x_8))
 
+        print(x_8.size())
+
         x_9 = self.block_9(x_8)
         x_9 = torch.cat((x_2, x_9), dim=1)
         x_9 = self.dropout(self._1x1conv_9(x_9))
 
+        print(x_9.size())
+
         x_10 = self.block_10(x_9)
         x_10 = torch.cat((x_1, x_10), dim=1)
 
+        print(x_10.size())
+
         x_11 = self.block_11(x_10)
+
+        print(x_11.size())
 
         return x_11
 

@@ -120,7 +120,7 @@ def train_refine(num_step, coarse_output, x_mask, y_train, local_coords, l_fns):
     writer.add_scalar("Loss/on_step_refine_tv_loss", refine_tv.mean().item(), num_step)
     writer.add_scalar("Loss/on_step_refine_global_loss", refine_global_loss.mean().item(), num_step)
     writer.add_scalar("Loss/on_step_refine_local_loss", refine_local_loss.mean().item(), num_step)
-    loss = (0.4 * refine_global_loss) + (0.6 * refine_local_loss) + (2.0 * refine_loss)
+    loss = refine_global_loss + refine_local_loss + (2.0 * refine_loss)
     loss.backward()
 
     return refine_output, refine_local_output, (refine_loss, refine_pixel, refine_style, refine_tv, refine_global_loss, refine_local_loss)
@@ -153,7 +153,7 @@ def train_discriminator(num_step, x_train, x_desc, x_mask, x_local, y_train, loc
     local_fake_loss = l_fns["discriminator"](local_d_fake_output, fake_label)
     writer.add_scalar("Loss/on_step_local_fake_loss", local_fake_loss.mean().item(), num_step)
     local_loss = local_real_loss + local_fake_loss
-    d_loss = 0.4 * global_loss + 0.6 * local_loss
+    d_loss = global_loss + local_loss
     d_loss.backward(retain_graph=True)
 
 
