@@ -148,3 +148,27 @@ def weights_init(m):
     elif classname.find('BatchNorm') != -1:
         nn.init.normal_(m.weight.data, 1.0, 0.02)
         nn.init.constant_(m.bias.data, 0)
+
+
+if __name__ == '__main__':
+    BATCH_SIZE = 128
+    fg_train = HDF5Dataset(filename='./Fashion-Gen/fashiongen_256_256_train.h5')
+    fg_val = HDF5Dataset(filename='./Fashion-Gen/fashiongen_256_256_validation.h5', is_train=False)
+
+    print("Sample size in training: {}".format(len(fg_train)))
+
+    train_loader = data.DataLoader(fg_train, batch_size=BATCH_SIZE, shuffle=True, num_workers=0)
+    val_loader = data.DataLoader(fg_val, batch_size=BATCH_SIZE, shuffle=False, num_workers=0)
+
+    mean = 0.
+    std = 0.
+    nb_samples = 0.
+    for data in train_loader:
+        batch_samples = data.size(0)
+        data = data.view(batch_samples, data.size(1), -1)
+        mean += data.mean(2).sum(0)
+        std += data.std(2).sum(0)
+        nb_samples += batch_samples
+
+    mean /= nb_samples
+    std /= nb_samples
