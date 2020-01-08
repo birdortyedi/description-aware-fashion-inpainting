@@ -75,6 +75,7 @@ def train(epoch, loader, l_fns, optimizers, schedulers):
         x_train = x_train.float().to(device)
         x_desc = x_desc.long().to(device)
         x_mask = x_mask.float().to(device)
+        x_local = x_local.float().to(device)
         y_train = y_train.float().to(device)
 
         train_discriminator(num_step, x_train, x_desc, x_mask, x_local, y_train, local_coords, l_fns)
