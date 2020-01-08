@@ -53,6 +53,10 @@ class HDF5Dataset(data.Dataset):
         img = ToTensor()(img)
         erased, mask, local, coords = rnd_central_eraser(img)
 
+        img = normalize_img(img)
+        erased = normalize_img(erased)
+        local = normalize_img(local)
+
         local = ToTensor()(Resize(size=(32, 32))(ToPILImage()(local)))
 
         return erased, desc, mask, local, coords, img
@@ -130,6 +134,11 @@ class UnNormalize(object):
 
 def unnormalize_img(im):
     im = ((im * 127.5) + 127.5) / 255.0
+    return im
+
+
+def normalize_img(im):
+    im = ((im * 255.0) - 127.5) / 127.5
     return im
 
 
