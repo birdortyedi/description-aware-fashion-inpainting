@@ -406,7 +406,7 @@ class Net(nn.Module):
     @staticmethod
     def _deconv_in_lrelu_block(in_channels, out_channels, kernel_size, stride=2, padding=0):
         return nn.Sequential(
-            nn.ConvTranspose2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size, stride=stride, padding=padding, output_padding=1),
+            nn.ConvTranspose2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size, stride=stride, padding=padding, output_padding=0),
             nn.InstanceNorm2d(num_features=out_channels, affine=True),
             nn.LeakyReLU(negative_slope=0.2)
         )
