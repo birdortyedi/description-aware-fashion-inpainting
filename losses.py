@@ -106,8 +106,8 @@ class CoarseLoss(nn.Module):
 class RefineLoss(nn.Module):
     def __init__(self):
         super(RefineLoss, self).__init__()
-        self.pixel_loss = nn.SmoothL1Loss()
-        self.style_loss = nn.SmoothL1Loss()
+        self.pixel_loss = nn.MSELoss()
+        self.style_loss = nn.MSELoss()
         self.tv_loss = TVLoss()
 
     def forward(self, x, out):  # , features_x, features_out):

@@ -86,7 +86,7 @@ def train(epoch, loader, l_fns, optimizers, schedulers):
         optimizers["coarse"].step()
         schedulers["coarse"].step(epoch)
 
-        refine_output, refine_local_output, refine_losses = train_refine(num_step, coarse_output, x_mask, x_local, y_train, local_coords, l_fns)
+        refine_output, refine_local_output, refine_losses = train_refine(num_step, coarse_output, x_mask, y_train, local_coords, l_fns)
         optimizers["refine"].step()
         schedulers["refine"].step(epoch)
 
@@ -99,7 +99,7 @@ def train(epoch, loader, l_fns, optimizers, schedulers):
             make_verbose(x_train, x_local, y_train, coarse_output, refine_output, refine_local_output, refine_losses, num_step, batch_idx, epoch)
 
 
-def train_refine(num_step, coarse_output, x_mask, x_local, y_train, local_coords, l_fns):
+def train_refine(num_step, coarse_output, x_mask, y_train, local_coords, l_fns):
     refine.zero_grad()
     refine_output = (1.0 - x_mask) * y_train + x_mask * refine(coarse_output)
     # refine_output_vgg_features = vgg(normalize_batch(refine_output))
@@ -121,7 +121,7 @@ def train_refine(num_step, coarse_output, x_mask, x_local, y_train, local_coords
     # writer.add_scalar("Loss/on_step_refine_tv_loss", refine_tv.mean().item(), num_step)
     writer.add_scalar("Loss/on_step_refine_global_loss", refine_global_loss.mean().item(), num_step)
     writer.add_scalar("Loss/on_step_refine_local_loss", refine_local_loss.mean().item(), num_step)
-    loss = refine_global_loss + refine_local_loss + (2.0 * refine_loss)
+    loss = (0.4 * refine_global_loss + 0.6 * refine_local_loss) + (2.0 * refine_loss)
     loss.backward()
 
     return refine_output, refine_local_output, (refine_loss, refine_pixel, refine_style, refine_global_loss, refine_local_loss)
