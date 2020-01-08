@@ -134,5 +134,5 @@ class RefineLoss(nn.Module):
         b, ch, h, w = mat.size()
         m = mat.view(b, ch, w * h)
         m_transposed = m.transpose(1, 2)
-        G = m.bmm(m_transposed) / (h * w * ch)
+        G = m.bmm(m_transposed)  # / (h * w * ch)
         return G
