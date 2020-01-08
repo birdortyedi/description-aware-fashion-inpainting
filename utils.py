@@ -43,6 +43,7 @@ class HDF5Dataset(data.Dataset):
         img = ToPILImage()(img)
         rnd_central_eraser = CentralErasing(scale=(0.03125, 0.0625), ratio=(0.75, 1.25), value=1)
         h_flip = RandomHorizontalFlip(p=0.5)
+        normalizer = Normalize((0.7535, 0.7359, 0.7292), (0.5259, 0.5487, 0.5589))
 
         desc = self.descriptions[i].float()
 
@@ -54,9 +55,9 @@ class HDF5Dataset(data.Dataset):
 
         local = ToTensor()(Resize(size=(32, 32))(ToPILImage()(local)))
 
-        img = normalize_img(img)
-        erased = normalize_img(erased)
-        local = normalize_img(local)
+        img = normalizer(img)
+        erased = normalizer(erased)
+        local = normalizer(local)
 
         return erased, desc, mask, local, coords, img
 
@@ -129,11 +130,6 @@ class UnNormalize(object):
             t.mul_(s).add_(m)
             # The normalize code -> t.sub_(m).div_(s)
         return tensor
-
-
-def normalize_img(im):
-    im = (im * 255.0) / 127.5 - 1
-    return im
 
 
 def unnormalize_img(im):
