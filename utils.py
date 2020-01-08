@@ -172,3 +172,6 @@ if __name__ == '__main__':
 
     mean /= nb_samples
     std /= nb_samples
+
+    print(mean)
+    print(std)
