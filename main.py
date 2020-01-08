@@ -113,12 +113,10 @@ def train_refine(num_step, coarse_output, x_mask, x_local, y_train, local_coords
     real_label = torch.ones((y_train.size(0), 1)).to(device)
     refine_global_loss = loss_fns["discriminator"](global_d(refine_output), real_label)
     refine_local_loss = loss_fns["discriminator"](local_d(refine_local_output), real_label)
-    refine_loss, refine_pixel, refine_style, refine_local_style, refine_tv = l_fns["refine"](y_train, refine_output,
-                                                                                             x_local, refine_local_output)  # , coarse_output_vgg_features, refine_output_vgg_features)
+    refine_loss, refine_pixel, refine_style, refine_tv = l_fns["refine"](y_train, refine_output)  # , coarse_output_vgg_features, refine_output_vgg_features)
     writer.add_scalar("Loss/on_step_refine_loss", refine_loss.mean().item(), num_step)
     writer.add_scalar("Loss/on_step_refine_pixel_loss", refine_pixel.mean().item(), num_step)
     # writer.add_scalar("Loss/on_step_refine_content_loss", refine_content.mean().item(), num_step)
-    writer.add_scalar("Loss/on_step_refine_local_style_loss", refine_local_style.mean().item(), num_step)
     writer.add_scalar("Loss/on_step_refine_style_loss", refine_style.mean().item(), num_step)
     writer.add_scalar("Loss/on_step_refine_tv_loss", refine_tv.mean().item(), num_step)
     writer.add_scalar("Loss/on_step_refine_global_loss", refine_global_loss.mean().item(), num_step)
@@ -126,7 +124,7 @@ def train_refine(num_step, coarse_output, x_mask, x_local, y_train, local_coords
     loss = refine_global_loss + refine_local_loss + (2.0 * refine_loss)
     loss.backward()
 
-    return refine_output, refine_local_output, (refine_loss, refine_pixel, refine_style, refine_local_style, refine_tv, refine_global_loss, refine_local_loss)
+    return refine_output, refine_local_output, (refine_loss, refine_pixel, refine_style, refine_tv, refine_global_loss, refine_local_loss)
 
 
 def train_discriminator(num_step, x_train, x_desc, x_mask, x_local, y_train, local_coords, l_fns):
@@ -192,7 +190,7 @@ def make_verbose(x_train, x_local, y_train, coarse_output, refine_output, refine
     writer.add_image("refine_out/epoch_{}".format(epoch), refine_0, num_step)
     writer.add_image("refine_local_out/epoch_{}".format(epoch), refine_local_0, num_step)
 
-    refine_loss, refine_pixel, refine_style, refine_local_style, refine_tv, refine_global, refine_local = refine_losses
+    refine_loss, refine_pixel, refine_style, refine_tv, refine_global, refine_local = refine_losses
     print("Step:{}  ".format(num_step),
           "Epoch:{}".format(epoch),
           "[{}/{} ".format(batch_idx * len(x_train), len(train_loader.dataset)),
@@ -201,7 +199,6 @@ def make_verbose(x_train, x_local, y_train, coarse_output, refine_output, refine
           "Pixel: {:.6f} ".format(refine_pixel.mean().item()),
           # "Content: {:.5f} ".format(refine_content.mean().item()),
           "Style: {:.6f} ".format(refine_style.mean().item()),
-          "Local Style: {:.6f} ".format(refine_local_style.mean().item()),
           "TV: {:.6f} ".format(refine_tv.mean().item()),
           "Global: {:.6f} ".format(refine_global.mean().item()),
           "Local: {:.6f}".format(refine_local.mean().item()))
