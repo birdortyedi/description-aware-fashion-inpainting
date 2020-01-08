@@ -118,13 +118,13 @@ def train_refine(num_step, coarse_output, x_mask, x_local, y_train, local_coords
     writer.add_scalar("Loss/on_step_refine_pixel_loss", refine_pixel.mean().item(), num_step)
     # writer.add_scalar("Loss/on_step_refine_content_loss", refine_content.mean().item(), num_step)
     writer.add_scalar("Loss/on_step_refine_style_loss", refine_style.mean().item(), num_step)
-    writer.add_scalar("Loss/on_step_refine_tv_loss", refine_tv.mean().item(), num_step)
+    # writer.add_scalar("Loss/on_step_refine_tv_loss", refine_tv.mean().item(), num_step)
     writer.add_scalar("Loss/on_step_refine_global_loss", refine_global_loss.mean().item(), num_step)
     writer.add_scalar("Loss/on_step_refine_local_loss", refine_local_loss.mean().item(), num_step)
     loss = refine_global_loss + refine_local_loss + (2.0 * refine_loss)
     loss.backward()
 
-    return refine_output, refine_local_output, (refine_loss, refine_pixel, refine_style, refine_tv, refine_global_loss, refine_local_loss)
+    return refine_output, refine_local_output, (refine_loss, refine_pixel, refine_style, refine_global_loss, refine_local_loss)
 
 
 def train_discriminator(num_step, x_train, x_desc, x_mask, x_local, y_train, local_coords, l_fns):
@@ -199,7 +199,7 @@ def make_verbose(x_train, x_local, y_train, coarse_output, refine_output, refine
           "Pixel: {:.6f} ".format(refine_pixel.mean().item()),
           # "Content: {:.5f} ".format(refine_content.mean().item()),
           "Style: {:.6f} ".format(refine_style.mean().item()),
-          "TV: {:.6f} ".format(refine_tv.mean().item()),
+          #  "TV: {:.6f} ".format(refine_tv.mean().item()),
           "Global: {:.6f} ".format(refine_global.mean().item()),
           "Local: {:.6f}".format(refine_local.mean().item()))
 
