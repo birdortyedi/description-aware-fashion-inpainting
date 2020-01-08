@@ -85,7 +85,7 @@ def train(epoch, loader, l_fns, optimizers, schedulers):
         optimizers["coarse"].step()
         schedulers["coarse"].step(epoch)
 
-        refine_output, refine_local_output, refine_losses = train_refine(num_step, coarse_output, x_mask, y_train, local_coords, l_fns)
+        refine_output, refine_local_output, refine_losses = train_refine(num_step, coarse_output, x_mask, x_local, y_train, local_coords, l_fns)
         optimizers["refine"].step()
         schedulers["refine"].step(epoch)
 
@@ -98,7 +98,7 @@ def train(epoch, loader, l_fns, optimizers, schedulers):
             make_verbose(x_train, x_local, y_train, coarse_output, refine_output, refine_local_output, refine_losses, num_step, batch_idx, epoch)
 
 
-def train_refine(num_step, coarse_output, x_mask, y_train, local_coords, l_fns):
+def train_refine(num_step, coarse_output, x_mask, x_local, y_train, local_coords, l_fns):
     refine.zero_grad()
     refine_output = (1.0 - x_mask) * y_train + x_mask * refine(coarse_output)
     # refine_output_vgg_features = vgg(normalize_batch(refine_output))
@@ -112,10 +112,12 @@ def train_refine(num_step, coarse_output, x_mask, y_train, local_coords, l_fns):
     real_label = torch.ones((y_train.size(0), 1)).to(device)
     refine_global_loss = loss_fns["discriminator"](global_d(refine_output), real_label)
     refine_local_loss = loss_fns["discriminator"](local_d(refine_local_output), real_label)
-    refine_loss, refine_pixel, refine_style, refine_tv = l_fns["refine"](refine_output, y_train)  # , coarse_output_vgg_features, refine_output_vgg_features)
+    refine_loss, refine_pixel, refine_style, refine_local_style, refine_tv = l_fns["refine"](y_train, refine_output,
+                                                                                             x_local, refine_local_output)  # , coarse_output_vgg_features, refine_output_vgg_features)
     writer.add_scalar("Loss/on_step_refine_loss", refine_loss.mean().item(), num_step)
     writer.add_scalar("Loss/on_step_refine_pixel_loss", refine_pixel.mean().item(), num_step)
     # writer.add_scalar("Loss/on_step_refine_content_loss", refine_content.mean().item(), num_step)
+    writer.add_scalar("Loss/on_step_refine_local_style_loss", refine_local_style.mean().item(), num_step)
     writer.add_scalar("Loss/on_step_refine_style_loss", refine_style.mean().item(), num_step)
     writer.add_scalar("Loss/on_step_refine_tv_loss", refine_tv.mean().item(), num_step)
     writer.add_scalar("Loss/on_step_refine_global_loss", refine_global_loss.mean().item(), num_step)
