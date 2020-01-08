@@ -163,9 +163,9 @@ if __name__ == '__main__':
     mean = 0.
     std = 0.
     nb_samples = 0.
-    for data in train_loader:
-        batch_samples = data[0].size(0)
-        x = data[0].view(batch_samples, data.size(1), -1)
+    for x_train, x_desc, x_mask, x_local, local_coords, y_train in train_loader:
+        batch_samples = x_train.size(0)
+        x = x_train.view(batch_samples, x_train.size(1), -1)
         mean += x.mean(2).sum(0)
         std += x.std(2).sum(0)
         nb_samples += batch_samples
