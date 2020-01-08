@@ -126,7 +126,7 @@ def train_refine(num_step, coarse_output, x_mask, x_local, y_train, local_coords
     loss = refine_global_loss + refine_local_loss + (2.0 * refine_loss)
     loss.backward()
 
-    return refine_output, refine_local_output, (refine_loss, refine_pixel, refine_style, refine_tv, refine_global_loss, refine_local_loss)
+    return refine_output, refine_local_output, (refine_loss, refine_pixel, refine_style, refine_local_style, refine_tv, refine_global_loss, refine_local_loss)
 
 
 def train_discriminator(num_step, x_train, x_desc, x_mask, x_local, y_train, local_coords, l_fns):
