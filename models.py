@@ -519,16 +519,21 @@ class CoarseNet(Net):
         x_1 = self.block_1(x)
         x_2 = self.dropout(self.block_2(x_1))
         x_3 = self.dropout(self.block_3(x_2))
+        print(x_3.size())
 
         dil_res_x_3 = self.dilated_res_blocks(x_3)
         attention_map, _ = self.self_attention(dil_res_x_3)
 
         x_4 = self.dropout(self.block_4(x_3))
+        print(x_4.size())
         x_5 = self.dropout(self.block_5(x_4))
-
+        print(x_5.size())
         visual_embedding = self.avg_pooling(x_5).squeeze()
+        print(visual_embedding.size())
         textual_embedding = self.lstm_block(descriptions)
+        print(textual_embedding.size())
         embedding = torch.cat((visual_embedding, textual_embedding), dim=1)
+        print(embedding.size())
 
         x_6 = self.block_6(embedding.view(-1, 16, 4, 4))
         x_6 = torch.cat((x_5, x_6), dim=1)
