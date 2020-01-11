@@ -94,7 +94,7 @@ def train(epoch, loader, l_fns, optimizers, schedulers):
         print(local_coords.size())
 
         d_x_train_idx = torch.LongTensor([idx for idx in range(BATCH_SIZE//8)]).to(device)
-        train_discriminator(num_step, torch.index_select(x_train, dim=0, index=),
+        train_discriminator(num_step, torch.index_select(x_train, dim=0, index=d_x_train_idx),
                             torch.index_select(x_desc, dim=0, index=d_x_train_idx),
                             torch.index_select(x_mask, dim=0, index=d_x_train_idx),
                             torch.index_select(x_local, dim=0, index=d_x_train_idx),
