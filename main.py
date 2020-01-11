@@ -94,12 +94,12 @@ def train(epoch, loader, l_fns, optimizers, schedulers):
         print(local_coords.size())
 
         d_x_train_idx = [idx for idx in range(BATCH_SIZE//8)]
-        train_discriminator(num_step, torch.index_select(x_train, dim=0, index=torch.Tensor(d_x_train_idx)),
-                            torch.index_select(x_desc, dim=0, index=torch.Tensor(d_x_train_idx)),
-                            torch.index_select(x_mask, dim=0, index=torch.Tensor(d_x_train_idx)),
-                            torch.index_select(x_local, dim=0, index=torch.Tensor(d_x_train_idx)),
-                            torch.index_select(y_train, dim=0, index=torch.Tensor(d_x_train_idx)),
-                            torch.index_select(local_coords, dim=0, index=torch.Tensor(d_x_train_idx)), l_fns)
+        train_discriminator(num_step, torch.index_select(x_train, dim=0, index=torch.Tensor(d_x_train_idx).to(device)),
+                            torch.index_select(x_desc, dim=0, index=torch.Tensor(d_x_train_idx).to(device)),
+                            torch.index_select(x_mask, dim=0, index=torch.Tensor(d_x_train_idx).to(device)),
+                            torch.index_select(x_local, dim=0, index=torch.Tensor(d_x_train_idx).to(device)),
+                            torch.index_select(y_train, dim=0, index=torch.Tensor(d_x_train_idx).to(device)),
+                            torch.index_select(local_coords, dim=0, index=torch.Tensor(d_x_train_idx).to(device)), l_fns)
         optimizers["discriminator"].step()
         schedulers["discriminator"].step(epoch)
 
