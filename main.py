@@ -87,7 +87,7 @@ def train(epoch, loader, l_fns, optimizers, schedulers):
         optimizers["refine"].step()
         schedulers["refine"].step(epoch)
 
-        if batch_idx % 200 == 0:
+        if batch_idx % 150 == 0:
             train_discriminator(num_step, x_train, x_desc, x_mask, x_local, y_train, local_coords, l_fns)
             optimizers["discriminator"].step()
             schedulers["discriminator"].step(epoch)
