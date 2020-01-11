@@ -93,9 +93,9 @@ def train(epoch, loader, l_fns, optimizers, schedulers):
         print(y_train.size())
         print(local_coords.size())
 
-        train_discriminator(num_step, x_train, x_desc,
-                            x_mask, x_local, y_train[BATCH_SIZE//8, :, :, :],
-                            local_coords[BATCH_SIZE//8, :], l_fns)
+        train_discriminator(num_step, x_train.take(list(range(BATCH_SIZE//8))), x_desc.take(list(range(BATCH_SIZE//8))),
+                            x_mask.take(list(range(BATCH_SIZE//8))), x_local.take(list(range(BATCH_SIZE//8))),
+                            y_train.take(list(range(BATCH_SIZE//8))), local_coords.take(list(range(BATCH_SIZE//8))), l_fns)
         optimizers["discriminator"].step()
         schedulers["discriminator"].step(epoch)
 
