@@ -87,7 +87,7 @@ def train(epoch, loader, l_fns, optimizers, schedulers):
         optimizers["refine"].step()
         schedulers["refine"].step(epoch)
 
-        d_x_train_idx = torch.randint(high=128, size=(2, )).long().to(device)
+        d_x_train_idx = torch.randint(low=0, high=128, size=(2, )).long().to(device)
         train_discriminator(num_step, torch.index_select(x_train, dim=0, index=d_x_train_idx).to(device),
                             torch.index_select(x_desc, dim=0, index=d_x_train_idx).to(device),
                             torch.index_select(x_mask, dim=0, index=d_x_train_idx).to(device),
