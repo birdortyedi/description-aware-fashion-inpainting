@@ -77,6 +77,7 @@ def train(epoch, loader, l_fns, optimizers, schedulers):
         x_mask = x_mask.float().to(device)
         x_local = x_local.float().to(device)
         y_train = y_train.float().to(device)
+        local_coords = local_coords.float().to(device)
 
         coarse_output = train_coarse(num_step, x_train, x_desc, y_train, l_fns)
         optimizers["coarse"].step()
