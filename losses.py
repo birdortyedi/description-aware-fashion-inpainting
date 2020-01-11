@@ -36,43 +36,9 @@ class TVLoss(nn.Module):
         super(TVLoss, self).__init__()
 
     def forward(self, x):
-        var_w = torch.sum(torch.pow(x[:, :, :, :-1] - x[:, :, :, 1:], 2))
-        var_h = torch.sum(torch.pow(x[:, :, :-1, :] - x[:, :, 1:, :], 2))
+        var_w = torch.sum(torch.abs(x[:, :, :, :-1] - x[:, :, :, 1:]))
+        var_h = torch.sum(torch.abs(x[:, :, :-1, :] - x[:, :, 1:, :]))
         return var_w + var_h
-
-
-class AdverserialLoss(nn.Module):
-    def __init__(self):
-        super(AdverserialLoss, self).__init__()
-        self.loss_fn = nn.BCELoss()
-
-    def forward(self, x):
-        return self.loss_fn(x, torch.ones_like(x))
-
-
-class CustomInpaintingLoss(nn.Module):
-    def __init__(self):
-        super(CustomInpaintingLoss, self).__init__()
-        self.content_loss = PixelLoss()  # (x, out) := (the original image, inpainting)
-        self.content_weight = 25.0
-        self.style_loss = StyleLoss()  # (x, out) := (the original image, inpainting)
-        self.style_weight = 100.0
-        self.structural_loss = pytorch_msssim.MSSSIM()  # (x, out) := (the original image, inpainting)
-        self.structural_weight = 25.0
-        self.adversarial_loss = AdverserialLoss()
-        # (d_x, d_out) := (discriminator(x), discriminator(out))
-        self.adversarial_weight = 1.0
-
-    def forward(self, x, out, d_out):
-        con_loss = self.content_loss(x, out.detach())
-        sty_loss = self.style_loss(x, out.detach())
-        str_loss = 1 - self.structural_loss(x, out.detach())
-        adv_loss = self.adversarial_loss(d_out.detach())
-        return self.content_weight * con_loss + \
-               self.style_weight * sty_loss + \
-               self.structural_weight * str_loss + \
-               self.adversarial_weight * adv_loss, \
-               con_loss, sty_loss, str_loss, adv_loss
 
 
 class CoarseLoss(nn.Module):
@@ -121,9 +87,9 @@ class RefineLoss(nn.Module):
         #     G_f_out = self._gram_matrix(f_out).detach()
         #     s_loss += self.style_loss(G_f_x, G_f_out)
         #     c_loss += self.content_loss(f_x.detach(), f_out.detach()) / 255.
-        # t_loss = self.tv_loss(out.detach())
-        return 20.0 * p_loss + 100.0 * s_loss, \
-            p_loss, s_loss
+        t_loss = self.tv_loss(out.detach())
+        return 20.0 * p_loss + 100.0 * s_loss + 0.0002 * t_loss, \
+            p_loss, s_loss, t_loss
 
     @staticmethod
     def _gram_matrix(mat):
