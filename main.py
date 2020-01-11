@@ -87,15 +87,10 @@ def train(epoch, loader, l_fns, optimizers, schedulers):
         optimizers["refine"].step()
         schedulers["refine"].step(epoch)
 
-        d_x_train_idx = torch.randint(low=0, high=x_train.size(0), size=(4, )).long().to(device)
-        train_discriminator(num_step, torch.index_select(x_train, dim=0, index=d_x_train_idx).to(device),
-                            torch.index_select(x_desc, dim=0, index=d_x_train_idx).to(device),
-                            torch.index_select(x_mask, dim=0, index=d_x_train_idx).to(device),
-                            torch.index_select(x_local, dim=0, index=d_x_train_idx).to(device),
-                            torch.index_select(y_train, dim=0, index=d_x_train_idx).to(device),
-                            torch.index_select(local_coords, dim=0, index=d_x_train_idx).to(device), l_fns)
-        optimizers["discriminator"].step()
-        schedulers["discriminator"].step(epoch)
+        if batch_idx % 200 == 0:
+            train_discriminator(num_step, x_train, x_desc, x_mask, x_local, y_train, local_coords, l_fns)
+            optimizers["discriminator"].step()
+            schedulers["discriminator"].step(epoch)
 
         global_d_accuracy_on_refine_output = torch.mean((global_d(refine_output).view(-1) > 0.5).float(), dim=0)
         writer.add_scalar("Metrics/on_step_d_global_acc_on_refine", global_d_accuracy_on_refine_output, num_step)
