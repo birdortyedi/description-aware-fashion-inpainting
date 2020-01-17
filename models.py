@@ -173,7 +173,7 @@ class CoarseNet(Net):
         self.lstm_block = lstm_block(vocab_size)
 
         self.conv_5 = nn.Conv2d(in_channels=128, out_channels=16, kernel_size=1)
-        self.conv_6 = nn.Conv2d(in_channels=160, out_channels=32, kernel_size=1)
+        self.conv_6 = nn.Conv2d(in_channels=32, out_channels=160, kernel_size=1)
         self.conv_7 = nn.Conv2d(in_channels=128, out_channels=16, kernel_size=1)
         self.conv_8 = nn.Conv2d(in_channels=128, out_channels=16, kernel_size=1)
         self.conv_9 = nn.Conv2d(in_channels=128, out_channels=16, kernel_size=1)
