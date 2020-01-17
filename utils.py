@@ -174,9 +174,6 @@ def weights_init(m):
         nn.init.kaiming_normal_(m.weight)
         if m.bias is not None:
             nn.init.constant_(m.bias, 0)
-    elif type(m) == nn.InstanceNorm2d:
-        nn.init.normal_(m.weight, 1.0, 0.02)
-        nn.init.constant_(m.bias, 0)
 
 
 if __name__ == '__main__':
