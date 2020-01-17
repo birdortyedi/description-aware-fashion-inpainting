@@ -186,7 +186,7 @@ def make_verbose(x_train, x_local, y_train, coarse_output, coarse_losses, refine
     x_0 = (unnormalize_img(x_train[0]).cpu()).detach().numpy()  # UnNormalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
     y_0 = (unnormalize_img(y_train[0]).cpu()).detach().numpy()
     local_0 = (unnormalize_img(x_local[0]).cpu()).detach().numpy()
-    coarse_0 = (unnormalize_img(coarse_output[0]).cpu()).detach().numpy()
+    coarse_0 = (unnormalize_img(coarse_output[0]).squeeze(0).cpu()).detach().numpy()
     # refine_0 = (unnormalize_img(refine_output[0]).squeeze(0).cpu()).detach().numpy()
     # refine_local_0 = (unnormalize_img(refine_local_output[0]).squeeze(0).cpu()).detach().numpy()
     writer.add_image("train_x/epoch_{}".format(epoch), x_0, num_step)
