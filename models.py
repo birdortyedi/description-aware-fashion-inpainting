@@ -240,7 +240,7 @@ class CoarseNet(nn.Module):
         x_12 = torch.cat((x, x_12), dim=1)
         m_12 = torch.cat((mask, m_12), dim=1)
         x_12, _ = self.block_12(x_12, m_12)
-        x_12 = F.tanh(x_12)
+        x_12 = torch.tanh(x_12)
 
         return x_12
 
