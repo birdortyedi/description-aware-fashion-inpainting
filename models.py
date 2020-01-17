@@ -95,9 +95,9 @@ class Net(nn.Module):
 
         self.avg_pooling = nn.AdaptiveAvgPool2d(output_size=(1, 1))
 
-        self.block_8 = upsampling_in_lrelu_block(in_channels=128, out_channels=64)
-        self.block_9 = upsampling_in_lrelu_block(in_channels=64, out_channels=32)
-        self.block_10 = upsampling_in_lrelu_block(in_channels=32, out_channels=32)
+        self.block_8 = upsampling_in_lrelu_block(in_channels=192, out_channels=64)
+        self.block_9 = upsampling_in_lrelu_block(in_channels=128, out_channels=32)
+        self.block_10 = upsampling_in_lrelu_block(in_channels=64, out_channels=32)
         self.block_11 = upsampling_tanh_block(in_channels=64, out_channels=3)
 
         self.dropout = nn.Dropout2d(p=0.3)
