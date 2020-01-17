@@ -2,6 +2,8 @@ import torch
 from torch import nn
 import pytorch_msssim
 
+from utils import normalize_batch
+
 
 class PixelLoss(nn.Module):
     def __init__(self):
@@ -50,15 +52,36 @@ class CoarseLoss(nn.Module):
         self.style_loss = nn.SmoothL1Loss()
         self.tv_loss = TVLoss()
 
-    def forward(self, x, out, features_x, features_out):
-        p_loss = self.pixel_loss(x, out.detach())
-        s_loss, c_loss = 0., 0.
-        for f_x, f_out in zip(features_x, features_out):
-            G_f_x = self._gram_matrix(f_x).detach()
-            G_f_out = self._gram_matrix(f_out).detach()
-            s_loss += self.style_loss(G_f_x, G_f_out)
-            c_loss += self.content_loss(f_x.detach(), f_out.detach())
-        return 20.0 * p_loss + 100.0 * s_loss, p_loss, s_loss
+    def forward(self, x, out, comp, mask, vgg):
+        coarse_vgg_features = vgg(normalize_batch(x))
+        coarse_comp_vgg_features = vgg(normalize_batch(comp))
+        coarse_output_vgg_features = vgg(normalize_batch(out))
+
+        x_valid = (1 - mask) * x
+        out_valid = (1 - mask) * out
+
+        x_hole = mask * x
+        out_hole = mask * out
+
+        p_loss_valid = self.pixel_loss(out_valid, x_valid.detach()).mean()
+        p_loss_hole = self.pixel_loss(out_hole, x_hole.detach()).mean()
+
+        s_loss_out, s_loss_comp = 0., 0.
+        c_loss_out, c_loss_comp = 0., 0.
+        for f_x, f_comp, f_out in zip(coarse_vgg_features, coarse_comp_vgg_features, coarse_output_vgg_features):
+            G_f_x = self._gram_matrix(f_x)
+            G_f_out = self._gram_matrix(f_out)
+            G_f_comp = self._gram_matrix(f_comp)
+            s_loss_out += self.style_loss(G_f_out, G_f_x).mean()
+            s_loss_comp += self.style_loss(G_f_out, G_f_comp).mean()
+            c_loss_out += self.content_loss(f_out, f_x.detach()).mean()
+            c_loss_comp += self.content_loss(f_out, f_comp.detach()).mean()
+        s_loss = s_loss_out + s_loss_comp
+        c_loss = c_loss_out + c_loss_comp
+
+        tv_loss = self.tv_loss(comp)
+
+        return p_loss_valid + 6 * p_loss_hole + 0.05 * c_loss + 120 * s_loss + 0.1 * tv_loss, p_loss_valid, p_loss_hole, c_loss, s_loss, tv_loss
 
     @staticmethod
     def _gram_matrix(mat):

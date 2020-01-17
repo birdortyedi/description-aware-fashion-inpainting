@@ -8,7 +8,7 @@ from tensorboardX import SummaryWriter
 from tqdm import tqdm
 from colorama import Fore
 
-from utils import HDF5Dataset, UnNormalize, weights_init, unnormalize_img, normalize_batch
+from utils import HDF5Dataset, UnNormalize, weights_init, unnormalize_img
 from models import CoarseNet, RefineNet, LocalDiscriminator, GlobalDiscriminator, VGG16
 from losses import CoarseLoss, RefineLoss
 
@@ -80,7 +80,7 @@ def train(epoch, loader, l_fns, optimizers, schedulers):
         y_train = y_train.float().to(device)
         # local_coords = local_coords.float().to(device)
 
-        coarse_output, _ = train_coarse(num_step, x_train, x_desc, x_mask, y_train, l_fns)
+        coarse_output, coarse_losses = train_coarse(num_step, x_train, x_desc, x_mask, y_train, l_fns)
         optimizers["coarse"].step()
         schedulers["coarse"].step(epoch)
 
@@ -99,7 +99,7 @@ def train(epoch, loader, l_fns, optimizers, schedulers):
         # writer.add_scalar("Metrics/on_step_d_local_acc_on_refine", local_d_accuracy_on_refine_local_output, num_step)
 
         if batch_idx % 50 == 0:
-            make_verbose(x_train, x_local, y_train, coarse_output, None, None, None, num_step, batch_idx, epoch)
+            make_verbose(x_train, x_local, y_train, coarse_output, coarse_losses, None, None, None, num_step, batch_idx, epoch)
 
 
 def train_refine(num_step, coarse_output, x_mask, y_train, local_coords, l_fns):
@@ -164,19 +164,21 @@ def train_discriminator(num_step, x_train, x_desc, x_mask, x_local, y_train, loc
 def train_coarse(num_step, x_train, x_desc, x_mask, y_train, l_fns):
     coarse.zero_grad()
     coarse_output = coarse(x_train, x_desc, x_mask)
-    coarse_vgg_features = vgg(normalize_batch(x_train))
-    coarse_output_vgg_features = vgg(normalize_batch(coarse_output))
-    coarse_loss, coarse_pixel, coarse_content, coarse_style, coarse_tv = l_fns["coarse"](coarse_output, y_train,
-                                                                                         coarse_vgg_features, coarse_output_vgg_features)
+    coarse_comp_output = (1.0 - x_mask) * x_train + x_mask * coarse_output
+    coarse_losses = l_fns["coarse"](coarse_output, y_train, coarse_comp_output, x_mask, vgg)
 
-    writer.add_scalar("Loss/on_step_coarse_loss", coarse_loss.mean().item(), num_step)
-    writer.add_scalar("Loss/on_step_coarse_pixel_loss", coarse_pixel.mean().item(), num_step)
-    writer.add_scalar("Loss/on_step_coarse_content_loss", coarse_content.mean().item(), num_step)
-    writer.add_scalar("Loss/on_step_coarse_style_loss", coarse_style.mean().item(), num_step)
+    coarse_loss, coarse_pixel_valid, coarse_pixel_hole, coarse_content, coarse_style, coarse_tv = coarse_losses
+
+    writer.add_scalar("Loss/on_step_coarse_loss", coarse_loss.item(), num_step)
+    writer.add_scalar("Loss/on_step_coarse_pixel_valid_loss", coarse_pixel_valid.item(), num_step)
+    writer.add_scalar("Loss/on_step_coarse_pixel_hole_loss", coarse_pixel_hole.item(), num_step)
+    writer.add_scalar("Loss/on_step_coarse_content_loss", coarse_content.item(), num_step)
+    writer.add_scalar("Loss/on_step_coarse_style_loss", coarse_style.item(), num_step)
+    writer.add_scalar("Loss/on_step_coarse_tv_loss", coarse_tv.item(), num_step)
 
     coarse_loss.backward()
 
-    return coarse_output, coarse_output_vgg_features
+    return coarse_output, coarse_losses
 
 
 def make_verbose(x_train, x_local, y_train, coarse_output, coarse_losses, refine_output, refine_local_output, refine_losses, num_step, batch_idx, epoch):
@@ -196,13 +198,14 @@ def make_verbose(x_train, x_local, y_train, coarse_output, coarse_losses, refine
 
     # refine_loss, refine_pixel, refine_style, refine_tv, refine_global, refine_local = refine_losses
 
-    coarse_loss, coarse_pixel, coarse_content, coarse_style, coarse_tv = coarse_losses
+    coarse_loss, coarse_pixel_valid, coarse_pixel_hole, coarse_content, coarse_style, coarse_tv = coarse_losses
     print("Step:{}  ".format(num_step),
           "Epoch:{}".format(epoch),
           "[{}/{} ".format(batch_idx * len(x_train), len(train_loader.dataset)),
           "({}%)]  ".format(int(100 * batch_idx / float(len(train_loader)))),
           "Loss: {:.6f} ".format(coarse_loss.mean().item()),
-          "Pixel: {:.6f} ".format(coarse_pixel.mean().item()),
+          "Valid: {:.6f} ".format(coarse_pixel_valid.mean().item()),
+          "Hole: {:.6f} ".format(coarse_pixel_hole.mean().item()),
           "Content: {:.5f} ".format(coarse_content.mean().item()),
           "Style: {:.6f} ".format(coarse_style.mean().item()),
           "TV: {:.6f} ".format(coarse_tv.mean().item())  # ,
