@@ -67,11 +67,6 @@ class GlobalDiscriminator(nn.Module):
         return x
 
 
-class Net(nn.Module):
-    def __init__(self):
-
-
-
 class RefineNet(Net):
     def __init__(self):
         super(RefineNet, self).__init__()
@@ -120,11 +115,10 @@ class RefineNet(Net):
         return x_11
 
 
-class CoarseNet(Net):
+class CoarseNet(nn.Module):
     def __init__(self, vocab_size):
         super(CoarseNet, self).__init__()
 
-        super(Net, self).__init__()
         # Encoder
         self.block_1 = PartialConv2d(in_channels=3, out_channels=32, kernel_size=7, stride=2, padding=3,
                                      bias=False, return_mask=True, multi_channel=True)
