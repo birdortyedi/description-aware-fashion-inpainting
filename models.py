@@ -167,12 +167,12 @@ class CoarseNet(Net):
                                      bias=False, return_mask=True, multi_channel=True)
         self.in_5 = nn.InstanceNorm2d(num_features=128)
 
-        self.block_6 = PartialConv2d(in_channels=128, out_channels=256, kernel_size=5, stride=2, padding=2,
+        self.block_6 = PartialConv2d(in_channels=128, out_channels=512, kernel_size=5, stride=2, padding=2,
                                      bias=False, return_mask=True, multi_channel=True)
         self.in_6 = nn.InstanceNorm2d(num_features=128)
 
         # LSTM
-        self.lstm_block = lstm_block(vocab_size, output_size=256)
+        self.lstm_block = lstm_block(vocab_size, output_size=1024)
 
         # Decoder
         self.p_conv_7 = PartialConv2d(in_channels=16, out_channels=32, kernel_size=1, padding=0,
@@ -206,7 +206,7 @@ class CoarseNet(Net):
         embedding = torch.cat((visual_embedding, textual_embedding), dim=1)
         print(embedding.size())
 
-        o = embedding.view(-1, 32, 4, 4)
+        o = embedding.view(-1, 128, 4, 4)
         print(o.size())
 
         x_7 = self.upsample(o)
