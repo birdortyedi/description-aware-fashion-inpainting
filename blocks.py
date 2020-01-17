@@ -71,8 +71,7 @@ def upsampling_bn_lrelu_block(in_channels, out_channels, mode='nearest', scale_f
 def upsampling_tanh_block(in_channels, out_channels, mode='nearest', scale_factor=2.0, padding=0):
     return nn.Sequential(
         nn.Upsample(mode=mode, scale_factor=scale_factor),
-        nn.ReflectionPad2d(1),
-        nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=3, padding=padding),
+        nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=1, padding=padding),
         nn.Tanh()
     )
 
