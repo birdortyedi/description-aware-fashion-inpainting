@@ -176,7 +176,7 @@ class CoarseNet(Net):
         self.conv_6 = nn.Conv2d(in_channels=32, out_channels=160, kernel_size=1)
         self.conv_7 = nn.Conv2d(in_channels=128, out_channels=192, kernel_size=1)
         self.conv_8 = nn.Conv2d(in_channels=64, out_channels=320, kernel_size=1)
-        self.conv_9 = nn.Conv2d(in_channels=192, out_channels=16, kernel_size=1)
+        self.conv_9 = nn.Conv2d(in_channels=32, out_channels=128, kernel_size=1)
 
         # Decoder
         self.p_conv_6 = PartialConv2d(in_channels=16, out_channels=32, kernel_size=1, padding=0,
@@ -232,7 +232,7 @@ class CoarseNet(Net):
         x_9 = self.dropout(torch.cat((x_2, x_9), dim=1))
 
         x_10 = self.upsample(x_9)
-        m_10 = self.conv_6(m_9)
+        m_10 = self.conv_9(m_9)
         x_10, m_10 = self.p_conv_10(x_10, m_10)
         x_10 = F.leaky_relu(self.in_10(x_10), negative_slope=0.2)
         x_10 = torch.cat((x_1, x_10), dim=1)
