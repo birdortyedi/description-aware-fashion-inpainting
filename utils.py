@@ -1,5 +1,6 @@
 import torch
 from torch import nn
+from torch.autograd import Variable
 from torchvision.transforms import functional as F
 from torchvision.transforms import Normalize, ToTensor, ToPILImage, RandomHorizontalFlip, Resize
 from torchtext.data import Field
@@ -139,6 +140,31 @@ def unnormalize_img(im):
 def normalize_img(im):
     im = ((im * 255.0) - 127.5) / 127.5
     return im
+
+
+def normalize_batch(batch, div_factor=1.0):
+    """
+    Normalize batch
+    :param batch: input tensor with shape
+     (batch_size, nbr_channels, height, width)
+    :param div_factor: normalizing factor before data whitening
+    :return: normalized data, tensor with shape
+     (batch_size, nbr_channels, height, width)
+    """
+    # normalize using imagenet mean and std
+    mean = batch.data.new(batch.data.size())
+    std = batch.data.new(batch.data.size())
+    mean[:, 0, :, :] = 0.485
+    mean[:, 1, :, :] = 0.456
+    mean[:, 2, :, :] = 0.406
+    std[:, 0, :, :] = 0.229
+    std[:, 1, :, :] = 0.224
+    std[:, 2, :, :] = 0.225
+    batch = torch.div(batch, div_factor)
+
+    batch -= Variable(mean)
+    batch = torch.div(batch, Variable(std))
+    return batch
 
 
 def weights_init(m):
