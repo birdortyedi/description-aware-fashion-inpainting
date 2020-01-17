@@ -230,15 +230,13 @@ class CoarseNet(nn.Module):
 
         x_11 = self.upsample(x_10)
         m_11 = self.upsample(m_10)
-        x_11, _ = self.block_11(x_11, m_11)
+        x_11, m_11 = self.block_11(x_11, m_11)
         x_11 = F.leaky_relu(self.in_11(x_11), negative_slope=0.2)
         x_11 = torch.cat((x_1, x_11), dim=1)
         m_11 = torch.cat((m_1, m_11), dim=1)
 
         x_12 = self.upsample(x_11)
         m_12 = self.upsample(m_11)
-        print(x_12.size())
-        print(m_12.size())
         x_12 = torch.cat((x, x_12), dim=1)
         m_12 = torch.cat((mask, m_12), dim=1)
         x_12, _ = self.block_12(x_12, m_12)
