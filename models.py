@@ -67,7 +67,7 @@ class GlobalDiscriminator(nn.Module):
         return x
 
 
-class RefineNet(Net):
+class RefineNet(nn.Module):
     def __init__(self):
         super(RefineNet, self).__init__()
 
