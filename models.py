@@ -159,7 +159,7 @@ class CoarseNet(nn.Module):
         # Decoder
         self.block_7 = PartialConv2d(in_channels=128, out_channels=96, kernel_size=1, padding=0,
                                      bias=False, return_mask=True, multi_channel=True)
-        self.in_7 = nn.InstanceNorm2d(num_features=128, affine=True)
+        self.in_7 = nn.InstanceNorm2d(num_features=96, affine=True)
 
         self.block_8 = PartialConv2d(in_channels=128, out_channels=128, kernel_size=1, padding=0,
                                      bias=False, return_mask=True, multi_channel=True)
