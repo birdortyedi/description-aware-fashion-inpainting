@@ -205,23 +205,28 @@ class CoarseNet(Net):
         embedding = torch.cat((visual_embedding, textual_embedding), dim=1)
 
         x_6 = self.upsample(embedding.view(-1, 16, 4, 4))
-        x_6, m_6 = F.leaky_relu(self.in_6(self.p_conv_6(x_6, m_5)), negative_slope=0.2)
+        x_6, m_6 = self.p_conv_6(x_6, m_5)
+        x_6 = F.leaky_relu(self.in_6(x_6), negative_slope=0.2)
         x_6 = self.dropout(torch.cat((x_5, x_6), dim=1))
 
         x_7 = self.upsample(x_6)
-        x_7, m_7 = F.leaky_relu(self.in_7(self.p_conv_7(x_7, m_6)), negative_slope=0.2)
+        x_7, m_7 = self.p_conv_7(x_7, m_6)
+        x_7 = F.leaky_relu(self.in_7(x_7), negative_slope=0.2)
         x_7 = self.dropout(torch.cat((x_4, x_7), dim=1))
 
         x_8 = self.upsample(x_7)
-        x_8, m_8 = F.leaky_relu(self.in_8(self.p_conv_8(x_8, m_7)), negative_slope=0.2)
+        x_8, m_8 = self.p_conv_8(x_8, m_7)
+        x_8 = F.leaky_relu(self.in_8(x_8), negative_slope=0.2)
         x_8 = self.dropout(torch.cat((x_3, x_8, attention_map), dim=1))
 
         x_9 = self.upsample(x_8)
-        x_9, m_9 = F.leaky_relu(self.in_9(self.p_conv_9(x_9, m_8)), negative_slope=0.2)
+        x_9, m_9 = self.p_conv_9(x_9, m_8)
+        x_9 = F.leaky_relu(self.in_9(x_9), negative_slope=0.2)
         x_9 = self.dropout(torch.cat((x_2, x_9), dim=1))
 
         x_10 = self.upsample(x_9)
-        x_10, m_10 = F.leaky_relu(self.in_10(self.p_conv_10(x_10, m_9)), negative_slope=0.2)
+        x_10, m_10 = self.p_conv_10(x_10, m_9)
+        x_10 = F.leaky_relu(self.in_10(x_10), negative_slope=0.2)
         x_10 = torch.cat((x_1, x_10), dim=1)
 
         x_11 = self.upsample(x_10)
