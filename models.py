@@ -169,7 +169,7 @@ class CoarseNet(nn.Module):
                                      bias=False, return_mask=True, multi_channel=True)
         self.in_9 = nn.InstanceNorm2d(num_features=128, affine=True)
 
-        self.block_10 = PartialConv2d(in_channels=384, out_channels=128, kernel_size=3, padding=1,
+        self.block_10 = PartialConv2d(in_channels=448, out_channels=128, kernel_size=3, padding=1,
                                       bias=False, return_mask=True, multi_channel=True)
         self.in_10 = nn.InstanceNorm2d(num_features=128, affine=True)
 
