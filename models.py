@@ -153,15 +153,15 @@ class CoarseNet(Net):
         self._1x1conv_7 = one_by_one_conv_lrelu_block(in_channels=96, out_channels=128)
 
     def forward(self, x, descriptions, mask):
-        x_1, m_1 = self.block_1(x, mask)
-        x_2, m_2 = self.dropout(self.block_2(x_1, m_1))
-        x_3, m_3 = self.dropout(self.block_3(x_2, m_2))
+        x_1, m_1 = self.block_1((x, mask))
+        x_2, m_2 = self.dropout(self.block_2((x_1, m_1)))
+        x_3, m_3 = self.dropout(self.block_3((x_2, m_2)))
 
         dil_res_x_3 = self.dilated_res_blocks(x_3)
         attention_map, _ = self.self_attention(dil_res_x_3)
 
-        x_4, m_4 = self.dropout(self.block_4(x_3, m_3))
-        x_5, m_5 = self.dropout(self.block_5(x_4, m_4))
+        x_4, m_4 = self.dropout(self.block_4((x_3, m_3)))
+        x_5, m_5 = self.dropout(self.block_5((x_4, m_4)))
 
         visual_embedding = self.avg_pooling(x_5).squeeze()
         textual_embedding = self.lstm_block(descriptions)
