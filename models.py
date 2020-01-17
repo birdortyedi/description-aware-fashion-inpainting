@@ -172,6 +172,8 @@ class CoarseNet(Net):
         # LSTM
         self.lstm_block = lstm_block(vocab_size)
 
+        self.conv_5 = nn.Conv2d(in_channels=128, out_channels=32, kernel_size=1)
+
         # Decoder
         self.p_conv_6 = PartialConv2d(in_channels=16, out_channels=32, kernel_size=1, padding=0,
                                       bias=False, return_mask=True, multi_channel=True)
@@ -196,7 +198,7 @@ class CoarseNet(Net):
         x_4 = self.dropout(F.leaky_relu(self.in_4(x_4), negative_slope=0.2))
         x_5, m_5 = self.block_5(x_4, m_4)
         x_5 = self.dropout(F.leaky_relu(self.in_5(x_5), negative_slope=0.2))
-        m_5 = self.avg_pooling(nn.Conv2d(in_channels=128, out_channels=32, kernel_size=1)(m_5))
+        m_5 = self.avg_pooling(self.conv_5(m_5))
 
         visual_embedding = self.avg_pooling(x_5).squeeze()
         textual_embedding = self.lstm_block(descriptions)
