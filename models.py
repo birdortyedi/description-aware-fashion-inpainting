@@ -73,7 +73,6 @@ class Net(nn.Module):
         # Encoder
         self.block_1 = PartialConv2d(in_channels=3, out_channels=32, kernel_size=7, stride=2, padding=3,
                                      bias=False, return_mask=True, multi_channel=True)
-        self.in_1 = nn.InstanceNorm2d(num_features=32, affine=True)
 
         self.block_2 = PartialConv2d(in_channels=32, out_channels=64, kernel_size=5, stride=2, padding=2,
                                      bias=False, return_mask=True, multi_channel=True)
@@ -94,23 +93,22 @@ class Net(nn.Module):
         self.in_4 = nn.InstanceNorm2d(num_features=64, affine=True)
 
         self.avg_pooling = nn.AdaptiveAvgPool2d(output_size=(1, 1))
+        self.dropout = nn.Dropout2d(p=0.3)
 
         self.upsample = nn.Upsample(mode="nearest", scale_factor=2.0)
-        self.p_conv_8 = PartialConv2d(in_channels=192, out_channels=64, kernel_size=1, padding=0,
+        self.p_conv_9 = PartialConv2d(in_channels=192, out_channels=64, kernel_size=1, padding=0,
                                       bias=False, return_mask=True, multi_channel=True)
-        self.in_8 = nn.InstanceNorm2d(num_features=64, affine=True)
+        self.in_9 = nn.InstanceNorm2d(num_features=64, affine=True)
 
-        self.p_conv_9 = PartialConv2d(in_channels=320, out_channels=128, kernel_size=1, padding=0,
+        self.p_conv_10 = PartialConv2d(in_channels=320, out_channels=128, kernel_size=1, padding=0,
                                       bias=False, return_mask=True, multi_channel=True)
-        self.in_9 = nn.InstanceNorm2d(num_features=128, affine=True)
+        self.in_10 = nn.InstanceNorm2d(num_features=128, affine=True)
 
-        self.p_conv_10 = PartialConv2d(in_channels=192, out_channels=32, kernel_size=1, padding=0,
+        self.p_conv_11 = PartialConv2d(in_channels=192, out_channels=32, kernel_size=1, padding=0,
                                        bias=False, return_mask=True, multi_channel=True)
-        self.in_10 = nn.InstanceNorm2d(num_features=32, affine=True)
+        self.in_11 = nn.InstanceNorm2d(num_features=32, affine=True)
 
-        self.p_conv_11 = PartialConv2d(in_channels=67, out_channels=3, kernel_size=1, bias=False, return_mask=True, multi_channel=True)
-
-        self.dropout = nn.Dropout2d(p=0.3)
+        self.p_conv_12 = PartialConv2d(in_channels=67, out_channels=3, kernel_size=1, bias=False, return_mask=True, multi_channel=True)
 
 
 class RefineNet(Net):
@@ -169,28 +167,25 @@ class CoarseNet(Net):
                                      bias=False, return_mask=True, multi_channel=True)
         self.in_5 = nn.InstanceNorm2d(num_features=128)
 
-        # LSTM
-        self.lstm_block = lstm_block(vocab_size)
+        self.block_6 = PartialConv2d(in_channels=128, out_channels=256, kernel_size=5, stride=2, padding=2,
+                                     bias=False, return_mask=True, multi_channel=True)
+        self.in_6 = nn.InstanceNorm2d(num_features=128)
 
-        self.conv_5 = nn.Conv2d(in_channels=128, out_channels=16, kernel_size=1)
-        self.conv_6 = nn.Conv2d(in_channels=32, out_channels=160, kernel_size=1)
-        self.conv_7 = nn.Conv2d(in_channels=128, out_channels=192, kernel_size=1)
-        self.conv_8 = nn.Conv2d(in_channels=64, out_channels=320, kernel_size=1)
-        self.conv_9 = nn.Conv2d(in_channels=128, out_channels=192, kernel_size=1)
-        self.conv_10 = nn.Conv2d(in_channels=3, out_channels=67, kernel_size=1)
+        # LSTM
+        self.lstm_block = lstm_block(vocab_size, output_size=256)
 
         # Decoder
-        self.p_conv_6 = PartialConv2d(in_channels=16, out_channels=32, kernel_size=1, padding=0,
+        self.p_conv_7 = PartialConv2d(in_channels=16, out_channels=32, kernel_size=1, padding=0,
                                       bias=False, return_mask=True, multi_channel=True)
-        self.in_6 = nn.InstanceNorm2d(num_features=32, affine=True)
+        self.in_7 = nn.InstanceNorm2d(num_features=32, affine=True)
 
-        self.p_conv_7 = PartialConv2d(in_channels=160, out_channels=128, kernel_size=1, padding=0,
+        self.p_conv_8 = PartialConv2d(in_channels=160, out_channels=128, kernel_size=1, padding=0,
                                       bias=False, return_mask=True, multi_channel=True)
-        self.in_7 = nn.InstanceNorm2d(num_features=128, affine=True)
+        self.in_8 = nn.InstanceNorm2d(num_features=128, affine=True)
 
     def forward(self, x, descriptions, mask):
         x_1, m_1 = self.block_1(x, mask)
-        x_1 = F.leaky_relu(self.in_1(x_1), negative_slope=0.2)
+        x_1 = F.leaky_relu(x_1, negative_slope=0.2)
         x_2, m_2 = self.block_2(x_1, m_1)
         x_2 = self.dropout(F.leaky_relu(self.in_2(x_2), negative_slope=0.2))
         x_3, m_3 = self.block_3(x_2, m_2)
@@ -203,48 +198,45 @@ class CoarseNet(Net):
         x_4 = self.dropout(F.leaky_relu(self.in_4(x_4), negative_slope=0.2))
         x_5, m_5 = self.block_5(x_4, m_4)
         x_5 = self.dropout(F.leaky_relu(self.in_5(x_5), negative_slope=0.2))
-        m_6 = self.avg_pooling(self.conv_5(m_5))
+        x_6, m_6 = self.block_6(x_5, m_5)
+        x_6 = self.dropout(F.leaky_relu(self.in_6(x_6), negative_slope=0.2))
 
-        visual_embedding = self.avg_pooling(x_5).squeeze()
+        visual_embedding = self.avg_pooling(x_6).squeeze()
         textual_embedding = self.lstm_block(descriptions)
         embedding = torch.cat((visual_embedding, textual_embedding), dim=1)
+        print(embedding.size())
 
-        x_6 = self.upsample(embedding.view(-1, 16, 4, 4))
-        x_6, m_6 = self.p_conv_6(x_6, m_6)
-        x_6 = F.leaky_relu(self.in_6(x_6), negative_slope=0.2)
-        x_6 = self.dropout(torch.cat((x_5, x_6), dim=1))
-
-        x_7 = self.upsample(x_6)
-        m_7 = self.conv_6(m_6)
-        x_7, m_7 = self.p_conv_7(x_7, m_7)
+        x_7 = self.upsample(embedding.view(-1, 16, 4, 4))
+        x_7, m_7 = self.p_conv_7(x_7, m_6)
         x_7 = F.leaky_relu(self.in_7(x_7), negative_slope=0.2)
-        x_7 = self.dropout(torch.cat((x_4, x_7), dim=1))
+        x_7 = self.dropout(torch.cat((x_5, x_7), dim=1))
 
         x_8 = self.upsample(x_7)
-        m_8 = self.conv_7(m_7)
-        x_8, m_8 = self.p_conv_8(x_8, m_8)
+        x_8, m_8 = self.p_conv_8(x_8, m_7)
         x_8 = F.leaky_relu(self.in_8(x_8), negative_slope=0.2)
-        x_8 = self.dropout(torch.cat((x_3, x_8, attention_map), dim=1))
+        x_8 = self.dropout(torch.cat((x_4, x_8), dim=1))
 
         x_9 = self.upsample(x_8)
-        m_9 = self.conv_8(m_8)
-        x_9, m_9 = self.p_conv_9(x_9, m_9)
+        x_9, m_9 = self.p_conv_9(x_9, m_8)
         x_9 = F.leaky_relu(self.in_9(x_9), negative_slope=0.2)
-        x_9 = self.dropout(torch.cat((x_2, x_9), dim=1))
+        x_9 = self.dropout(torch.cat((x_3, x_9, attention_map), dim=1))
 
         x_10 = self.upsample(x_9)
-        m_10 = self.conv_9(m_9)
-        x_10, m_10 = self.p_conv_10(x_10, m_10)
+        x_10, m_10 = self.p_conv_10(x_10, m_9)
         x_10 = F.leaky_relu(self.in_10(x_10), negative_slope=0.2)
-        x_10 = torch.cat((x_1, x_10), dim=1)
+        x_10 = self.dropout(torch.cat((x_2, x_10), dim=1))
 
         x_11 = self.upsample(x_10)
-        x_11 = torch.cat((x, x_11), dim=1)
-        m_11 = self.conv_10(mask)
-        x_11, _ = self.p_conv_11(x_11, m_11)
-        x_11 = F.tanh(x_11)
+        x_11, m_11 = self.p_conv_11(x_11, m_10)
+        x_11 = F.leaky_relu(self.in_11(x_11), negative_slope=0.2)
+        x_11 = torch.cat((x_1, x_11), dim=1)
 
-        return x_11
+        x_12 = self.upsample(x_11)
+        x_12 = torch.cat((x, x_12), dim=1)
+        x_12, _ = self.p_conv_12(x_12, m_11)
+        x_12 = F.tanh(x_12)
+
+        return x_12
 
 
 class VGG16(torch.nn.Module):
