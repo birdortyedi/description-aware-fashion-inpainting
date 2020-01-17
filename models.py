@@ -174,7 +174,7 @@ class CoarseNet(Net):
 
         self.conv_5 = nn.Conv2d(in_channels=128, out_channels=16, kernel_size=1)
         self.conv_6 = nn.Conv2d(in_channels=32, out_channels=160, kernel_size=1)
-        self.conv_7 = nn.Conv2d(in_channels=64, out_channels=192, kernel_size=1)
+        self.conv_7 = nn.Conv2d(in_channels=128, out_channels=192, kernel_size=1)
         self.conv_8 = nn.Conv2d(in_channels=128, out_channels=16, kernel_size=1)
         self.conv_9 = nn.Conv2d(in_channels=128, out_channels=16, kernel_size=1)
 
