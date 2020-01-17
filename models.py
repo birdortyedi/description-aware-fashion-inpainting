@@ -169,7 +169,7 @@ class CoarseNet(nn.Module):
                                      bias=False, return_mask=True, multi_channel=True)
         self.in_9 = nn.InstanceNorm2d(num_features=128, affine=True)
 
-        self.block_10 = PartialConv2d(in_channels=256, out_channels=128, kernel_size=3, padding=1,
+        self.block_10 = PartialConv2d(in_channels=384, out_channels=128, kernel_size=3, padding=1,
                                       bias=False, return_mask=True, multi_channel=True)
         self.in_10 = nn.InstanceNorm2d(num_features=128, affine=True)
 
@@ -219,14 +219,14 @@ class CoarseNet(nn.Module):
         x_9, m_9 = self.block_9(x_9, m_9)
         x_9 = F.leaky_relu(self.in_9(x_9), negative_slope=0.2)
         x_9 = self.dropout(torch.cat((x_3, x_9, attention_map), dim=1))
-        m_9 = torch.cat((m_3, m_9), dim=1)
+        m_9 = torch.cat((m_3, m_9, m_3), dim=1)
 
         x_10 = self.upsample(x_9)
         m_10 = self.upsample(m_9)
         x_10, m_10 = self.block_10(x_10, m_10)
         x_10 = F.leaky_relu(self.in_10(x_10), negative_slope=0.2)
         x_10 = self.dropout(torch.cat((x_2, x_10), dim=1))
-        m_10 = torch.cat((x_2, x_10), dim=1)
+        m_10 = torch.cat((m_2, m_10), dim=1)
 
         x_11 = self.upsample(x_10)
         m_11 = self.upsample(m_10)
