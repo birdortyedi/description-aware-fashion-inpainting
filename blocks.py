@@ -2,34 +2,6 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 
-from layers import PartialConv2d
-
-
-def pconv_in_lrelu_block(in_channels, out_channels, kernel_size, stride=1, padding=0):
-    return nn.Sequential(
-        PartialConv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size,
-                      stride=stride, padding=padding, bias=False, multi_channel=True, return_mask=True),
-        nn.InstanceNorm2d(num_features=out_channels),
-        nn.LeakyReLU(negative_slope=0.2)
-    )
-
-
-def pconv_bn_lrelu_block(in_channels, out_channels, kernel_size, stride=1, padding=0):
-    return nn.Sequential(
-        PartialConv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size,
-                      stride=stride, padding=padding, bias=False, multi_channel=True, return_mask=True),
-        nn.BatchNorm2d(num_features=out_channels),
-        nn.LeakyReLU(negative_slope=0.2)
-    )
-
-
-def pconv_lrelu_block(in_channels, out_channels, kernel_size, stride=1, padding=0):
-    return nn.Sequential(
-        PartialConv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size,
-                      stride=stride, padding=padding, bias=False, multi_channel=True, return_mask=True),
-        nn.LeakyReLU(negative_slope=0.2)
-    )
-
 
 def conv_in_lrelu_block(in_channels, out_channels, kernel_size, stride=1, padding=0):
     return nn.Sequential(
@@ -72,8 +44,7 @@ def lstm_block(vocab_size, embedding_dim=32, hidden_dim=1024, n_layers=3, output
 def upsampling_in_lrelu_block(in_channels, out_channels, mode='nearest', scale_factor=2.0, padding=0):
     return nn.Sequential(
         nn.Upsample(mode=mode, scale_factor=scale_factor),
-        nn.ReflectionPad2d(1),
-        nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=3, padding=padding),
+        nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=1, padding=padding),
         nn.InstanceNorm2d(num_features=out_channels, affine=True),
         nn.LeakyReLU(negative_slope=0.2)
     )

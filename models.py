@@ -1,9 +1,14 @@
+import torch
+import torch.nn.functional as F
+from torch import nn
+
 from torchvision import transforms
 from torchvision import models
 
 from collections import namedtuple
 from utils import HDF5Dataset, CentralErasing
-from blocks import *
+from layers import PartialConv2d
+from blocks import lstm_block, dilated_res_blocks, SelfAttention, upsampling_in_lrelu_block, upsampling_tanh_block
 
 
 class LocalDiscriminator(nn.Module):
@@ -68,15 +73,15 @@ class Net(nn.Module):
         # Encoder
         self.block_1 = PartialConv2d(in_channels=3, out_channels=32, kernel_size=7, stride=2, padding=3,
                                      bias=False, return_mask=True, multi_channel=True)
-        self.in_1 = nn.InstanceNorm2d(num_features=32)
+        self.in_1 = nn.InstanceNorm2d(num_features=32, affine=True)
 
         self.block_2 = PartialConv2d(in_channels=32, out_channels=64, kernel_size=5, stride=2, padding=2,
                                      bias=False, return_mask=True, multi_channel=True)
-        self.in_2 = nn.InstanceNorm2d(num_features=64)
+        self.in_2 = nn.InstanceNorm2d(num_features=64, affine=True)
 
         self.block_3 = PartialConv2d(in_channels=64, out_channels=128, kernel_size=5, stride=2, padding=2,
                                      bias=False, return_mask=True, multi_channel=True)
-        self.in_3 = nn.InstanceNorm2d(num_features=128)
+        self.in_3 = nn.InstanceNorm2d(num_features=128, affine=True)
 
         # Dilated Residual Blocks
         self.dilated_res_blocks = dilated_res_blocks(num_features=128, kernel_size=5, padding=4)
@@ -86,15 +91,13 @@ class Net(nn.Module):
         # Visual features for concatenating with textual features
         self.block_4 = PartialConv2d(in_channels=128, out_channels=64, kernel_size=5, stride=2, padding=2,
                                      bias=False, return_mask=True, multi_channel=True)
-        self.in_4 = nn.InstanceNorm2d(num_features=64)
+        self.in_4 = nn.InstanceNorm2d(num_features=64, affine=True)
 
         self.avg_pooling = nn.AdaptiveAvgPool2d(output_size=(1, 1))
 
-        self.block_8 = upsampling_in_lrelu_block(in_channels=128, out_channels=128, padding=1)
-        self._1x1conv_8 = one_by_one_conv_lrelu_block(in_channels=384, out_channels=64)
-        self.block_9 = upsampling_in_lrelu_block(in_channels=64, out_channels=64, padding=1)
-        self._1x1conv_9 = one_by_one_conv_lrelu_block(in_channels=128, out_channels=32)
-        self.block_10 = upsampling_in_lrelu_block(in_channels=32, out_channels=32, padding=1)
+        self.block_8 = upsampling_in_lrelu_block(in_channels=128, out_channels=64)
+        self.block_9 = upsampling_in_lrelu_block(in_channels=64, out_channels=32)
+        self.block_10 = upsampling_in_lrelu_block(in_channels=32, out_channels=32)
         self.block_11 = upsampling_tanh_block(in_channels=64, out_channels=3)
 
         self.dropout = nn.Dropout2d(p=0.3)
@@ -160,10 +163,8 @@ class CoarseNet(Net):
         self.lstm_block = lstm_block(vocab_size)
 
         # Decoder
-        self.block_6 = upsampling_in_lrelu_block(in_channels=16, out_channels=16)
-        self._1x1conv_6 = one_by_one_conv_lrelu_block(in_channels=144, out_channels=32)
-        self.block_7 = upsampling_in_lrelu_block(in_channels=32, out_channels=32)
-        self._1x1conv_7 = one_by_one_conv_lrelu_block(in_channels=96, out_channels=128)
+        self.block_6 = upsampling_in_lrelu_block(in_channels=16, out_channels=32)
+        self.block_7 = upsampling_in_lrelu_block(in_channels=32, out_channels=128)
 
     def forward(self, x, descriptions, mask):
         x_1, m_1 = self.block_1(x, mask)
@@ -195,27 +196,27 @@ class CoarseNet(Net):
 
         x_6 = self.block_6(embedding.view(-1, 16, 4, 4))
         print(x_6.size())
-        x_6 = torch.cat((x_5, x_6), dim=1)
-        print(x_6.size())
-        x_6 = self.dropout(self._1x1conv_6(x_6))
+        x_6 = self.dropout(torch.cat((x_5, x_6), dim=1))
         print(x_6.size())
 
         x_7 = self.block_7(x_6)
-        x_7 = torch.cat((x_4, x_7), dim=1)
-        x_7 = self.dropout(self._1x1conv_7(x_7))
+        x_7 = self.dropout(torch.cat((x_4, x_7), dim=1))
+        print(x_7.size())
 
         x_8 = self.block_8(x_7)
-        x_8 = torch.cat((x_3, x_8, attention_map), dim=1)
-        x_8 = self.dropout(self._1x1conv_8(x_8))
+        x_8 = self.dropout(torch.cat((x_3, x_8, attention_map), dim=1))
+        print(x_8.size())
 
         x_9 = self.block_9(x_8)
-        x_9 = torch.cat((x_2, x_9), dim=1)
-        x_9 = self.dropout(self._1x1conv_9(x_9))
+        x_9 = self.dropout(torch.cat((x_2, x_9), dim=1))
+        print(x_9.size())
 
         x_10 = self.block_10(x_9)
         x_10 = torch.cat((x_1, x_10), dim=1)
+        print(x_10.size())
 
         x_11 = self.block_11(x_10)
+        print(x_11.size())
 
         return x_11
 
