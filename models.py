@@ -66,9 +66,17 @@ class Net(nn.Module):
     def __init__(self):
         super(Net, self).__init__()
         # Encoder
-        self.block_1 = pconv_in_lrelu_block(in_channels=3, out_channels=32, kernel_size=7, stride=2, padding=3)
-        self.block_2 = pconv_in_lrelu_block(in_channels=32, out_channels=64, kernel_size=5, stride=2, padding=2)
-        self.block_3 = pconv_in_lrelu_block(in_channels=64, out_channels=128, kernel_size=5, stride=2, padding=2)
+        self.block_1 = PartialConv2d(in_channels=3, out_channels=32, kernel_size=7, stride=2, padding=3,
+                                     bias=False, return_mask=True, multi_channel=True)
+        self.in_1 = nn.InstanceNorm2d(num_features=32)
+
+        self.block_2 = PartialConv2d(in_channels=32, out_channels=64, kernel_size=5, stride=2, padding=2,
+                                     bias=False, return_mask=True, multi_channel=True)
+        self.in_2 = nn.InstanceNorm2d(num_features=64)
+
+        self.block_3 = PartialConv2d(in_channels=64, out_channels=128, kernel_size=5, stride=2, padding=2,
+                                     bias=False, return_mask=True, multi_channel=True)
+        self.in_3 = nn.InstanceNorm2d(num_features=128)
 
         # Dilated Residual Blocks
         self.dilated_res_blocks = dilated_res_blocks(num_features=128, kernel_size=5, padding=4)
@@ -76,7 +84,10 @@ class Net(nn.Module):
         self.self_attention = SelfAttention(in_channels=128)
 
         # Visual features for concatenating with textual features
-        self.block_4 = pconv_in_lrelu_block(in_channels=128, out_channels=64, kernel_size=5, stride=2, padding=2)
+        self.block_4 = PartialConv2d(in_channels=128, out_channels=64, kernel_size=5, stride=2, padding=2,
+                                     bias=False, return_mask=True, multi_channel=True)
+        self.in_4 = nn.InstanceNorm2d(num_features=64)
+
         self.avg_pooling = nn.AdaptiveAvgPool2d(output_size=(1, 1))
 
         self.block_8 = upsampling_in_lrelu_block(in_channels=128, out_channels=128, padding=1)
@@ -141,7 +152,9 @@ class CoarseNet(Net):
     def __init__(self, vocab_size):
         super(CoarseNet, self).__init__()
 
-        self.block_5 = pconv_in_lrelu_block(in_channels=64, out_channels=128, kernel_size=5, stride=2, padding=2)
+        self.block_5 = PartialConv2d(in_channels=64, out_channels=128, kernel_size=5, stride=2, padding=2,
+                                     bias=False, return_mask=True, multi_channel=True)
+        self.in_5 = nn.InstanceNorm2d(num_features=128)
 
         # LSTM
         self.lstm_block = lstm_block(vocab_size)
@@ -153,15 +166,20 @@ class CoarseNet(Net):
         self._1x1conv_7 = one_by_one_conv_lrelu_block(in_channels=96, out_channels=128)
 
     def forward(self, x, descriptions, mask):
-        x_1, m_1 = self.block_1((x, mask))
-        x_2, m_2 = self.dropout(self.block_2((x_1, m_1)))
-        x_3, m_3 = self.dropout(self.block_3((x_2, m_2)))
+        x_1, m_1 = self.block_1(x, mask)
+        x_1 = F.leaky_relu(self.in_1(x_1))
+        x_2, m_2 = self.block_2(x_1, m_1)
+        x_2 = self.dropout(F.leaky_relu(self.in_2(x_2)))
+        x_3, m_3 = self.block_3(x_2, m_2)
+        x_3 = self.dropout(F.leaky_relu(self.in_3(x_3)))
 
         dil_res_x_3 = self.dilated_res_blocks(x_3)
         attention_map, _ = self.self_attention(dil_res_x_3)
 
-        x_4, m_4 = self.dropout(self.block_4((x_3, m_3)))
-        x_5, m_5 = self.dropout(self.block_5((x_4, m_4)))
+        x_4, m_4 = self.block_4(x_3, m_3)
+        x_4 = self.dropout(F.leaky_relu(self.in_4(x_4)))
+        x_5, m_5 = self.block_5(x_4, m_4)
+        x_5 = self.dropout(F.leaky_relu(self.in_5(x_5)))
 
         visual_embedding = self.avg_pooling(x_5).squeeze()
         textual_embedding = self.lstm_block(descriptions)
