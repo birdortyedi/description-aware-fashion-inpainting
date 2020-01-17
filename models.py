@@ -196,6 +196,7 @@ class CoarseNet(Net):
         x_4 = self.dropout(F.leaky_relu(self.in_4(x_4), negative_slope=0.2))
         x_5, m_5 = self.block_5(x_4, m_4)
         x_5 = self.dropout(F.leaky_relu(self.in_5(x_5), negative_slope=0.2))
+        m_5 = self.avg_pooling(m_5)
 
         visual_embedding = self.avg_pooling(x_5).squeeze()
         textual_embedding = self.lstm_block(descriptions)
