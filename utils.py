@@ -170,6 +170,7 @@ def normalize_batch(batch, div_factor=1.0):
 
 
 def weights_init(m):
+    print(type(m))
     if type(m) == PartialConv2d:
         nn.init.kaiming_normal(m.weight.data, mode='fan_out', nonlinearity='relu')
         if m.bias is not None:
