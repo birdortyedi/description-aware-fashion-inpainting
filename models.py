@@ -238,6 +238,7 @@ class CoarseNet(nn.Module):
         x_12 = self.upsample(x_11)
         m_12 = self.upsample(m_11)
         x_12 = torch.cat((x, x_12), dim=1)
+        m_12 = torch.cat((mask, m_12), dim=1)
         x_12, _ = self.block_12(x_12, m_12)
         x_12 = F.tanh(x_12)
 
