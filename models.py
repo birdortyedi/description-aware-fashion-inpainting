@@ -173,6 +173,10 @@ class CoarseNet(Net):
         self.lstm_block = lstm_block(vocab_size)
 
         self.conv_5 = nn.Conv2d(in_channels=128, out_channels=16, kernel_size=1)
+        self.conv_6 = nn.Conv2d(in_channels=160, out_channels=32, kernel_size=1)
+        self.conv_7 = nn.Conv2d(in_channels=128, out_channels=16, kernel_size=1)
+        self.conv_8 = nn.Conv2d(in_channels=128, out_channels=16, kernel_size=1)
+        self.conv_9 = nn.Conv2d(in_channels=128, out_channels=16, kernel_size=1)
 
         # Decoder
         self.p_conv_6 = PartialConv2d(in_channels=16, out_channels=32, kernel_size=1, padding=0,
@@ -198,34 +202,38 @@ class CoarseNet(Net):
         x_4 = self.dropout(F.leaky_relu(self.in_4(x_4), negative_slope=0.2))
         x_5, m_5 = self.block_5(x_4, m_4)
         x_5 = self.dropout(F.leaky_relu(self.in_5(x_5), negative_slope=0.2))
-        m_5 = self.avg_pooling(self.conv_5(m_5))
+        m_6 = self.avg_pooling(self.conv_5(m_5))
 
         visual_embedding = self.avg_pooling(x_5).squeeze()
         textual_embedding = self.lstm_block(descriptions)
         embedding = torch.cat((visual_embedding, textual_embedding), dim=1)
 
         x_6 = self.upsample(embedding.view(-1, 16, 4, 4))
-        x_6, m_6 = self.p_conv_6(x_6, m_5)
+        x_6, m_6 = self.p_conv_6(x_6, m_6)
         x_6 = F.leaky_relu(self.in_6(x_6), negative_slope=0.2)
         x_6 = self.dropout(torch.cat((x_5, x_6), dim=1))
 
         x_7 = self.upsample(x_6)
-        x_7, m_7 = self.p_conv_7(x_7, m_6)
+        m_7 = self.conv_6(m_6)
+        x_7, m_7 = self.p_conv_7(x_7, m_7)
         x_7 = F.leaky_relu(self.in_7(x_7), negative_slope=0.2)
         x_7 = self.dropout(torch.cat((x_4, x_7), dim=1))
 
         x_8 = self.upsample(x_7)
-        x_8, m_8 = self.p_conv_8(x_8, m_7)
+        m_8 = self.conv_7(m_7)
+        x_8, m_8 = self.p_conv_8(x_8, m_8)
         x_8 = F.leaky_relu(self.in_8(x_8), negative_slope=0.2)
         x_8 = self.dropout(torch.cat((x_3, x_8, attention_map), dim=1))
 
         x_9 = self.upsample(x_8)
-        x_9, m_9 = self.p_conv_9(x_9, m_8)
+        m_9 = self.conv_8(m_8)
+        x_9, m_9 = self.p_conv_9(x_9, m_9)
         x_9 = F.leaky_relu(self.in_9(x_9), negative_slope=0.2)
         x_9 = self.dropout(torch.cat((x_2, x_9), dim=1))
 
         x_10 = self.upsample(x_9)
-        x_10, m_10 = self.p_conv_10(x_10, m_9)
+        m_10 = self.conv_6(m_9)
+        x_10, m_10 = self.p_conv_10(x_10, m_10)
         x_10 = F.leaky_relu(self.in_10(x_10), negative_slope=0.2)
         x_10 = torch.cat((x_1, x_10), dim=1)
 
