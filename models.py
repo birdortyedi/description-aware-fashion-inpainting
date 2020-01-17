@@ -160,9 +160,9 @@ class CoarseNet(Net):
         self.lstm_block = lstm_block(vocab_size)
 
         # Decoder
-        self.block_6 = upsampling_in_lrelu_block(in_channels=16, out_channels=16, padding=1)
+        self.block_6 = upsampling_in_lrelu_block(in_channels=16, out_channels=16)
         self._1x1conv_6 = one_by_one_conv_lrelu_block(in_channels=144, out_channels=32)
-        self.block_7 = upsampling_in_lrelu_block(in_channels=32, out_channels=32, padding=1)
+        self.block_7 = upsampling_in_lrelu_block(in_channels=32, out_channels=32)
         self._1x1conv_7 = one_by_one_conv_lrelu_block(in_channels=96, out_channels=128)
 
     def forward(self, x, descriptions, mask):
