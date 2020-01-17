@@ -206,13 +206,13 @@ class CoarseNet(Net):
         embedding = torch.cat((visual_embedding, textual_embedding), dim=1)
         print(embedding.size())
 
-        o = embedding.view(-1, 16, 4, 4)
+        o = embedding.view(-1, 32, 4, 4)
         print(o.size())
 
         x_7 = self.upsample(o)
         print(x_7.size())
-        print(m_6.size())
-        x_7, m_7 = self.p_conv_7(x_7, m_6)
+        print(m_5.size())
+        x_7, m_7 = self.p_conv_7(x_7, m_5)
         x_7 = F.leaky_relu(self.in_7(x_7), negative_slope=0.2)
         x_7 = self.dropout(torch.cat((x_5, x_7), dim=1))
 
