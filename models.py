@@ -177,6 +177,7 @@ class CoarseNet(Net):
         self.conv_7 = nn.Conv2d(in_channels=128, out_channels=192, kernel_size=1)
         self.conv_8 = nn.Conv2d(in_channels=64, out_channels=320, kernel_size=1)
         self.conv_9 = nn.Conv2d(in_channels=128, out_channels=192, kernel_size=1)
+        self.conv_10 = nn.Conv2d(in_channels=3, out_channels=67, kernel_size=1)
 
         # Decoder
         self.p_conv_6 = PartialConv2d(in_channels=16, out_channels=32, kernel_size=1, padding=0,
@@ -239,7 +240,8 @@ class CoarseNet(Net):
 
         x_11 = self.upsample(x_10)
         x_11 = torch.cat((x, x_11), dim=1)
-        x_11, _ = self.p_conv_11(x_11, mask)
+        m_11 = self.conv_10(mask)
+        x_11, _ = self.p_conv_11(x_11, m_11)
         x_11 = F.tanh(x_11)
 
         return x_11
