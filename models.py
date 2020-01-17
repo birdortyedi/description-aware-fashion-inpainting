@@ -164,7 +164,7 @@ class CoarseNet(Net):
 
         # Decoder
         self.block_6 = upsampling_in_lrelu_block(in_channels=16, out_channels=32)
-        self.block_7 = upsampling_in_lrelu_block(in_channels=32, out_channels=128)
+        self.block_7 = upsampling_in_lrelu_block(in_channels=160, out_channels=128)
 
     def forward(self, x, descriptions, mask):
         x_1, m_1 = self.block_1(x, mask)
