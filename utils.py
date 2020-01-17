@@ -6,6 +6,8 @@ from torchvision.transforms import Normalize, ToTensor, ToPILImage, RandomHorizo
 from torchtext.data import Field
 from torch.utils import data
 
+from layers import PartialConv2d
+
 import math
 import numbers
 import warnings
@@ -168,12 +170,11 @@ def normalize_batch(batch, div_factor=1.0):
 
 
 def weights_init(m):
-    classname = m.__class__.__name__
-    if classname.find('Conv2d') != -1:
+    if type(m) == PartialConv2d:
         nn.init.kaiming_normal(m.weight, mode='fan_out', nonlinearity='relu')
-        if m.bias is not None:
+       if m.bias is not None:
             nn.init.constant(m.bias, 0)
-    elif classname.find('InstanceNorm2d') != -1:
+    elif type(m) == nn.InstanceNorm2d:
         nn.init.normal_(m.weight, 1.0, 0.02)
         nn.init.constant_(m.bias, 0)
 
