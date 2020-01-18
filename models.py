@@ -158,26 +158,26 @@ class CoarseNet(nn.Module):
 
         # Decoder
         self.block_7 = PartialConv2d(in_channels=128, out_channels=128, kernel_size=3, padding=1,
-                                     bias=False, return_mask=True, multi_channel=True)
+                                     bias=False, multi_channel=True)
         self.in_7 = nn.InstanceNorm2d(num_features=128, affine=True)
 
         self.block_8 = PartialConv2d(in_channels=256, out_channels=128, kernel_size=3, padding=1,
-                                     bias=False, return_mask=True, multi_channel=True)
+                                     bias=False, multi_channel=True)
         self.in_8 = nn.InstanceNorm2d(num_features=128, affine=True)
 
         self.block_9 = PartialConv2d(in_channels=192, out_channels=128, kernel_size=3, padding=1,
-                                     bias=False, return_mask=True, multi_channel=True)
+                                     bias=False, multi_channel=True)
         self.in_9 = nn.InstanceNorm2d(num_features=128, affine=True)
 
         self.block_10 = PartialConv2d(in_channels=384, out_channels=128, kernel_size=3, padding=1,
-                                      bias=False, return_mask=True, multi_channel=True)
+                                      bias=False, multi_channel=True)
         self.in_10 = nn.InstanceNorm2d(num_features=128, affine=True)
 
         self.block_11 = PartialConv2d(in_channels=192, out_channels=32, kernel_size=3, padding=1,
-                                      bias=False, return_mask=True, multi_channel=True)
+                                      bias=False,  multi_channel=True)
         self.in_11 = nn.InstanceNorm2d(num_features=32, affine=True)
 
-        self.block_12 = PartialConv2d(in_channels=67, out_channels=3, kernel_size=1, bias=False, return_mask=True, multi_channel=True)
+        self.block_12 = PartialConv2d(in_channels=67, out_channels=3, kernel_size=1, bias=False, multi_channel=True)
 
     def forward(self, x, descriptions, mask):
         x_1, m_1 = self.block_1(x, mask)
@@ -202,44 +202,33 @@ class CoarseNet(nn.Module):
         embedding = torch.cat((visual_embedding, textual_embedding), dim=1)
 
         x_7 = self.upsample(embedding.view(-1, 128, 4, 4))
-        x_7, m_7 = self.block_7(x_7, m_5)
+        x_7 = self.block_7(x_7)
         x_7 = F.leaky_relu(self.in_7(x_7), negative_slope=0.2)
         x_7 = self.dropout(torch.cat((x_5, x_7), dim=1))
-        m_7 = torch.cat((m_5, m_7), dim=1)
 
         x_8 = self.upsample(x_7)
-        m_8 = self.upsample(m_7)
-        x_8, m_8 = self.block_8(x_8, m_8)
+        x_8 = self.block_8(x_8)
         x_8 = F.leaky_relu(self.in_8(x_8), negative_slope=0.2)
         x_8 = self.dropout(torch.cat((x_4, x_8), dim=1))
-        m_8 = torch.cat((m_4, m_8), dim=1)
 
         x_9 = self.upsample(x_8)
-        m_9 = self.upsample(m_8)
-        x_9, m_9 = self.block_9(x_9, m_9)
+        x_9 = self.block_9(x_9)
         x_9 = F.leaky_relu(self.in_9(x_9), negative_slope=0.2)
         x_9 = self.dropout(torch.cat((x_3, x_9, attention_map), dim=1))
-        m_9 = torch.cat((m_3, m_9, m_3), dim=1)
 
         x_10 = self.upsample(x_9)
-        m_10 = self.upsample(m_9)
-        x_10, m_10 = self.block_10(x_10, m_10)
+        x_10 = self.block_10(x_10)
         x_10 = F.leaky_relu(self.in_10(x_10), negative_slope=0.2)
         x_10 = self.dropout(torch.cat((x_2, x_10), dim=1))
-        m_10 = torch.cat((m_2, m_10), dim=1)
 
         x_11 = self.upsample(x_10)
-        m_11 = self.upsample(m_10)
-        x_11, m_11 = self.block_11(x_11, m_11)
+        x_11 = self.block_11(x_11)
         x_11 = F.leaky_relu(self.in_11(x_11), negative_slope=0.2)
         x_11 = torch.cat((x_1, x_11), dim=1)
-        m_11 = torch.cat((m_1, m_11), dim=1)
 
         x_12 = self.upsample(x_11)
-        m_12 = self.upsample(m_11)
         x_12 = torch.cat((x, x_12), dim=1)
-        m_12 = torch.cat((mask, m_12), dim=1)
-        x_12, _ = self.block_12(x_12, m_12)
+        x_12 = self.block_12(x_12)
         x_12 = torch.tanh(x_12)
 
         return x_12
