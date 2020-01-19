@@ -186,11 +186,11 @@ def train_coarse(num_step, x_train, x_desc, x_mask, y_train, l_fns):
 
 
 def make_verbose(x_train, x_local, y_train, coarse_output, coarse_losses, refine_output, refine_local_output, refine_losses, num_step, batch_idx, epoch):
-    # unnormalizer = UnNormalize((0.7535, 0.7359, 0.7292), (0.5259, 0.5487, 0.5589))
+    unnormalizer = UnNormalize((0.7535, 0.7359, 0.7292), (0.5259, 0.5487, 0.5589))
 
-    x_grid = make_grid(x_train, nrow=16, padding=2)
-    y_grid = make_grid(y_train, nrow=16, padding=2)
-    local_grid = make_grid(x_local, nrow=16, padding=2)
+    x_grid = make_grid(unnormalizer(x_train), nrow=16, padding=2)
+    y_grid = make_grid(unnormalizer(y_train), nrow=16, padding=2)
+    local_grid = make_grid(unnormalizer(x_local), nrow=16, padding=2)
     coarse_grid = make_grid(coarse_output, nrow=16, padding=2)
     # x_0 = unnormalizer(x_train[0]).cpu().detach().numpy()
     # y_0 = unnormalizer(y_train[0]).cpu().detach().numpy()
