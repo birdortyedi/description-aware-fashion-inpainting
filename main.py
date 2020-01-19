@@ -9,7 +9,7 @@ from tensorboardX import SummaryWriter
 from tqdm import tqdm
 from colorama import Fore
 
-from utils import HDF5Dataset, UnNormalize, weights_init, unnormalize_batch
+from utils import HDF5Dataset, weights_init, unnormalize_img, unnormalize_batch
 from models import CoarseNet, RefineNet, LocalDiscriminator, GlobalDiscriminator, VGG16
 from losses import CoarseLoss, RefineLoss
 
@@ -165,7 +165,7 @@ def train_discriminator(num_step, x_train, x_desc, x_mask, x_local, y_train, loc
 
 def train_coarse(num_step, x_train, x_desc, x_mask, y_train, l_fns):
     coarse.zero_grad()
-    coarse_output = coarse(x_train, x_desc, x_mask)
+    coarse_output = unnormalize_img(coarse(x_train, x_desc, x_mask))
     coarse_comp_output = (1.0 - x_mask) * x_train + x_mask * coarse_output
     coarse_losses = l_fns["coarse"](y_train, coarse_output, coarse_comp_output, x_mask, vgg)
 
