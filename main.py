@@ -170,7 +170,7 @@ def train_coarse(num_step, x_train, x_desc, x_mask, y_train, l_fns):
 
     coarse_loss, coarse_pixel_valid, coarse_pixel_hole, coarse_content, coarse_style, coarse_tv = coarse_losses
 
-    writer.add_scalar("LR/learning_rate", schedulers["coarse"].get_lr(), e)
+    writer.add_scalar("LR/learning_rate", schedulers["coarse"].get_lr(), num_step)
 
     writer.add_scalar("Loss/on_step_coarse_loss", coarse_loss.item(), num_step)
     writer.add_scalar("Loss/on_step_coarse_pixel_valid_loss", coarse_pixel_valid.item(), num_step)
