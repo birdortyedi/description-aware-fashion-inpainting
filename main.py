@@ -60,14 +60,16 @@ coarse_optimizer = optim.Adam(coarse.parameters(), lr=lr, betas=(0.5, 0.999))
 # refine_optimizer = optim.Adam(refine.parameters(), lr=r_lr, betas=(0.5, 0.999))
 # d_optimizer = optim.Adam(local_d.parameters(), lr=d_lr, betas=(0.9, 0.999))
 
-coarse_scheduler = optim.lr_scheduler.ExponentialLR(coarse_optimizer, gamma=0.9)
+# coarse_scheduler = optim.lr_scheduler.ExponentialLR(coarse_optimizer, gamma=0.9)
+coarse_scheduler = optim.lr_scheduler.StepLR(coarse_optimizer, step_size=10000, gamma=0.1)
+
 # refine_scheduler = optim.lr_scheduler.ExponentialLR(refine_optimizer, gamma=0.95)
 # d_scheduler = optim.lr_scheduler.ExponentialLR(d_optimizer, gamma=0.95)
 
 writer = SummaryWriter()
 
 
-def train(epoch, loader, l_fns, optimizers, schedulers):
+def train(epoch, loader, l_fns, optimizers):
     coarse.train()
     # refine.train()
     for batch_idx, (x_train, x_desc, x_mask, x_local, local_coords, y_train) in tqdm(enumerate(loader), ncols=50, desc="Training",
@@ -82,7 +84,6 @@ def train(epoch, loader, l_fns, optimizers, schedulers):
 
         coarse_output, coarse_losses = train_coarse(num_step, x_train, x_desc, x_mask, y_train, l_fns)
         optimizers["coarse"].step()
-        schedulers["coarse"].step(epoch)
 
         # refine_output, refine_local_output, refine_losses = train_refine(num_step, coarse_output, x_mask, y_train, local_coords, l_fns)
         # optimizers["refine"].step()
@@ -266,7 +267,9 @@ if __name__ == '__main__':
                   # "discriminator": d_scheduler
                   }
     for e in range(NUM_EPOCHS):
-        train(e, train_loader, loss_fns, optimizers, schedulers)
+        schedulers["coarse"].step(e)
+        writer.add_scalar("LR/learning_rate", schedulers["coarse"].get_lr(), e)
+        train(e, train_loader, loss_fns, optimizers)
         # evaluate(e, val_loader, (d_loss_fn, loss_fn))
         torch.save(coarse.state_dict(), "./weights/weights_epoch_{}.pth".format(e))
         # torch.save(refine.state_dict(), "./weights/{}/weights_epoch_{}.pth".format("refine", e))
