@@ -9,7 +9,7 @@ from tensorboardX import SummaryWriter
 from tqdm import tqdm
 from colorama import Fore
 
-from utils import HDF5Dataset, UnNormalize, weights_init, unnormalize_img
+from utils import HDF5Dataset, UnNormalize, weights_init, unnormalize_batch
 from models import CoarseNet, RefineNet, LocalDiscriminator, GlobalDiscriminator, VGG16
 from losses import CoarseLoss, RefineLoss
 
@@ -186,11 +186,11 @@ def train_coarse(num_step, x_train, x_desc, x_mask, y_train, l_fns):
 
 
 def make_verbose(x_train, x_local, y_train, coarse_output, coarse_losses, refine_output, refine_local_output, refine_losses, num_step, batch_idx, epoch):
-    unnormalizer = UnNormalize((0.7535, 0.7359, 0.7292), (0.5259, 0.5487, 0.5589))
+    # unnormalizer = UnNormalize((0.7535, 0.7359, 0.7292), (0.5259, 0.5487, 0.5589))
 
-    x_grid = make_grid(unnormalizer(x_train), nrow=16, padding=2)
-    y_grid = make_grid(unnormalizer(y_train), nrow=16, padding=2)
-    local_grid = make_grid(unnormalizer(x_local), nrow=16, padding=2)
+    x_grid = make_grid(unnormalize_batch(x_train), nrow=16, padding=2)
+    y_grid = make_grid(unnormalize_batch(y_train), nrow=16, padding=2)
+    local_grid = make_grid(unnormalize_batch(x_local), nrow=16, padding=2)
     coarse_grid = make_grid(coarse_output, nrow=16, padding=2)
     # x_0 = unnormalizer(x_train[0]).cpu().detach().numpy()
     # y_0 = unnormalizer(y_train[0]).cpu().detach().numpy()
@@ -281,3 +281,4 @@ if __name__ == '__main__':
         # evaluate(e, val_loader, (d_loss_fn, loss_fn))
         torch.save(coarse.state_dict(), "./weights/weights_epoch_{}.pth".format(e))
         # torch.save(refine.state_dict(), "./weights/{}/weights_epoch_{}.pth".format("refine", e))
+    writer.close()

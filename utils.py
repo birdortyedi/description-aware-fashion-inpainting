@@ -170,6 +170,31 @@ def normalize_batch(batch, div_factor=1.0):
     return batch
 
 
+def unnormalize_batch(batch, div_factor=1.0):
+    """
+    Normalize batch
+    :param batch: input tensor with shape
+     (batch_size, nbr_channels, height, width)
+    :param div_factor: normalizing factor before data whitening
+    :return: normalized data, tensor with shape
+     (batch_size, nbr_channels, height, width)
+    """
+    # normalize using imagenet mean and std
+    mean = batch.data.new(batch.data.size())
+    std = batch.data.new(batch.data.size())
+    mean[:, 0, :, :] = 0.756
+    mean[:, 1, :, :] = 0.736
+    mean[:, 2, :, :] = 0.729
+    std[:, 0, :, :] = 0.526
+    std[:, 1, :, :] = 0.549
+    std[:, 2, :, :] = 0.559
+    batch = torch.div(batch, div_factor)
+
+    batch *= Variable(mean)
+    batch = torch.add(batch, Variable(std))
+    return batch
+
+
 def weights_init(m):
     if type(m) == PartialConv2d:
         nn.init.kaiming_normal_(m.weight)
