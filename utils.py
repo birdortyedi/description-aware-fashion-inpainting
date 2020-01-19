@@ -172,14 +172,14 @@ def normalize_batch(batch, div_factor=1.0):
 
 def unnormalize_batch(batch, div_factor=1.0):
     """
-    Normalize batch
+    Unnormalize batch
     :param batch: input tensor with shape
      (batch_size, nbr_channels, height, width)
     :param div_factor: normalizing factor before data whitening
-    :return: normalized data, tensor with shape
+    :return: unnormalized data, tensor with shape
      (batch_size, nbr_channels, height, width)
     """
-    # normalize using imagenet mean and std
+    # normalize using dataset mean and std
     mean = batch.data.new(batch.data.size())
     std = batch.data.new(batch.data.size())
     mean[:, 0, :, :] = 0.756
@@ -190,8 +190,8 @@ def unnormalize_batch(batch, div_factor=1.0):
     std[:, 2, :, :] = 0.559
     batch = torch.div(batch, div_factor)
 
-    batch *= Variable(mean)
-    batch = torch.add(batch, Variable(std))
+    batch *= Variable(std)
+    batch = torch.add(batch, Variable(mean))
     return batch
 
 
