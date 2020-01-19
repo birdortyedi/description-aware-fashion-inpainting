@@ -3,6 +3,7 @@ from torch import nn, optim
 from torch.utils import data
 from torchvision.transforms import ToTensor, ToPILImage, Resize
 from torchvision.transforms import functional as F
+from torchvision.utils import make_grid
 from tensorboardX import SummaryWriter
 
 from tqdm import tqdm
@@ -185,17 +186,22 @@ def train_coarse(num_step, x_train, x_desc, x_mask, y_train, l_fns):
 
 
 def make_verbose(x_train, x_local, y_train, coarse_output, coarse_losses, refine_output, refine_local_output, refine_losses, num_step, batch_idx, epoch):
-    unnormalizer = UnNormalize((0.7535, 0.7359, 0.7292), (0.5259, 0.5487, 0.5589))
-    x_0 = unnormalizer(x_train[0]).cpu().detach().numpy()
-    y_0 = unnormalizer(y_train[0]).cpu().detach().numpy()
-    local_0 = unnormalizer(x_local[0]).cpu().detach().numpy()
-    coarse_0 = (unnormalize_img(coarse_output[0].squeeze(0)).cpu()).detach().numpy()
+    # unnormalizer = UnNormalize((0.7535, 0.7359, 0.7292), (0.5259, 0.5487, 0.5589))
+
+    x_grid = make_grid(x_train, nrow=16, padding=2)
+    y_grid = make_grid(y_train, nrow=16, padding=2)
+    local_grid = make_grid(x_local, nrow=16, padding=2)
+    coarse_grid = make_grid(coarse_output, nrow=16, padding=2)
+    # x_0 = unnormalizer(x_train[0]).cpu().detach().numpy()
+    # y_0 = unnormalizer(y_train[0]).cpu().detach().numpy()
+    # local_0 = unnormalizer(x_local[0]).cpu().detach().numpy()
+    # coarse_0 = (unnormalize_img(coarse_output[0].squeeze(0)).cpu()).detach().numpy()
     # refine_0 = (unnormalize_img(refine_output[0]).squeeze(0).cpu()).detach().numpy()
     # refine_local_0 = (unnormalize_img(refine_local_output[0]).squeeze(0).cpu()).detach().numpy()
-    writer.add_image("train_x/epoch_{}".format(epoch), x_0, num_step)
-    writer.add_image("original/epoch_{}".format(epoch), y_0, num_step)
-    writer.add_image("local_x/epoch_{}".format(epoch), local_0, num_step)
-    writer.add_image("coarse_out/epoch_{}".format(epoch), coarse_0, num_step)
+    writer.add_image("train_x/epoch_{}".format(epoch), x_grid, num_step)
+    writer.add_image("original/epoch_{}".format(epoch), y_grid, num_step)
+    writer.add_image("local_x/epoch_{}".format(epoch), local_grid, num_step)
+    writer.add_image("coarse_out/epoch_{}".format(epoch), coarse_grid, num_step)
     # writer.add_image("refine_out/epoch_{}".format(epoch), refine_0, num_step)
     # writer.add_image("refine_local_out/epoch_{}".format(epoch), refine_local_0, num_step)
 
