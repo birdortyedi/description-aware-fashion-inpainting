@@ -61,7 +61,7 @@ coarse_optimizer = optim.Adam(coarse.parameters(), lr=lr, betas=(0.5, 0.999))
 # d_optimizer = optim.Adam(local_d.parameters(), lr=d_lr, betas=(0.9, 0.999))
 
 # coarse_scheduler = optim.lr_scheduler.ExponentialLR(coarse_optimizer, gamma=0.9)
-coarse_scheduler = optim.lr_scheduler.StepLR(coarse_optimizer, step_size=10000, gamma=0.1)
+coarse_scheduler = optim.lr_scheduler.StepLR(coarse_optimizer, step_size=10000, gamma=0.5)
 
 # refine_scheduler = optim.lr_scheduler.ExponentialLR(refine_optimizer, gamma=0.95)
 # d_scheduler = optim.lr_scheduler.ExponentialLR(d_optimizer, gamma=0.95)
@@ -170,6 +170,8 @@ def train_coarse(num_step, x_train, x_desc, x_mask, y_train, l_fns):
 
     coarse_loss, coarse_pixel_valid, coarse_pixel_hole, coarse_content, coarse_style, coarse_tv = coarse_losses
 
+    writer.add_scalar("LR/learning_rate", schedulers["coarse"].get_lr(), e)
+
     writer.add_scalar("Loss/on_step_coarse_loss", coarse_loss.item(), num_step)
     writer.add_scalar("Loss/on_step_coarse_pixel_valid_loss", coarse_pixel_valid.item(), num_step)
     writer.add_scalar("Loss/on_step_coarse_pixel_hole_loss", coarse_pixel_hole.item(), num_step)
@@ -183,10 +185,10 @@ def train_coarse(num_step, x_train, x_desc, x_mask, y_train, l_fns):
 
 
 def make_verbose(x_train, x_local, y_train, coarse_output, coarse_losses, refine_output, refine_local_output, refine_losses, num_step, batch_idx, epoch):
-    # unnormalizer = UnNormalize((0.7535, 0.7359, 0.7292), (0.5259, 0.5487, 0.5589))
-    x_0 = (unnormalize_img(x_train[0]).cpu()).detach().numpy()  # UnNormalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
-    y_0 = (unnormalize_img(y_train[0]).cpu()).detach().numpy()
-    local_0 = (unnormalize_img(x_local[0]).cpu()).detach().numpy()
+    unnormalizer = UnNormalize((0.7535, 0.7359, 0.7292), (0.5259, 0.5487, 0.5589))
+    x_0 = unnormalizer(unnormalize_img(x_train[0]).cpu()).detach().numpy()
+    y_0 = unnormalizer(unnormalize_img(y_train[0]).cpu()).detach().numpy()
+    local_0 = unnormalizer(unnormalize_img(x_local[0]).cpu()).detach().numpy()
     coarse_0 = (unnormalize_img(coarse_output[0].squeeze(0)).cpu()).detach().numpy()
     # refine_0 = (unnormalize_img(refine_output[0]).squeeze(0).cpu()).detach().numpy()
     # refine_local_0 = (unnormalize_img(refine_local_output[0]).squeeze(0).cpu()).detach().numpy()
@@ -268,7 +270,6 @@ if __name__ == '__main__':
                   }
     for e in range(NUM_EPOCHS):
         schedulers["coarse"].step(e)
-        writer.add_scalar("LR/learning_rate", schedulers["coarse"].get_lr(), e)
         train(e, train_loader, loss_fns, optimizers)
         # evaluate(e, val_loader, (d_loss_fn, loss_fn))
         torch.save(coarse.state_dict(), "./weights/weights_epoch_{}.pth".format(e))
