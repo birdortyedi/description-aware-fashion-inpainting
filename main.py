@@ -269,7 +269,8 @@ if __name__ == '__main__':
                   # "discriminator": d_scheduler
                   }
     for e in range(NUM_EPOCHS):
-        schedulers["coarse"].step(e)
+        if e > 0:
+            schedulers["coarse"].step(e)
         train(e, train_loader, loss_fns, optimizers)
         # evaluate(e, val_loader, (d_loss_fn, loss_fn))
         torch.save(coarse.state_dict(), "./weights/weights_epoch_{}.pth".format(e))
