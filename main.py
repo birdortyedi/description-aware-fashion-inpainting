@@ -165,7 +165,7 @@ def train_discriminator(num_step, x_train, x_desc, x_mask, x_local, y_train, loc
 
 def train_coarse(num_step, x_train, x_desc, x_mask, y_train, l_fns):
     coarse.zero_grad()
-    coarse_output = unnormalize_img(coarse(x_train, x_desc, x_mask))
+    coarse_output = coarse(x_train, x_desc, x_mask)
     coarse_comp_output = (1.0 - x_mask) * x_train + x_mask * coarse_output
     coarse_losses = l_fns["coarse"](y_train, coarse_output, coarse_comp_output, x_mask, vgg)
 
@@ -188,10 +188,10 @@ def train_coarse(num_step, x_train, x_desc, x_mask, y_train, l_fns):
 def make_verbose(x_train, x_local, y_train, coarse_output, coarse_losses, refine_output, refine_local_output, refine_losses, num_step, batch_idx, epoch):
     # unnormalizer = UnNormalize((0.7535, 0.7359, 0.7292), (0.5259, 0.5487, 0.5589))
 
-    x_grid = make_grid(unnormalize_batch(x_train), nrow=16, padding=2)
-    y_grid = make_grid(unnormalize_batch(y_train), nrow=16, padding=2)
-    local_grid = make_grid(unnormalize_batch(x_local), nrow=16, padding=2)
-    coarse_grid = make_grid(coarse_output, nrow=16, padding=2)
+    x_grid = make_grid(unnormalize_batch(unnormalize_img(x_train)), nrow=16, padding=2)
+    y_grid = make_grid(unnormalize_batch(unnormalize_img(y_train)), nrow=16, padding=2)
+    local_grid = make_grid(unnormalize_batch(unnormalize_img(x_local)), nrow=16, padding=2)
+    coarse_grid = make_grid(unnormalize_batch(unnormalize_img(coarse_output)), nrow=16, padding=2)
     # x_0 = unnormalizer(x_train[0]).cpu().detach().numpy()
     # y_0 = unnormalizer(y_train[0]).cpu().detach().numpy()
     # local_0 = unnormalizer(x_local[0]).cpu().detach().numpy()
