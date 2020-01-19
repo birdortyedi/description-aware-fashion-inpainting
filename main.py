@@ -62,7 +62,7 @@ coarse_optimizer = optim.Adam(coarse.parameters(), lr=lr, betas=(0.5, 0.999))
 # d_optimizer = optim.Adam(local_d.parameters(), lr=d_lr, betas=(0.9, 0.999))
 
 # coarse_scheduler = optim.lr_scheduler.ExponentialLR(coarse_optimizer, gamma=0.9)
-coarse_scheduler = optim.lr_scheduler.StepLR(coarse_optimizer, step_size=10000, gamma=0.5)
+coarse_scheduler = optim.lr_scheduler.StepLR(coarse_optimizer, step_size=3100, gamma=0.5)
 
 # refine_scheduler = optim.lr_scheduler.ExponentialLR(refine_optimizer, gamma=0.95)
 # d_scheduler = optim.lr_scheduler.ExponentialLR(d_optimizer, gamma=0.95)
@@ -191,7 +191,7 @@ def make_verbose(x_train, x_local, y_train, coarse_output, coarse_losses, refine
     x_grid = make_grid(unnormalize_batch(unnormalize_img(x_train)), nrow=16, padding=2)
     y_grid = make_grid(unnormalize_batch(unnormalize_img(y_train)), nrow=16, padding=2)
     local_grid = make_grid(unnormalize_batch(unnormalize_img(x_local)), nrow=16, padding=2)
-    coarse_grid = make_grid(unnormalize_batch(unnormalize_img(coarse_output)), nrow=16, padding=2)
+    coarse_grid = make_grid(unnormalize_img(coarse_output), nrow=16, padding=2)
     # x_0 = unnormalizer(x_train[0]).cpu().detach().numpy()
     # y_0 = unnormalizer(y_train[0]).cpu().detach().numpy()
     # local_0 = unnormalizer(x_local[0]).cpu().detach().numpy()
