@@ -51,11 +51,14 @@ class CoarseLoss(nn.Module):
         self.content_loss = nn.L1Loss()
         self.style_loss = nn.L1Loss()
         self.tv_loss = TVLoss()
+        self.adversarial_loss = nn.BCELoss()
 
-    def forward(self, x, out, comp, mask, vgg):
+    def forward(self, x, out, comp, mask, d_out, d_local, vgg, device):
         coarse_vgg_features = vgg(normalize_batch(x))
         coarse_comp_vgg_features = vgg(normalize_batch(comp))
         coarse_output_vgg_features = vgg(normalize_batch(out))
+
+        real_label = torch.ones_like(d_out).to(device)
 
         x_valid = (1.0 - mask) * x
         out_valid = (1.0 - mask) * out
@@ -77,12 +80,17 @@ class CoarseLoss(nn.Module):
             if i == 2:
                 c_loss_out += self.content_loss(f_out, f_x.detach()).mean()
                 c_loss_comp += self.content_loss(f_out, f_comp.detach()).mean()
-        s_loss = s_loss_out + s_loss_comp
-        c_loss = c_loss_out + c_loss_comp
+        s_loss = 0.5 * s_loss_out + 3.0 * s_loss_comp
+        c_loss = 0.5 * c_loss_out + 3.0 * c_loss_comp
 
         tv_loss = self.tv_loss(comp)
 
-        return p_loss_valid + 6.0 * p_loss_hole + 0.05 * c_loss + 120.0 * s_loss + 0.1 * tv_loss, p_loss_valid, p_loss_hole, c_loss, s_loss, tv_loss
+        adversarial_loss_global = self.adversarial_loss(d_out, real_label)
+        adversarial_loss_local = self.adversarial_loss(d_local, real_label)
+        adversarial_loss = 0.5 * adversarial_loss_global + 3.0 * adversarial_loss_local
+
+        return p_loss_valid + 20.0 * p_loss_hole + 0.05 * c_loss + 120.0 * s_loss + 0.01 * tv_loss + 0.1 * adversarial_loss,\
+            p_loss_valid, p_loss_hole, c_loss, s_loss, tv_loss, adversarial_loss
 
     @staticmethod
     def _gram_matrix(mat):

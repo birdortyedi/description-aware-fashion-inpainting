@@ -27,19 +27,19 @@ val_loader = data.DataLoader(fg_val, batch_size=BATCH_SIZE, shuffle=False, num_w
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 coarse = CoarseNet(fg_train.vocab_size)
 # refine = RefineNet()
-# local_d = LocalDiscriminator()
-# global_d = GlobalDiscriminator()
+local_d = LocalDiscriminator()
+global_d = GlobalDiscriminator()
 vgg = VGG16(requires_grad=False)
 if torch.cuda.device_count() > 1:
     print("Using {} GPUs...".format(torch.cuda.device_count()))
     coarse = nn.DataParallel(coarse)
     # refine = nn.DataParallel(refine)
-    # local_d = nn.DataParallel(local_d)
-    # global_d = nn.DataParallel(global_d)
+    local_d = nn.DataParallel(local_d)
+    global_d = nn.DataParallel(global_d)
 coarse.to(device)
 # refine.to(device)
-# local_d.to(device)
-# global_d.to(device)
+local_d.to(device)
+global_d.to(device)
 vgg.to(device)
 
 coarse.apply(weights_init)
@@ -52,20 +52,22 @@ coarse_loss_fn = coarse_loss_fn.to(device)
 # refine_loss_fn = RefineLoss()
 # refine_loss_fn = refine_loss_fn.to(device)
 
-# d_loss_fn = nn.BCELoss()
-# d_loss_fn = d_loss_fn.to(device)
+d_loss_fn = nn.BCELoss()
+d_loss_fn = d_loss_fn.to(device)
 
 # c_lr, r_lr, d_lr = 0.002, 0.001, 0.0001
-lr = 0.0002
+lr, d_lr = 0.0002, 0.0001
 coarse_optimizer = optim.Adam(coarse.parameters(), lr=lr, betas=(0.5, 0.999))
 # refine_optimizer = optim.Adam(refine.parameters(), lr=r_lr, betas=(0.5, 0.999))
-# d_optimizer = optim.Adam(local_d.parameters(), lr=d_lr, betas=(0.9, 0.999))
+global_optimizer = optim.Adam(global_d.parameters(), lr=d_lr, betas=(0.9, 0.999))
+local_optimizer = optim.Adam(local_d.parameters(), lr=d_lr, betas=(0.9, 0.999))
 
 coarse_scheduler = optim.lr_scheduler.ExponentialLR(coarse_optimizer, gamma=0.9)
 # coarse_scheduler = optim.lr_scheduler.StepLR(coarse_optimizer, step_size=3100, gamma=0.5)
 
 # refine_scheduler = optim.lr_scheduler.ExponentialLR(refine_optimizer, gamma=0.95)
-# d_scheduler = optim.lr_scheduler.ExponentialLR(d_optimizer, gamma=0.95)
+global_scheduler = optim.lr_scheduler.ExponentialLR(global_optimizer, gamma=0.9)
+local_scheduler = optim.lr_scheduler.ExponentialLR(local_optimizer, gamma=0.9)
 
 writer = SummaryWriter()
 
@@ -81,24 +83,20 @@ def train(epoch, loader, l_fns, optimizers):
         x_mask = x_mask.float().to(device)
         x_local = x_local.float().to(device)
         y_train = y_train.float().to(device)
-        # local_coords = local_coords.float().to(device)
+        local_coords = local_coords.float().to(device)
 
-        coarse_output, coarse_losses = train_coarse(num_step, x_train, x_desc, x_mask, y_train, l_fns)
+        coarse_output, coarse_comp_output, coarse_losses = train_coarse(num_step, x_train, x_desc, x_mask, y_train, local_coords, l_fns)
         optimizers["coarse"].step()
 
         # refine_output, refine_local_output, refine_losses = train_refine(num_step, coarse_output, x_mask, y_train, local_coords, l_fns)
         # optimizers["refine"].step()
         # schedulers["refine"].step(epoch)
 
-        # if batch_idx % 150 == 0:
-        # train_discriminator(num_step, x_train, x_desc, x_mask, x_local, y_train, local_coords, l_fns)
-        # optimizers["discriminator"].step()
-        # schedulers["discriminator"].step(epoch)
-
-        # global_d_accuracy_on_refine_output = torch.mean((global_d(refine_output).view(-1) > 0.5).float(), dim=0)
-        # writer.add_scalar("Metrics/on_step_d_global_acc_on_refine", global_d_accuracy_on_refine_output, num_step)
-        # local_d_accuracy_on_refine_local_output = torch.mean((local_d(refine_local_output).view(-1) > 0.5).float(), dim=0)
-        # writer.add_scalar("Metrics/on_step_d_local_acc_on_refine", local_d_accuracy_on_refine_local_output, num_step)
+        train_discriminator(num_step, x_local, y_train, local_coords, coarse_comp_output, l_fns)
+        optimizers["global"].step()
+        schedulers["global"].step(epoch)
+        optimizers["local"].step()
+        schedulers["local"].step(epoch)
 
         if batch_idx % 100 == 0:
             make_verbose(x_train, x_local, y_train, coarse_output, coarse_losses, None, None, None, num_step, batch_idx, epoch)
@@ -132,44 +130,60 @@ def train_refine(num_step, coarse_output, x_mask, y_train, local_coords, l_fns):
     return refine_output, refine_local_output, (refine_loss, refine_pixel, refine_style, refine_tv, refine_global_loss, refine_local_loss)
 
 
-def train_discriminator(num_step, x_train, x_desc, x_mask, x_local, y_train, local_coords, l_fns):
+def train_discriminator(num_step, x_local, y_train, local_coords, coarse_comp_output, l_fns):
+    global_d.train()
     global_d.zero_grad()
     global_d_real_output = global_d(y_train).view(-1)
     real_label = torch.ones_like(global_d_real_output).to(device)
-    global_real_loss = l_fns["discriminator"](global_d_real_output, real_label)
+    global_real_loss = l_fns["global"](global_d_real_output.detach(), real_label)
     writer.add_scalar("Loss/on_step_d_global_real_loss", global_real_loss.mean().item(), num_step)
-    global_fake_output = (1.0 - x_mask) * x_train + x_mask * refine(coarse(x_train, x_desc))
-    global_d_fake_output = global_d(global_fake_output).view(-1)
+    global_d_fake_output = global_d(coarse_comp_output).view(-1)
     fake_label = torch.zeros_like(global_d_fake_output).to(device)
-    global_fake_loss = l_fns["discriminator"](global_d_fake_output, fake_label)
+    global_fake_loss = l_fns["global"](global_d_fake_output.detach(), fake_label)
     writer.add_scalar("Loss/on_step_d_global_fake_loss", global_fake_loss.mean().item(), num_step)
     global_loss = global_real_loss + global_fake_loss
 
+    local_d.train()
     local_d.zero_grad()
     local_d_real_output = local_d(x_local).view(-1)
-    local_real_loss = l_fns["discriminator"](local_d_real_output, real_label)
+    local_real_loss = l_fns["local"](local_d_real_output.detach(), real_label)
     writer.add_scalar("Loss/on_step_d_local_real_loss", local_real_loss.mean().item(), num_step)
     out_local = list()
-    for im, local_coord in zip(global_fake_output, local_coords):
+    for im, local_coord in zip(coarse_comp_output, local_coords):
         top, left, h, w = local_coord
         single_out = ToTensor()(Resize(size=(32, 32))(F.crop(ToPILImage()(im.cpu()), top.item(), left.item(), h.item(), w.item())))
         out_local.append(single_out)
     out_local = torch.stack(out_local).to(device)
     local_d_fake_output = local_d(out_local).view(-1)
-    local_fake_loss = l_fns["discriminator"](local_d_fake_output, fake_label)
+    local_fake_loss = l_fns["local"](local_d_fake_output.detach(), fake_label)
     writer.add_scalar("Loss/on_step_d_local_fake_loss", local_fake_loss.mean().item(), num_step)
     local_loss = local_real_loss + local_fake_loss
     d_loss = global_loss + local_loss
-    d_loss.backward(retain_graph=True)
+    d_loss.backward()
+
+    global_d_accuracy_on_output = torch.mean((global_d_fake_output.view(-1) > 0.5).float(), dim=0)
+    writer.add_scalar("Metrics/on_step_d_global_acc_on_refine", global_d_accuracy_on_output, num_step)
+    local_d_accuracy_on_local_output = torch.mean((local_d_fake_output.view(-1) > 0.5).float(), dim=0)
+    writer.add_scalar("Metrics/on_step_d_local_acc_on_refine", local_d_accuracy_on_local_output, num_step)
 
 
-def train_coarse(num_step, x_train, x_desc, x_mask, y_train, l_fns):
+def train_coarse(num_step, x_train, x_desc, x_mask, y_train, local_coords, l_fns):
+    global_d.eval()
+    local_d.eval()
     coarse.zero_grad()
     coarse_output = coarse(x_train, x_desc, x_mask)
     coarse_comp_output = (1.0 - x_mask) * x_train + x_mask * coarse_output
-    coarse_losses = l_fns["coarse"](y_train, coarse_output, coarse_comp_output, x_mask, vgg)
+    d_out = global_d(coarse_output)
+    out_local = list()
+    for im, local_coord in zip(coarse_comp_output, local_coords):
+        top, left, h, w = local_coord
+        single_out = ToTensor()(Resize(size=(32, 32))(F.crop(ToPILImage()(im.cpu()), top.item(), left.item(), h.item(), w.item())))
+        out_local.append(single_out)
+    out_local = torch.stack(out_local).to(device)
+    d_local = local_d(out_local)
+    coarse_losses = l_fns["coarse"](y_train, coarse_output, coarse_comp_output, x_mask, d_out, d_local, vgg, device)
 
-    coarse_loss, coarse_pixel_valid, coarse_pixel_hole, coarse_content, coarse_style, coarse_tv = coarse_losses
+    coarse_loss, coarse_pixel_valid, coarse_pixel_hole, coarse_content, coarse_style, coarse_tv, coarse_adversarial = coarse_losses
 
     writer.add_scalar("LR/learning_rate", schedulers["coarse"].get_lr(), num_step)
 
@@ -179,10 +193,11 @@ def train_coarse(num_step, x_train, x_desc, x_mask, y_train, l_fns):
     writer.add_scalar("Loss/on_step_coarse_content_loss", coarse_content.item(), num_step)
     writer.add_scalar("Loss/on_step_coarse_style_loss", coarse_style.item(), num_step)
     writer.add_scalar("Loss/on_step_coarse_tv_loss", coarse_tv.item(), num_step)
+    writer.add_scalar("Loss/on_step_coarse_adversarial_loss", coarse_adversarial.item(), num_step)
 
     coarse_loss.backward()
 
-    return coarse_output, coarse_losses
+    return coarse_output, coarse_comp_output, coarse_losses
 
 
 def make_verbose(x_train, x_local, y_train, coarse_output, coarse_losses, refine_output, refine_local_output, refine_losses, num_step, batch_idx, epoch):
@@ -205,7 +220,7 @@ def make_verbose(x_train, x_local, y_train, coarse_output, coarse_losses, refine
 
     # refine_loss, refine_pixel, refine_style, refine_tv, refine_global, refine_local = refine_losses
 
-    coarse_loss, coarse_pixel_valid, coarse_pixel_hole, coarse_content, coarse_style, coarse_tv = coarse_losses
+    coarse_loss, coarse_pixel_valid, coarse_pixel_hole, coarse_content, coarse_style, coarse_tv, coarse_adversarial = coarse_losses
     print("Step:{}  ".format(num_step),
           "Epoch:{}".format(epoch),
           "[{}/{} ".format(batch_idx * len(x_train), len(train_loader.dataset)),
@@ -215,8 +230,8 @@ def make_verbose(x_train, x_local, y_train, coarse_output, coarse_losses, refine
           "Hole: {:.6f} ".format(coarse_pixel_hole.mean().item()),
           "Content: {:.5f} ".format(coarse_content.mean().item()),
           "Style: {:.6f} ".format(coarse_style.mean().item()),
-          "TV: {:.6f} ".format(coarse_tv.mean().item())  # ,
-          # "Global: {:.6f} ".format(refine_global.mean().item()),
+          "TV: {:.6f} ".format(coarse_tv.mean().item()),
+          "Adversarial: {:.6f} ".format(coarse_adversarial.mean().item())
           # "Local: {:.6f}".format(refine_local.mean().item())
           )
 
@@ -262,15 +277,18 @@ def evaluate(epoch, loader, l_fn):
 if __name__ == '__main__':
     loss_fns = {"coarse": coarse_loss_fn,
                 # "refine": refine_loss_fn,
-                # "discriminator": d_loss_fn
+                "global": d_loss_fn,
+                "local": d_loss_fn
                 }
     optimizers = {"coarse": coarse_optimizer,
                   # "refine": refine_optimizer,
-                  # "discriminator": d_optimizer
+                  "global": global_optimizer,
+                  "local": local_optimizer
                   }
     schedulers = {"coarse": coarse_scheduler,
                   # "refine": refine_scheduler,
-                  # "discriminator": d_scheduler
+                  "global": global_scheduler,
+                  "local": local_scheduler
                   }
     for e in range(NUM_EPOCHS):
         train(e, train_loader, loss_fns, optimizers)

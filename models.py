@@ -8,7 +8,7 @@ from torchvision import models
 from collections import namedtuple
 from utils import HDF5Dataset, CentralErasing
 from layers import PartialConv2d
-from blocks import lstm_block, dilated_res_blocks, SelfAttention, DilatedResidualBlock, upsampling_tanh_block
+from blocks import lstm_block, dilated_res_blocks, SelfAttention, DilatedResidualBlock, conv_bn_lrelu_block, conv_lrelu_block
 
 
 class LocalDiscriminator(nn.Module):
@@ -45,12 +45,12 @@ class GlobalDiscriminator(nn.Module):
     def __init__(self):
         super(GlobalDiscriminator, self).__init__()
         # Discriminator
-        self.d_block_1 = conv_lrelu_block(in_channels=3, out_channels=32, kernel_size=7, stride=2, padding=1)
-        self.d_block_2 = conv_bn_lrelu_block(in_channels=32, out_channels=64, kernel_size=5, stride=2, padding=1)
-        self.d_block_3 = conv_bn_lrelu_block(in_channels=64, out_channels=128, kernel_size=5, stride=2, padding=1)
-        self.d_block_4 = conv_bn_lrelu_block(in_channels=128, out_channels=64, kernel_size=5, stride=2, padding=1)
-        self.d_block_5 = conv_bn_lrelu_block(in_channels=64, out_channels=32, kernel_size=3, stride=2, padding=1)
-        self.d_block_6 = conv_bn_lrelu_block(in_channels=32, out_channels=16, kernel_size=3, stride=2, padding=1)
+        self.d_block_1 = conv_lrelu_block(in_channels=3, out_channels=16, kernel_size=7, stride=2, padding=1)
+        self.d_block_2 = conv_bn_lrelu_block(in_channels=16, out_channels=32, kernel_size=5, stride=2, padding=1)
+        self.d_block_3 = conv_bn_lrelu_block(in_channels=32, out_channels=64, kernel_size=5, stride=2, padding=1)
+        self.d_block_4 = conv_bn_lrelu_block(in_channels=64, out_channels=128, kernel_size=5, stride=2, padding=1)
+        self.d_block_5 = conv_bn_lrelu_block(in_channels=128, out_channels=64, kernel_size=3, stride=2, padding=1)
+        self.d_block_6 = conv_bn_lrelu_block(in_channels=64, out_channels=16, kernel_size=3, stride=2, padding=1)
         self.dropout = nn.Dropout2d(p=0.3)
         self.avg_pooling = nn.AdaptiveAvgPool2d(output_size=(1, 1))
         self.d_block_7 = nn.Linear(in_features=16, out_features=1)
