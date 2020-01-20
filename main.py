@@ -94,9 +94,7 @@ def train(epoch, loader, l_fns, optimizers):
 
         train_discriminator(num_step, x_local, y_train, local_coords, coarse_comp_output, l_fns)
         optimizers["global"].step()
-        schedulers["global"].step(epoch)
         optimizers["local"].step()
-        schedulers["local"].step(epoch)
 
         if batch_idx % 100 == 0:
             make_verbose(x_train, x_local, y_train, coarse_output, coarse_losses, None, None, None, num_step, batch_idx, epoch)
@@ -142,6 +140,7 @@ def train_discriminator(num_step, x_local, y_train, local_coords, coarse_comp_ou
     global_fake_loss = l_fns["global"](global_d_fake_output.detach(), fake_label)
     writer.add_scalar("Loss/on_step_d_global_fake_loss", global_fake_loss.mean().item(), num_step)
     global_loss = global_real_loss + global_fake_loss
+    global_loss.backward()
 
     local_d.train()
     local_d.zero_grad()
@@ -158,8 +157,7 @@ def train_discriminator(num_step, x_local, y_train, local_coords, coarse_comp_ou
     local_fake_loss = l_fns["local"](local_d_fake_output.detach(), fake_label)
     writer.add_scalar("Loss/on_step_d_local_fake_loss", local_fake_loss.mean().item(), num_step)
     local_loss = local_real_loss + local_fake_loss
-    d_loss = global_loss + local_loss
-    d_loss.backward()
+    local_loss.backward()
 
     global_d_accuracy_on_output = torch.mean((global_d_fake_output.view(-1) > 0.5).float(), dim=0)
     writer.add_scalar("Metrics/on_step_d_global_acc_on_refine", global_d_accuracy_on_output, num_step)
@@ -168,8 +166,6 @@ def train_discriminator(num_step, x_local, y_train, local_coords, coarse_comp_ou
 
 
 def train_coarse(num_step, x_train, x_desc, x_mask, y_train, local_coords, l_fns):
-    global_d.eval()
-    local_d.eval()
     coarse.zero_grad()
     coarse_output = coarse(x_train, x_desc, x_mask)
     coarse_comp_output = (1.0 - x_mask) * x_train + x_mask * coarse_output
@@ -293,6 +289,8 @@ if __name__ == '__main__':
     for e in range(NUM_EPOCHS):
         train(e, train_loader, loss_fns, optimizers)
         schedulers["coarse"].step(e)
+        schedulers["global"].step(e)
+        schedulers["local"].step(e)
         # evaluate(e, val_loader, (d_loss_fn, loss_fn))
         torch.save(coarse.state_dict(), "./weights/weights_epoch_{}.pth".format(e))
         # torch.save(refine.state_dict(), "./weights/{}/weights_epoch_{}.pth".format("refine", e))
