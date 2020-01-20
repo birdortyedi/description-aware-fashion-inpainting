@@ -73,7 +73,6 @@ writer = SummaryWriter()
 
 
 def train(epoch, loader, l_fns, optimizers):
-    coarse.train()
     # refine.train()
     for batch_idx, (x_train, x_desc, x_mask, x_local, local_coords, y_train) in tqdm(enumerate(loader), ncols=50, desc="Training",
                                                                                      bar_format="{l_bar}%s{bar}%s{r_bar}" % (Fore.GREEN, Fore.RESET)):
@@ -85,6 +84,9 @@ def train(epoch, loader, l_fns, optimizers):
         y_train = y_train.float().to(device)
         local_coords = local_coords.float().to(device)
 
+        coarse.train()
+        global_d.eval()
+        local_d.eval()
         coarse_output, coarse_comp_output, coarse_losses = train_coarse(num_step, x_train, x_desc, x_mask, y_train, local_coords, l_fns)
         optimizers["coarse"].step()
 
@@ -92,6 +94,9 @@ def train(epoch, loader, l_fns, optimizers):
         # optimizers["refine"].step()
         # schedulers["refine"].step(epoch)
 
+        coarse.eval()
+        global_d.train()
+        local_d.train()
         train_discriminator(num_step, x_local, y_train, local_coords, coarse_comp_output, l_fns)
         optimizers["global"].step()
         optimizers["local"].step()
@@ -129,7 +134,6 @@ def train_refine(num_step, coarse_output, x_mask, y_train, local_coords, l_fns):
 
 
 def train_discriminator(num_step, x_local, y_train, local_coords, coarse_comp_output, l_fns):
-    global_d.train()
     global_d.zero_grad()
     global_d_real_output = global_d(y_train).view(-1)
     real_label = torch.ones_like(global_d_real_output).to(device)
@@ -142,7 +146,6 @@ def train_discriminator(num_step, x_local, y_train, local_coords, coarse_comp_ou
     global_loss = (global_real_loss + global_fake_loss) / 2
     global_loss.backward()
 
-    local_d.train()
     local_d.zero_grad()
     local_d_real_output = local_d(x_local).view(-1)
     local_real_loss = l_fns["local"](local_d_real_output, real_label)
