@@ -207,37 +207,38 @@ class CoarseNet(nn.Module):
         textual_embedding = self.lstm_block(descriptions)
         embedding = torch.cat((visual_embedding, textual_embedding), dim=1)
 
-        x_7 = self.upsample(embedding.view(-1, 16, 4, 4))
-        x_7 = torch.cat((x_5, x_7), dim=1)
-        x_7 = self.block_7(x_7)
-        x_7 = F.leaky_relu(self.in_7(x_7), negative_slope=0.2)
+        out = self.upsample(embedding.view(-1, 16, 4, 4))
+        out = torch.cat((x_5, out), dim=1)
+        out = self.block_7(out)
+        out = F.leaky_relu(self.in_7(out), negative_slope=0.2)
 
-        x_8 = self.upsample(x_7)
-        x_8 = torch.cat((x_4, x_8), dim=1)
-        x_8 = self.block_8(x_8)
-        x_8 = F.leaky_relu(self.in_8(x_8), negative_slope=0.2)
+        out = self.upsample(out)
+        out = torch.cat((x_4, out), dim=1)
+        out = self.block_8(out)
+        out = F.leaky_relu(self.in_8(out), negative_slope=0.2)
 
-        x_9 = self.upsample(x_8)
-        x_9 = torch.cat((x_3, x_9 * attention_map), dim=1)
-        x_9 = self.block_9(x_9)
-        x_9 = F.leaky_relu(self.in_9(x_9), negative_slope=0.2)
+        out = self.upsample(out)
+        out += out * attention_map
+        out = F.leaky_relu(out, negative_slope=0.2)
+        out = torch.cat((x_3, out), dim=1)
+        out = self.block_9(out)
+        out = F.leaky_relu(self.in_9(out), negative_slope=0.2)
 
-        x_10 = self.upsample(x_9)
-        x_10 = torch.cat((x_2, x_10), dim=1)
-        x_10 = self.block_10(x_10)
-        x_10 = F.leaky_relu(self.in_10(x_10), negative_slope=0.2)
+        out = self.upsample(out)
+        out = torch.cat((x_2, out), dim=1)
+        out = self.block_10(out)
+        out = F.leaky_relu(self.in_10(out), negative_slope=0.2)
 
-        x_11 = self.upsample(x_10)
-        x_11 = torch.cat((x_1, x_11), dim=1)
-        x_11 = self.block_11(x_11)
-        x_11 = F.leaky_relu(self.in_11(x_11), negative_slope=0.2)
+        out = self.upsample(out)
+        out = torch.cat((x_1, out), dim=1)
+        out = self.block_11(out)
+        out = F.leaky_relu(self.in_11(out), negative_slope=0.2)
 
-        x_12 = self.upsample(x_11)
-        x_12 = torch.cat((x, x_12), dim=1)
-        x_12 = self.block_12(x_12)
-        x_12 = torch.tanh(x_12)
+        out = self.upsample(out)
+        out = torch.cat((x, out), dim=1)
+        out = torch.tanh(self.block_12(out))
 
-        return x_12
+        return out
 
 
 class VGG16(torch.nn.Module):
