@@ -157,7 +157,7 @@ class CoarseNet(nn.Module):
         self.upsample = nn.Upsample(mode="nearest", scale_factor=2.0)
 
         # Decoder
-        self.block_7 = PartialConv2d(in_channels=160, out_channels=128, kernel_size=3, padding=1,
+        self.block_7 = PartialConv2d(in_channels=144, out_channels=128, kernel_size=3, padding=1,
                                      bias=False, multi_channel=True)
         self.in_7 = nn.InstanceNorm2d(num_features=128, affine=True)
 
@@ -202,7 +202,7 @@ class CoarseNet(nn.Module):
         textual_embedding = self.lstm_block(descriptions)
         embedding = torch.cat((visual_embedding, textual_embedding), dim=1)
 
-        x_7 = self.upsample(embedding.view(-1, 32, 4, 4))
+        x_7 = self.upsample(embedding.view(-1, 16, 4, 4))
         x_7 = torch.cat((x_5, x_7), dim=1)
         x_7 = self.block_7(x_7)
         x_7 = F.leaky_relu(self.in_7(x_7), negative_slope=0.2)
