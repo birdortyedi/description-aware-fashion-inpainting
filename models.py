@@ -157,7 +157,7 @@ class CoarseNet(nn.Module):
 
         self.avg_pooling = nn.AdaptiveAvgPool2d(output_size=(1, 1))
         self.dropout = nn.Dropout2d(p=0.3)
-        self.upsample = nn.Upsample(mode="bilinear", scale_factor=2.0)
+        self.upsample = nn.Upsample(mode="nearest", scale_factor=2.0)
 
         # Decoder
         self.block_7 = PartialConv2d(in_channels=144, out_channels=128, kernel_size=3, padding=1,
