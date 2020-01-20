@@ -8,7 +8,7 @@ from torchvision import models
 from collections import namedtuple
 from utils import HDF5Dataset, CentralErasing
 from layers import PartialConv2d
-from blocks import lstm_block, dilated_res_blocks, SelfAttention, upsampling_in_lrelu_block, upsampling_tanh_block
+from blocks import lstm_block, dilated_res_blocks, SelfAttention, DilatedResidualBlock, upsampling_tanh_block
 
 
 class LocalDiscriminator(nn.Module):
@@ -132,7 +132,10 @@ class CoarseNet(nn.Module):
         self.in_3 = nn.InstanceNorm2d(num_features=128)
 
         # Dilated Residual Blocks
-        self.dilated_res_blocks = dilated_res_blocks(num_features=128, kernel_size=5, padding=4)
+        self.dilated_res_block_1 = DilatedResidualBlock(in_channels=128, out_channels=128, kernel_size=3, stride=1, dilation=2, padding=2)
+        self.dilated_res_block_2 = DilatedResidualBlock(in_channels=128, out_channels=128, kernel_size=3, stride=1, dilation=2, padding=2)
+        self.dilated_res_block_3 = DilatedResidualBlock(in_channels=128, out_channels=128, kernel_size=3, stride=1, dilation=2, padding=2)
+
         # Self-Attention
         self.self_attention = SelfAttention(in_channels=128)
 
@@ -187,10 +190,13 @@ class CoarseNet(nn.Module):
         x_3, m_3 = self.block_3(x_2, m_2)
         x_3 = F.relu(self.in_3(x_3))
 
-        dil_res_x_3 = self.dilated_res_blocks(x_3, m_3)
-        attention_map, _ = self.self_attention(dil_res_x_3)
+        dil_res_x_3_1 = self.dilated_res_block_1(x_3, m_3)
+        dil_res_x_3_2 = self.dilated_res_block_2(dil_res_x_3_1, m_3)
+        dil_res_x_3_3 = self.dilated_res_block_3(dil_res_x_3_2, m_3)
 
-        x_4, m_4 = self.block_4(dil_res_x_3, m_3)
+        attention_map, _ = self.self_attention(dil_res_x_3_3)
+
+        x_4, m_4 = self.block_4(dil_res_x_3_3, m_3)
         x_4 = F.relu(self.in_4(x_4))
         x_5, m_5 = self.block_5(x_4, m_4)
         x_5 = F.relu(self.in_5(x_5))
