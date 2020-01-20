@@ -14,7 +14,7 @@ from models import CoarseNet, RefineNet, LocalDiscriminator, GlobalDiscriminator
 from losses import CoarseLoss, RefineLoss
 
 NUM_EPOCHS = 250
-BATCH_SIZE = 8
+BATCH_SIZE = 16
 
 fg_train = HDF5Dataset(filename='./Fashion-Gen/fashiongen_256_256_train.h5')
 fg_val = HDF5Dataset(filename='./Fashion-Gen/fashiongen_256_256_validation.h5', is_train=False)
@@ -100,7 +100,7 @@ def train(epoch, loader, l_fns, optimizers):
         # local_d_accuracy_on_refine_local_output = torch.mean((local_d(refine_local_output).view(-1) > 0.5).float(), dim=0)
         # writer.add_scalar("Metrics/on_step_d_local_acc_on_refine", local_d_accuracy_on_refine_local_output, num_step)
 
-        if batch_idx % 50 == 0:
+        if batch_idx % 100 == 0:
             make_verbose(x_train, x_local, y_train, coarse_output, coarse_losses, None, None, None, num_step, batch_idx, epoch)
 
 

@@ -57,8 +57,8 @@ class CoarseLoss(nn.Module):
         coarse_comp_vgg_features = vgg(normalize_batch(comp))
         coarse_output_vgg_features = vgg(normalize_batch(out))
 
-        x_valid = (1 - mask) * x
-        out_valid = (1 - mask) * out
+        x_valid = (1.0 - mask) * x
+        out_valid = (1.0 - mask) * out
 
         x_hole = mask * x
         out_hole = mask * out
@@ -68,20 +68,21 @@ class CoarseLoss(nn.Module):
 
         s_loss_out, s_loss_comp = 0., 0.
         c_loss_out, c_loss_comp = 0., 0.
-        for f_x, f_comp, f_out in zip(coarse_vgg_features, coarse_comp_vgg_features, coarse_output_vgg_features):
+        for i, (f_x, f_comp, f_out) in enumerate(zip(coarse_vgg_features, coarse_comp_vgg_features, coarse_output_vgg_features)):
             G_f_x = self._gram_matrix(f_x)
             G_f_out = self._gram_matrix(f_out)
             G_f_comp = self._gram_matrix(f_comp)
             s_loss_out += self.style_loss(G_f_out, G_f_x).mean()
             s_loss_comp += self.style_loss(G_f_out, G_f_comp).mean()
-            c_loss_out += self.content_loss(f_out, f_x.detach()).mean()
-            c_loss_comp += self.content_loss(f_out, f_comp.detach()).mean()
+            if i == 2:
+                c_loss_out += self.content_loss(f_out, f_x.detach()).mean()
+                c_loss_comp += self.content_loss(f_out, f_comp.detach()).mean()
         s_loss = s_loss_out + s_loss_comp
         c_loss = c_loss_out + c_loss_comp
 
         tv_loss = self.tv_loss(comp)
 
-        return p_loss_valid + 6 * p_loss_hole + 0.05 * c_loss + 120 * s_loss + 0.1 * tv_loss, p_loss_valid, p_loss_hole, c_loss, s_loss, tv_loss
+        return p_loss_valid + 6.0 * p_loss_hole + 0.05 * c_loss + 120.0 * s_loss + 0.1 * tv_loss, p_loss_valid, p_loss_hole, c_loss, s_loss, tv_loss
 
     @staticmethod
     def _gram_matrix(mat):
