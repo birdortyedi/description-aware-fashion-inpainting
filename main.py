@@ -133,19 +133,19 @@ def train_discriminator(num_step, x_local, y_train, local_coords, coarse_comp_ou
     global_d.zero_grad()
     global_d_real_output = global_d(y_train).view(-1)
     real_label = torch.ones_like(global_d_real_output).to(device)
-    global_real_loss = l_fns["global"](global_d_real_output.detach(), real_label)
+    global_real_loss = l_fns["global"](global_d_real_output, real_label)
     writer.add_scalar("Loss/on_step_d_global_real_loss", global_real_loss.mean().item(), num_step)
     global_d_fake_output = global_d(coarse_comp_output).view(-1)
     fake_label = torch.zeros_like(global_d_fake_output).to(device)
-    global_fake_loss = l_fns["global"](global_d_fake_output.detach(), fake_label)
+    global_fake_loss = l_fns["global"](global_d_fake_output, fake_label)
     writer.add_scalar("Loss/on_step_d_global_fake_loss", global_fake_loss.mean().item(), num_step)
-    global_loss = global_real_loss + global_fake_loss
+    global_loss = (global_real_loss + global_fake_loss) / 2
     global_loss.backward()
 
     local_d.train()
     local_d.zero_grad()
     local_d_real_output = local_d(x_local).view(-1)
-    local_real_loss = l_fns["local"](local_d_real_output.detach(), real_label)
+    local_real_loss = l_fns["local"](local_d_real_output, real_label)
     writer.add_scalar("Loss/on_step_d_local_real_loss", local_real_loss.mean().item(), num_step)
     out_local = list()
     for im, local_coord in zip(coarse_comp_output, local_coords):
@@ -154,9 +154,9 @@ def train_discriminator(num_step, x_local, y_train, local_coords, coarse_comp_ou
         out_local.append(single_out)
     out_local = torch.stack(out_local).to(device)
     local_d_fake_output = local_d(out_local).view(-1)
-    local_fake_loss = l_fns["local"](local_d_fake_output.detach(), fake_label)
+    local_fake_loss = l_fns["local"](local_d_fake_output, fake_label)
     writer.add_scalar("Loss/on_step_d_local_fake_loss", local_fake_loss.mean().item(), num_step)
-    local_loss = local_real_loss + local_fake_loss
+    local_loss = (local_real_loss + local_fake_loss) / 2
     local_loss.backward()
 
     global_d_accuracy_on_output = torch.mean((global_d_fake_output.view(-1) > 0.5).float(), dim=0)
