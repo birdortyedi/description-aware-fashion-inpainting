@@ -47,9 +47,9 @@ class TVLoss(nn.Module):
 class CoarseLoss(nn.Module):
     def __init__(self):
         super(CoarseLoss, self).__init__()
-        self.pixel_loss = nn.SmoothL1Loss()
-        self.content_loss = nn.SmoothL1Loss()
-        self.style_loss = nn.SmoothL1Loss()
+        self.pixel_loss = nn.L1Loss()
+        self.content_loss = nn.L1Loss()
+        self.style_loss = nn.L1Loss()
         self.tv_loss = TVLoss()
 
     def forward(self, x, out, comp, mask, vgg):
