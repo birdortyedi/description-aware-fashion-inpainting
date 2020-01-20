@@ -125,11 +125,11 @@ class CoarseNet(nn.Module):
 
         self.block_2 = PartialConv2d(in_channels=32, out_channels=64, kernel_size=5, stride=2, padding=2,
                                      bias=False, return_mask=True, multi_channel=True)
-        self.in_2 = nn.InstanceNorm2d(num_features=64, affine=True)
+        self.in_2 = nn.InstanceNorm2d(num_features=64)
 
         self.block_3 = PartialConv2d(in_channels=64, out_channels=128, kernel_size=5, stride=2, padding=2,
                                      bias=False, return_mask=True, multi_channel=True)
-        self.in_3 = nn.InstanceNorm2d(num_features=128, affine=True)
+        self.in_3 = nn.InstanceNorm2d(num_features=128)
 
         # Dilated Residual Blocks
         self.dilated_res_blocks = dilated_res_blocks(num_features=128, kernel_size=5, padding=4)
@@ -139,7 +139,7 @@ class CoarseNet(nn.Module):
         # Visual features for concatenating with textual features
         self.block_4 = PartialConv2d(in_channels=128, out_channels=64, kernel_size=5, stride=2, padding=2,
                                      bias=False, return_mask=True, multi_channel=True)
-        self.in_4 = nn.InstanceNorm2d(num_features=64, affine=True)
+        self.in_4 = nn.InstanceNorm2d(num_features=64)
 
         self.block_5 = PartialConv2d(in_channels=64, out_channels=128, kernel_size=5, stride=2, padding=2,
                                      bias=False, return_mask=True, multi_channel=True)
@@ -154,30 +154,30 @@ class CoarseNet(nn.Module):
 
         self.avg_pooling = nn.AdaptiveAvgPool2d(output_size=(1, 1))
         self.dropout = nn.Dropout2d(p=0.3)
-        self.upsample = nn.Upsample(mode="nearest", scale_factor=2.0)
+        self.upsample = nn.Upsample(mode="bilinear", scale_factor=2.0)
 
         # Decoder
         self.block_7 = PartialConv2d(in_channels=144, out_channels=128, kernel_size=3, padding=1,
                                      bias=False, multi_channel=True)
-        self.in_7 = nn.InstanceNorm2d(num_features=128, affine=True)
+        self.in_7 = nn.InstanceNorm2d(num_features=128)
 
         self.block_8 = PartialConv2d(in_channels=192, out_channels=128, kernel_size=3, padding=1,
                                      bias=False, multi_channel=True)
-        self.in_8 = nn.InstanceNorm2d(num_features=128, affine=True)
+        self.in_8 = nn.InstanceNorm2d(num_features=128)
 
-        self.block_9 = PartialConv2d(in_channels=384, out_channels=128, kernel_size=3, padding=1,
+        self.block_9 = PartialConv2d(in_channels=256, out_channels=128, kernel_size=3, padding=1,
                                      bias=False, multi_channel=True)
-        self.in_9 = nn.InstanceNorm2d(num_features=128, affine=True)
+        self.in_9 = nn.InstanceNorm2d(num_features=128)
 
         self.block_10 = PartialConv2d(in_channels=192, out_channels=128, kernel_size=3, padding=1,
                                       bias=False, multi_channel=True)
-        self.in_10 = nn.InstanceNorm2d(num_features=128, affine=True)
+        self.in_10 = nn.InstanceNorm2d(num_features=128)
 
         self.block_11 = PartialConv2d(in_channels=160, out_channels=64, kernel_size=3, padding=1,
                                       bias=False,  multi_channel=True)
-        self.in_11 = nn.InstanceNorm2d(num_features=64, affine=True)
+        self.in_11 = nn.InstanceNorm2d(num_features=64)
 
-        self.block_12 = PartialConv2d(in_channels=67, out_channels=3, kernel_size=1, bias=False, multi_channel=True)
+        self.block_12 = PartialConv2d(in_channels=67, out_channels=3, kernel_size=3, padding=1, bias=False, multi_channel=True)
 
     def forward(self, x, descriptions, mask):
         x_1, m_1 = self.block_1(x, mask)
@@ -187,7 +187,7 @@ class CoarseNet(nn.Module):
         x_3, m_3 = self.block_3(x_2, m_2)
         x_3 = F.relu(self.in_3(x_3))
 
-        dil_res_x_3 = self.dilated_res_blocks(x_3)
+        dil_res_x_3 = self.dilated_res_blocks(x_3, m_3)
         attention_map, _ = self.self_attention(dil_res_x_3)
 
         x_4, m_4 = self.block_4(dil_res_x_3, m_3)
@@ -212,7 +212,7 @@ class CoarseNet(nn.Module):
         x_8 = F.leaky_relu(self.in_8(x_8), negative_slope=0.2)
 
         x_9 = self.upsample(x_8)
-        x_9 = torch.cat((x_3, x_9, attention_map), dim=1)
+        x_9 = torch.cat((x_3, x_9 * attention_map), dim=1)
         x_9 = self.block_9(x_9)
         x_9 = F.leaky_relu(self.in_9(x_9), negative_slope=0.2)
 

@@ -2,6 +2,8 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 
+from layers import PartialConv2d
+
 
 def conv_in_lrelu_block(in_channels, out_channels, kernel_size, stride=1, padding=0):
     return nn.Sequential(
@@ -154,19 +156,20 @@ class DilatedResidualBlock(nn.Module):
         self.in_channels = in_channels
         self.out_channels = out_channels
 
-        self.conv_1 = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size, stride=stride, padding=padding, dilation=dilation)
+        self.conv_1 = PartialConv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size,
+                                    stride=stride, padding=padding, dilation=dilation, multi_channel=True)
         self.in_1 = nn.InstanceNorm2d(num_features=out_channels)
-        self.conv_2 = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=1, stride=stride)
+        self.conv_2 = PartialConv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=1, stride=stride, multi_channel=True)
         self.in_2 = nn.InstanceNorm2d(num_features=out_channels)
         self.dropout = nn.Dropout2d(p=0.3)
 
-    def forward(self, x):
+    def forward(self, x, mask):
         residual = x
 
-        x = self.conv_1(x)
+        x = self.conv_1(x, mask)
         x = self.in_1(x)
         x = F.relu(x)
-        x = self.conv_2(x)
+        x = self.conv_2(x, mask)
         x = self.in_2(x)
         x += residual
         x = self.dropout((F.relu(x)))
