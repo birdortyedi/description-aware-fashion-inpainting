@@ -14,7 +14,7 @@ from models import CoarseNet, RefineNet, LocalDiscriminator, GlobalDiscriminator
 from losses import CoarseLoss, RefineLoss
 
 NUM_EPOCHS = 250
-BATCH_SIZE = 128
+BATCH_SIZE = 120
 
 fg_train = HDF5Dataset(filename='./Fashion-Gen/fashiongen_256_256_train.h5')
 fg_val = HDF5Dataset(filename='./Fashion-Gen/fashiongen_256_256_validation.h5', is_train=False)
