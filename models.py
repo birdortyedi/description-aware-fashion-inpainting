@@ -218,8 +218,8 @@ class CoarseNet(nn.Module):
         out = F.leaky_relu(self.in_8(out), negative_slope=0.2)
 
         out = self.upsample(out)
-        out_a = out * attention_map
-        out = out + out_a
+        # out_a = out * attention_map
+        # out = out + out_a
         out = F.leaky_relu(out, negative_slope=0.2)
         out = torch.cat((x_3, out), dim=1)
         out = self.block_9(out)
