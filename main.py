@@ -97,16 +97,15 @@ def train(epoch, loader):
         vgg_features_composite = vgg(composite)
         vgg_features_output = vgg(output)
 
-        total_loss, pixel_valid_loss, pixel_hole_loss, \
-            content_loss, style_loss, tv_loss = loss_fn(y_train, output, composite, x_mask,
+        total_loss, pixel_valid_loss, pixel_hole_loss = loss_fn(y_train, output, composite, x_mask,
                                                         vgg_features_gt, vgg_features_composite, vgg_features_output)
 
         writer.add_scalar("Loss/on_step_total_loss", total_loss.item(), num_step)
         writer.add_scalar("Loss/on_step_pixel_valid_loss", pixel_valid_loss.item(), num_step)
         writer.add_scalar("Loss/on_step_pixel_hole_loss", pixel_hole_loss.item(), num_step)
-        writer.add_scalar("Loss/on_step_content_loss", content_loss.item(), num_step)
-        writer.add_scalar("Loss/on_step_style_loss", style_loss.item(), num_step)
-        writer.add_scalar("Loss/on_step_tv_loss", tv_loss.item(), num_step)
+        # writer.add_scalar("Loss/on_step_content_loss", content_loss.item(), num_step)
+        # writer.add_scalar("Loss/on_step_style_loss", style_loss.item(), num_step)
+        # writer.add_scalar("Loss/on_step_tv_loss", tv_loss.item(), num_step)
         writer.add_scalar("LR/learning_rate", scheduler.get_lr(), num_step)
 
         total_loss.backward()
