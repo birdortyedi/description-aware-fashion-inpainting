@@ -169,7 +169,7 @@ class Net(nn.Module):
         x_5, _ = self.s_attention_5(x_5)
         x_5 = F.relu(x_5)
 
-        visual_embedding = self.avg_pooling(x_5).squeeze()
+        visual_embedding = self.pooling(x_5).squeeze()
         textual_embedding = self.lstm_block(descriptions)
         embedding = torch.cat((visual_embedding, textual_embedding), dim=1)
         out = embedding.view(-1, 16, 4, 4)
