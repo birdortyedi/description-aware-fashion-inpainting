@@ -149,7 +149,7 @@ class Net(nn.Module):
         self.in_9 = nn.InstanceNorm2d(num_features=128)
         self.block_10 = nn.Conv2d(in_channels=160, out_channels=64, kernel_size=3, padding=1)
         self.in_10 = nn.InstanceNorm2d(num_features=64)
-        self.block_11 = nn.Conv2d(in_channels=67, out_channels=3, kernel_size=3, padding=1)
+        self.block_11 = nn.Conv2d(in_channels=64, out_channels=3, kernel_size=3, padding=1)
 
     def forward(self, x, descriptions):
         x_0 = F.relu(self.block_0(x))
