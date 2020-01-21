@@ -165,22 +165,22 @@ class CoarseNet(nn.Module):
         self.upsample = nn.Upsample(mode="nearest", scale_factor=2.0)
 
         # Decoder
-        self.block_7 = PartialConv2d(in_channels=144, out_channels=128, kernel_size=3, padding=1, multi_channel=True)
+        self.block_7 = nn.Conv2d(in_channels=144, out_channels=128, kernel_size=3, padding=1)
         self.in_7 = nn.InstanceNorm2d(num_features=128)
 
-        self.block_8 = PartialConv2d(in_channels=192, out_channels=128, kernel_size=3, padding=1, multi_channel=True)
+        self.block_8 = nn.Conv2d(in_channels=192, out_channels=128, kernel_size=3, padding=1)
         self.in_8 = nn.InstanceNorm2d(num_features=128)
 
-        self.block_9 = PartialConv2d(in_channels=256, out_channels=128, kernel_size=3, padding=1, multi_channel=True)
+        self.block_9 = nn.Conv2d(in_channels=256, out_channels=128, kernel_size=3, padding=1)
         self.in_9 = nn.InstanceNorm2d(num_features=128)
 
-        self.block_10 = PartialConv2d(in_channels=192, out_channels=128, kernel_size=3, padding=1, multi_channel=True)
+        self.block_10 = nn.Conv2d(in_channels=192, out_channels=128, kernel_size=3, padding=1)
         self.in_10 = nn.InstanceNorm2d(num_features=128)
 
-        self.block_11 = PartialConv2d(in_channels=160, out_channels=64, kernel_size=3, padding=1, multi_channel=True)
+        self.block_11 = nn.Conv2d(in_channels=160, out_channels=64, kernel_size=3, padding=1)
         self.in_11 = nn.InstanceNorm2d(num_features=64)
 
-        self.block_12 = PartialConv2d(in_channels=67, out_channels=3, kernel_size=3, padding=1, multi_channel=True)
+        self.block_12 = nn.Conv2d(in_channels=67, out_channels=3, kernel_size=3, padding=1)
 
     def forward(self, x, descriptions, mask):
         x_1, m_1 = self.block_1(x, mask)
