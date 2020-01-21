@@ -98,7 +98,7 @@ def train(epoch, loader):
         vgg_features_output = vgg(output)
 
         total_loss, pixel_valid_loss, pixel_hole_loss, \
-            content_loss, style_loss, tv_loss = loss_fn(y_train, output, composite,
+            content_loss, style_loss, tv_loss = loss_fn(y_train, output, composite, x_mask,
                                                         vgg_features_gt, vgg_features_composite, vgg_features_output)
 
         writer.add_scalar("Loss/on_step_total_loss", total_loss.item(), num_step)
