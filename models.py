@@ -199,7 +199,7 @@ class Net(nn.Module):
         x_10 = self.block_10(x_10)
         out = F.leaky_relu(self.in_10(x_10), negative_slope=0.2)
 
-        out = torch.tanh(self.block_12(self.upsample(out)))
+        out = torch.tanh(self.block_11(self.upsample(out)))
 
         return out
 
