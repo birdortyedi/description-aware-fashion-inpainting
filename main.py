@@ -13,7 +13,7 @@ from utils import HDF5Dataset, weights_init, normalize_batch, unnormalize_batch
 from models import CoarseNet, Net, LocalDiscriminator, GlobalDiscriminator, VGG16
 from losses import CoarseLoss, RefineLoss, CustomLoss
 
-NUM_EPOCHS = 250
+NUM_EPOCHS = 1
 BATCH_SIZE = 16
 
 fg_train = HDF5Dataset(filename='./Fashion-Gen/fashiongen_256_256_train.h5')
