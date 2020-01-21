@@ -110,6 +110,8 @@ def train(epoch, loader):
 
         total_loss.backward()
 
+        optimizer.step()
+
         if batch_idx % 100 == 0:
             x_grid = make_grid(unnormalize_batch(x_train), nrow=16, padding=2)
             y_grid = make_grid(unnormalize_batch(y_train), nrow=16, padding=2)
