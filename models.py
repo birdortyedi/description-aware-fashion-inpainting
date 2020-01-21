@@ -168,16 +168,13 @@ class Net(nn.Module):
         x_5 = F.relu(self.in_5(self.block_5(x_4)))
         x_5, _ = self.s_attention_5(x_5)
         x_5 = F.relu(x_5)
-        print(x_5.size())
 
         visual_embedding = self.pooling(x_5).squeeze()
         textual_embedding = self.lstm_block(descriptions)
         embedding = torch.cat((visual_embedding, textual_embedding), dim=1)
         out = embedding.view(-1, 16, 4, 4)
-        print(out.size())
 
         x_6 = self.upsample(out)
-        print(x_6.size())
         x_6 = torch.cat((x_4, x_6), dim=1)
         x_6 = self.block_6(x_6)
         out = F.leaky_relu(self.in_6(x_6), negative_slope=0.2)
@@ -198,7 +195,7 @@ class Net(nn.Module):
         out = F.leaky_relu(self.in_9(x_9), negative_slope=0.2)
 
         x_10 = self.upsample(out)
-        x_10 = torch.cat((x_1, x_10), dim=1)
+        x_10 = torch.cat((x_0, x_10), dim=1)
         x_10 = self.block_10(x_10)
         out = F.leaky_relu(self.in_10(x_10), negative_slope=0.2)
 
