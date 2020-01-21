@@ -80,8 +80,8 @@ class CoarseLoss(nn.Module):
             if i == 2:
                 c_loss_out += self.content_loss(f_out, f_x.detach()).mean()
                 c_loss_comp += self.content_loss(f_out, f_comp.detach()).mean()
-        s_loss = 0.5 * s_loss_out + 3.0 * s_loss_comp
-        c_loss = 0.5 * c_loss_out + 3.0 * c_loss_comp
+        s_loss = 0.5 * s_loss_out + 8.0 * s_loss_comp
+        c_loss = 0.5 * c_loss_out + 8.0 * c_loss_comp
 
         tv_loss = self.tv_loss(comp)
 
@@ -89,7 +89,7 @@ class CoarseLoss(nn.Module):
         adversarial_loss_local = self.adversarial_loss(d_local, real_label)
         adversarial_loss = 0.5 * adversarial_loss_global + 3.0 * adversarial_loss_local
 
-        return p_loss_valid + 20.0 * p_loss_hole + 0.05 * c_loss + 120.0 * s_loss + 0.01 * tv_loss + 0.1 * adversarial_loss,\
+        return p_loss_valid + 100.0 * p_loss_hole + 0.05 * c_loss + 120.0 * s_loss + 0.001 * tv_loss + 0.1 * adversarial_loss,\
             p_loss_valid, p_loss_hole, c_loss, s_loss, tv_loss, adversarial_loss
 
     @staticmethod
