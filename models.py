@@ -67,9 +67,9 @@ class GlobalDiscriminator(nn.Module):
         return x
 
 
-class RefineNet(nn.Module):
+class RefineNet_old(nn.Module):
     def __init__(self):
-        super(RefineNet, self).__init__()
+        super(RefineNet_old, self).__init__()
 
         # Encoder c'ing
         self.block_5 = conv_in_lrelu_block(in_channels=64, out_channels=256, kernel_size=5, stride=2, padding=2)
@@ -115,20 +115,28 @@ class RefineNet(nn.Module):
         return x_11
 
 
+class RefineNet(nn.Module):
+    def __init__(self):
+        super(RefineNet, self).__init__()
+        self.block_0 = nn.Conv2d(in_channels=3, out_channels=32, kernel_size=7, stride=2, padding=3)
+        self.block_1 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=5, stride=2, padding=2)
+        self.in_1 = nn.InstanceNorm2d(num_features=32)
+
+    def forward(self, x):
+        return x
+
+
 class CoarseNet(nn.Module):
     def __init__(self, vocab_size):
         super(CoarseNet, self).__init__()
 
         # Encoder
-        self.block_1 = PartialConv2d(in_channels=3, out_channels=32, kernel_size=7, stride=2, padding=3,
-                                     bias=False, return_mask=True, multi_channel=True)
+        self.block_1 = PartialConv2d(in_channels=3, out_channels=32, kernel_size=7, stride=2, padding=3, return_mask=True, multi_channel=True)
 
-        self.block_2 = PartialConv2d(in_channels=32, out_channels=64, kernel_size=5, stride=2, padding=2,
-                                     bias=False, return_mask=True, multi_channel=True)
+        self.block_2 = PartialConv2d(in_channels=32, out_channels=64, kernel_size=5, stride=2, padding=2, return_mask=True, multi_channel=True)
         self.in_2 = nn.InstanceNorm2d(num_features=64)
 
-        self.block_3 = PartialConv2d(in_channels=64, out_channels=128, kernel_size=5, stride=2, padding=2,
-                                     bias=False, return_mask=True, multi_channel=True)
+        self.block_3 = PartialConv2d(in_channels=64, out_channels=128, kernel_size=5, stride=2, padding=2, return_mask=True, multi_channel=True)
         self.in_3 = nn.InstanceNorm2d(num_features=128)
 
         # Dilated Residual Blocks
@@ -140,16 +148,13 @@ class CoarseNet(nn.Module):
         self.self_attention = SelfAttention(in_channels=128)
 
         # Visual features for concatenating with textual features
-        self.block_4 = PartialConv2d(in_channels=128, out_channels=64, kernel_size=5, stride=2, padding=2,
-                                     bias=False, return_mask=True, multi_channel=True)
+        self.block_4 = PartialConv2d(in_channels=128, out_channels=64, kernel_size=5, stride=2, padding=2, return_mask=True, multi_channel=True)
         self.in_4 = nn.InstanceNorm2d(num_features=64)
 
-        self.block_5 = PartialConv2d(in_channels=64, out_channels=128, kernel_size=5, stride=2, padding=2,
-                                     bias=False, return_mask=True, multi_channel=True)
+        self.block_5 = PartialConv2d(in_channels=64, out_channels=128, kernel_size=5, stride=2, padding=2, return_mask=True, multi_channel=True)
         self.in_5 = nn.InstanceNorm2d(num_features=128)
 
-        self.block_6 = PartialConv2d(in_channels=128, out_channels=128, kernel_size=5, stride=2, padding=2,
-                                     bias=False, return_mask=True, multi_channel=True)
+        self.block_6 = PartialConv2d(in_channels=128, out_channels=128, kernel_size=5, stride=2, padding=2, return_mask=True, multi_channel=True)
         self.in_6 = nn.InstanceNorm2d(num_features=128)
 
         # LSTM
@@ -160,22 +165,22 @@ class CoarseNet(nn.Module):
         self.upsample = nn.Upsample(mode="nearest", scale_factor=2.0)
 
         # Decoder
-        self.block_7 = nn.Conv2d(in_channels=144, out_channels=128, kernel_size=3, padding=1, bias=False)
+        self.block_7 = nn.Conv2d(in_channels=144, out_channels=128, kernel_size=3, padding=1)
         self.in_7 = nn.InstanceNorm2d(num_features=128)
 
-        self.block_8 = nn.Conv2d(in_channels=192, out_channels=128, kernel_size=3, padding=1, bias=False)
+        self.block_8 = nn.Conv2d(in_channels=192, out_channels=128, kernel_size=3, padding=1)
         self.in_8 = nn.InstanceNorm2d(num_features=128)
 
-        self.block_9 = nn.Conv2d(in_channels=256, out_channels=128, kernel_size=3, padding=1, bias=False)
+        self.block_9 = nn.Conv2d(in_channels=256, out_channels=128, kernel_size=3, padding=1)
         self.in_9 = nn.InstanceNorm2d(num_features=128)
 
-        self.block_10 = nn.Conv2d(in_channels=192, out_channels=128, kernel_size=3, padding=1, bias=False)
+        self.block_10 = nn.Conv2d(in_channels=192, out_channels=128, kernel_size=3, padding=1)
         self.in_10 = nn.InstanceNorm2d(num_features=128)
 
-        self.block_11 = nn.Conv2d(in_channels=160, out_channels=64, kernel_size=3, padding=1, bias=False)
+        self.block_11 = nn.Conv2d(in_channels=160, out_channels=64, kernel_size=3, padding=1)
         self.in_11 = nn.InstanceNorm2d(num_features=64)
 
-        self.block_12 = nn.Conv2d(in_channels=67, out_channels=3, kernel_size=3, padding=1, bias=False)
+        self.block_12 = nn.Conv2d(in_channels=67, out_channels=3, kernel_size=3, padding=1)
 
     def forward(self, x, descriptions, mask):
         x_1, m_1 = self.block_1(x, mask)
