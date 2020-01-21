@@ -111,28 +111,29 @@ def train(epoch, loader):
 
         total_loss.backward()
 
-        x_grid = make_grid(unnormalize_batch(x_train), nrow=16, padding=2)
-        y_grid = make_grid(unnormalize_batch(y_train), nrow=16, padding=2)
-        local_grid = make_grid(unnormalize_batch(x_local), nrow=16, padding=2)
-        output_grid = make_grid(torch.clamp(unnormalize_batch(output), min=0.0, max=1.0), nrow=16, padding=2)
-        composite_grid = make_grid(torch.clamp(unnormalize_batch(composite), min=0.0, max=1.0), nrow=16, padding=2)
-        writer.add_image("x_train/epoch_{}".format(epoch), x_grid, num_step)
-        writer.add_image("org/epoch_{}".format(epoch), y_grid, num_step)
-        writer.add_image("local/epoch_{}".format(epoch), local_grid, num_step)
-        writer.add_image("output/epoch_{}".format(epoch), output_grid, num_step)
-        writer.add_image("composite/epoch_{}".format(epoch), composite_grid, num_step)
+        if batch_idx % 100 == 0:
+            x_grid = make_grid(unnormalize_batch(x_train), nrow=16, padding=2)
+            y_grid = make_grid(unnormalize_batch(y_train), nrow=16, padding=2)
+            local_grid = make_grid(unnormalize_batch(x_local), nrow=16, padding=2)
+            output_grid = make_grid(torch.clamp(unnormalize_batch(output), min=0.0, max=1.0), nrow=16, padding=2)
+            composite_grid = make_grid(torch.clamp(unnormalize_batch(composite), min=0.0, max=1.0), nrow=16, padding=2)
+            writer.add_image("x_train/epoch_{}".format(epoch), x_grid, num_step)
+            writer.add_image("org/epoch_{}".format(epoch), y_grid, num_step)
+            writer.add_image("local/epoch_{}".format(epoch), local_grid, num_step)
+            writer.add_image("output/epoch_{}".format(epoch), output_grid, num_step)
+            writer.add_image("composite/epoch_{}".format(epoch), composite_grid, num_step)
 
-        print("Step:{}  ".format(num_step),
-              "Epoch:{}".format(epoch),
-              "[{}/{} ".format(batch_idx * len(x_train), len(train_loader.dataset)),
-              "({}%)]  ".format(int(100 * batch_idx / float(len(train_loader)))),
-              "Loss: {:.6f} ".format(total_loss.item()),
-              "Valid: {:.6f} ".format(pixel_valid_loss.item()),
-              "Hole: {:.6f} ".format(pixel_hole_loss.item()),
-              "Content: {:.5f} ".format(content_loss.item()),
-              "Style: {:.6f} ".format(style_loss.item()),
-              "TV: {:.6f} ".format(tv_loss.item())
-              )
+            print("Step:{}  ".format(num_step),
+                  "Epoch:{}".format(epoch),
+                  "[{}/{} ".format(batch_idx * len(x_train), len(train_loader.dataset)),
+                  "({}%)]  ".format(int(100 * batch_idx / float(len(train_loader)))),
+                  "Loss: {:.6f} ".format(total_loss.item()),
+                  "Valid: {:.6f} ".format(pixel_valid_loss.item()),
+                  "Hole: {:.6f} ".format(pixel_hole_loss.item()),
+                  "Content: {:.5f} ".format(content_loss.item()),
+                  "Style: {:.6f} ".format(style_loss.item()),
+                  "TV: {:.6f} ".format(tv_loss.item())
+                  )
 
         # coarse_output, coarse_comp_output, coarse_losses = train_coarse(num_step, x_train, x_desc, x_mask, y_train, local_coords, l_fns)
         # optimizers["coarse"].step()
