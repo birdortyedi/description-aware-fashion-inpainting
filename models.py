@@ -221,8 +221,7 @@ class CoarseNet(nn.Module):
         b, c, w, h = out.size()
         out_reshaped = out.view(b, -1, w * h)
         out_reshaped = torch.bmm(out_reshaped, attention_map.permute(0, 2, 1))
-        out = out_reshaped.view(b, c, w, h)
-        attention_out = out * attention_map
+        attention_out = out_reshaped.view(b, c, w, h)
         out = out + attention_out
         out = F.leaky_relu(out, negative_slope=0.2)
         out = torch.cat((x_3, out), dim=1)
