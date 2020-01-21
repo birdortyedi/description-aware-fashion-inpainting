@@ -169,8 +169,8 @@ class CustomLoss(nn.Module):
 
         tv_loss = self.tv(composite)
 
-        return 10.0 * pixel_valid_loss + 120.0 * pixel_hole_loss, \
-            pixel_valid_loss, pixel_hole_loss
+        return 10.0 * pixel_valid_loss + 120.0 * pixel_hole_loss + 1.0 * content_loss + 100.0 * style_loss + 0.1 * tv_loss, \
+            pixel_valid_loss, pixel_hole_loss, content_loss, style_loss, tv_loss
 
     @staticmethod
     def _gram_matrix(mat):

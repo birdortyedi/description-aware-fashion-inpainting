@@ -66,7 +66,7 @@ lr = 0.0002
 # refine_optimizer = optim.Adam(refine.parameters(), lr=r_lr, betas=(0.5, 0.999))
 # global_optimizer = optim.Adam(global_d.parameters(), lr=d_lr, betas=(0.9, 0.999))
 # local_optimizer = optim.Adam(local_d.parameters(), lr=d_lr, betas=(0.9, 0.999))
-optimizer = optim.Adam(net.parameters(), lr=lr, betas=(0.5, 0.999))
+optimizer = optim.Adam(net.parameters(), lr=lr, betas=(0.0, 0.999))
 
 # coarse_scheduler = optim.lr_scheduler.ExponentialLR(coarse_optimizer, gamma=0.9)
 # coarse_scheduler = optim.lr_scheduler.StepLR(coarse_optimizer, step_size=3100, gamma=0.5)
@@ -97,15 +97,16 @@ def train(epoch, loader):
         vgg_features_composite = vgg(composite)
         vgg_features_output = vgg(output)
 
-        total_loss, pixel_valid_loss, pixel_hole_loss = loss_fn(y_train, output, composite, x_mask,
+        total_loss, pixel_valid_loss, pixel_hole_loss,\
+            content_loss, style_loss, tv_loss = loss_fn(y_train, output, composite, x_mask,
                                                         vgg_features_gt, vgg_features_composite, vgg_features_output)
 
         writer.add_scalar("Loss/on_step_total_loss", total_loss.item(), num_step)
         writer.add_scalar("Loss/on_step_pixel_valid_loss", pixel_valid_loss.item(), num_step)
         writer.add_scalar("Loss/on_step_pixel_hole_loss", pixel_hole_loss.item(), num_step)
-        # writer.add_scalar("Loss/on_step_content_loss", content_loss.item(), num_step)
-        # writer.add_scalar("Loss/on_step_style_loss", style_loss.item(), num_step)
-        # writer.add_scalar("Loss/on_step_tv_loss", tv_loss.item(), num_step)
+        writer.add_scalar("Loss/on_step_content_loss", content_loss.item(), num_step)
+        writer.add_scalar("Loss/on_step_style_loss", style_loss.item(), num_step)
+        writer.add_scalar("Loss/on_step_tv_loss", tv_loss.item(), num_step)
         writer.add_scalar("LR/learning_rate", scheduler.get_lr(), num_step)
 
         total_loss.backward()
@@ -130,10 +131,10 @@ def train(epoch, loader):
                   "({}%)]  ".format(int(100 * batch_idx / float(len(train_loader)))),
                   "Loss: {:.6f} ".format(total_loss.item()),
                   "Valid: {:.6f} ".format(pixel_valid_loss.item()),
-                  "Hole: {:.6f} ".format(pixel_hole_loss.item())
-                  # "Content: {:.5f} ".format(content_loss.item()),
-                  # "Style: {:.6f} ".format(style_loss.item()),
-                  # "TV: {:.6f} ".format(tv_loss.item())
+                  "Hole: {:.6f} ".format(pixel_hole_loss.item()),
+                  "Content: {:.5f} ".format(content_loss.item()),
+                  "Style: {:.6f} ".format(style_loss.item()),
+                  "TV: {:.6f} ".format(tv_loss.item())
                   )
 
         # coarse_output, coarse_comp_output, coarse_losses = train_coarse(num_step, x_train, x_desc, x_mask, y_train, local_coords, l_fns)
