@@ -128,10 +128,10 @@ def train(epoch, loader):
                   "({}%)]  ".format(int(100 * batch_idx / float(len(train_loader)))),
                   "Loss: {:.6f} ".format(total_loss.item()),
                   "Valid: {:.6f} ".format(pixel_valid_loss.item()),
-                  "Hole: {:.6f} ".format(pixel_hole_loss.item()),
-                  "Content: {:.5f} ".format(content_loss.item()),
-                  "Style: {:.6f} ".format(style_loss.item()),
-                  "TV: {:.6f} ".format(tv_loss.item())
+                  "Hole: {:.6f} ".format(pixel_hole_loss.item())
+                  # "Content: {:.5f} ".format(content_loss.item()),
+                  # "Style: {:.6f} ".format(style_loss.item()),
+                  # "TV: {:.6f} ".format(tv_loss.item())
                   )
 
         # coarse_output, coarse_comp_output, coarse_losses = train_coarse(num_step, x_train, x_desc, x_mask, y_train, local_coords, l_fns)
