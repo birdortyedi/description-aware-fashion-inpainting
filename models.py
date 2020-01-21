@@ -115,15 +115,88 @@ class RefineNet_old(nn.Module):
         return x_11
 
 
-class RefineNet(nn.Module):
-    def __init__(self):
-        super(RefineNet, self).__init__()
+class Net(nn.Module):
+    def __init__(self, vocab_size):
+        super(Net, self).__init__()
         self.block_0 = nn.Conv2d(in_channels=3, out_channels=32, kernel_size=7, stride=2, padding=3)
         self.block_1 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=5, stride=2, padding=2)
-        self.in_1 = nn.InstanceNorm2d(num_features=32)
+        self.in_1 = nn.InstanceNorm2d(num_features=64)
+        self.s_attention_1 = SelfAttention(in_channels=64)
+        self.block_2 = nn.Conv2d(in_channels=64, out_channels=128, kernel_size=5, stride=2, padding=2)
+        self.in_2 = nn.InstanceNorm2d(num_features=128)
+        self.s_attention_2 = SelfAttention(in_channels=128)
+        self.block_3 = nn.Conv2d(in_channels=128, out_channels=64, kernel_size=5, stride=2, padding=2)
+        self.in_3 = nn.InstanceNorm2d(num_features=64)
+        self.s_attention_3 = SelfAttention(in_channels=64)
+        self.block_4 = nn.Conv2d(in_channels=64, out_channels=128, kernel_size=5, stride=2, padding=2)
+        self.in_4 = nn.InstanceNorm2d(num_features=128)
+        self.s_attention_4 = SelfAttention(in_channels=128)
+        self.block_5 = nn.Conv2d(in_channels=128, out_channels=128, kernel_size=5, stride=2, padding=2)
+        self.in_5 = nn.InstanceNorm2d(num_features=128)
+        self.s_attention_5 = SelfAttention(in_channels=128)
 
-    def forward(self, x):
-        return x
+        self.lstm_block = lstm_block(vocab_size, output_size=128)
+        self.pooling = nn.AdaptiveAvgPool2d(output_size=(1, 1))
+        self.upsample = nn.Upsample(mode="nearest", scale_factor=2.0)
+
+        self.block_6 = nn.Conv2d(in_channels=144, out_channels=128, kernel_size=3, padding=1)
+        self.in_6 = nn.InstanceNorm2d(num_features=128)
+        self.block_7 = nn.Conv2d(in_channels=192, out_channels=128, kernel_size=3, padding=1)
+        self.in_7 = nn.InstanceNorm2d(num_features=128)
+        self.block_8 = nn.Conv2d(in_channels=256, out_channels=128, kernel_size=3, padding=1)
+        self.in_8 = nn.InstanceNorm2d(num_features=128)
+        self.block_9 = nn.Conv2d(in_channels=192, out_channels=128, kernel_size=3, padding=1)
+        self.in_9 = nn.InstanceNorm2d(num_features=128)
+        self.block_10 = nn.Conv2d(in_channels=160, out_channels=64, kernel_size=3, padding=1)
+        self.in_10 = nn.InstanceNorm2d(num_features=64)
+        self.block_11 = nn.Conv2d(in_channels=67, out_channels=3, kernel_size=3, padding=1)
+
+    def forward(self, x, descriptions):
+        x_0 = F.relu(self.block_0(x))
+        x_1 = F.relu(self.in_1(self.block_1(x_0)))
+        x_1 = F.relu(self.s_attention_1(x_1))
+        x_2 = F.relu(self.in_2(self.block_2(x_1)))
+        x_2 = F.relu(self.s_attention_2(x_2))
+        x_3 = F.relu(self.in_3(self.block_3(x_2)))
+        x_3 = F.relu(self.s_attention_3(x_3))
+        x_4 = F.relu(self.in_4(self.block_4(x_3)))
+        x_4 = F.relu(self.s_attention_4(x_4))
+        x_5 = F.relu(self.in_5(self.block_5(x_4)))
+        x_5 = F.relu(self.s_attention_5(x_5))
+
+        visual_embedding = self.avg_pooling(x_5).squeeze()
+        textual_embedding = self.lstm_block(descriptions)
+        embedding = torch.cat((visual_embedding, textual_embedding), dim=1)
+        out = embedding.view(-1, 16, 4, 4)
+
+        x_6 = self.upsample(out)
+        x_6 = torch.cat((x_5, x_6), dim=1)
+        x_6 = self.block_6(x_6)
+        out = F.leaky_relu(self.in_6(x_6), negative_slope=0.2)
+
+        x_7 = self.upsample(out)
+        x_7 = torch.cat((x_4, x_7), dim=1)
+        x_7 = self.block_7(x_7)
+        out = F.leaky_relu(self.in_7(x_7), negative_slope=0.2)
+
+        x_8 = self.upsample(out)
+        x_8 = torch.cat((x_3, x_8), dim=1)
+        x_8 = self.block_8(x_8)
+        out = F.leaky_relu(self.in_8(x_8), negative_slope=0.2)
+
+        x_9 = self.upsample(out)
+        x_9 = torch.cat((x_2, x_9), dim=1)
+        x_9 = self.block_9(x_9)
+        out = F.leaky_relu(self.in_9(x_9), negative_slope=0.2)
+
+        x_10 = self.upsample(out)
+        x_10 = torch.cat((x_1, x_10), dim=1)
+        x_10 = self.block_10(x_10)
+        out = F.leaky_relu(self.in_10(x_10), negative_slope=0.2)
+
+        out = torch.tanh(self.block_12(self.upsample(out)))
+
+        return out
 
 
 class CoarseNet(nn.Module):

@@ -134,3 +134,50 @@ class RefineLoss(nn.Module):
         i_ = torch.zeros(b, ch, ch).type(m.type())
         G = torch.baddbmm(i_, m, m_transposed, beta=0, alpha=1. / (ch * h * w), out=None)
         return G
+
+
+class CustomLoss(nn.Module):
+    def __init__(self):
+        super(CustomLoss, self).__init__()
+        self.pixel = nn.SmoothL1Loss()
+        self.content = nn.L1Loss()
+        self.style = nn.L1Loss()
+        self.tv = TVLoss()
+
+    def forward(self, x, output, composite, mask, vgg_features_gt, vgg_features_composite, vgg_features_output):
+        x_valid = (1.0 - mask) * x
+        output_valid = (1.0 - mask) * output
+        x_hole = mask * x
+        output_hole = mask * output
+
+        pixel_valid_loss = self.pixel(output_valid, x_valid.detach()).mean()
+        pixel_hole_loss = self.pixel(output_hole, x_hole.detach()).mean()
+
+        s_loss_output, s_loss_composite = 0.0, 0.0
+        c_loss_output, c_loss_composite = 0.0, 0.0
+        for i, (f_gt, f_composite, f_output) in enumerate(zip(vgg_features_gt, vgg_features_composite, vgg_features_output)):
+            g_f_gt = self._gram_matrix(f_gt)
+            g_f_output = self._gram_matrix(f_output)
+            g_f_composite = self._gram_matrix(f_composite)
+            s_loss_output += self.style(g_f_output, g_f_gt).mean()
+            s_loss_composite += self.style(g_f_composite, g_f_gt).mean()
+            if i == 2:
+                c_loss_output += self.content(f_output, f_gt).mean()
+                c_loss_composite += self.content(f_composite, f_gt).mean()
+        style_loss = 0.15 * s_loss_output + 0.85 * s_loss_composite
+        content_loss = 0.15 * c_loss_output + 0.85 * c_loss_composite
+
+        tv_loss = self.tv(composite)
+
+        return pixel_valid_loss + 6.0 * pixel_hole_loss + 0.5 * content_loss + 120.0 * style_loss + 0.1 * tv_loss, \
+            pixel_valid_loss, pixel_hole_loss, content_loss, style_loss, tv_loss
+
+    @staticmethod
+    def _gram_matrix(mat):
+        b, ch, h, w = mat.size()
+        m = mat.view(b, ch, w * h)
+        m_transposed = m.transpose(1, 2)
+        # G = m.bmm(m_transposed) / (h * w * ch)
+        i_ = torch.zeros(b, ch, ch).type(m.type())
+        G = torch.baddbmm(i_, m, m_transposed, beta=0, alpha=1. / (ch * h * w), out=None)
+        return G
