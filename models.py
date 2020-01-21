@@ -152,10 +152,12 @@ class Net(nn.Module):
         x_0 = F.relu(self.block_0(x))
         x_1 = F.relu(self.in_1(self.block_1(x_0)))
         x_2 = F.relu(self.in_2(self.block_2(x_1)))
-        x_2, _ = self.s_attention_2(x_2)
-        x_3 = F.relu(self.in_3(self.block_3(F.relu(x_2))))
-        x_3, _ = self.s_attention_3(x_3)
-        x_4 = F.relu(self.in_4(self.block_4(F.relu(x_3))))
+        x_2, x_2_attention = self.s_attention_2(x_2)
+        x_2 = F.relu(x_2)
+        x_3 = F.relu(self.in_3(self.block_3(x_2)))
+        x_3, x_3_attention = self.s_attention_3(x_3)
+        x_3 = F.relu(x_3)
+        x_4 = F.relu(self.in_4(self.block_4(x_3)))
         x_5 = F.relu(self.in_5(self.block_5(x_4)))
 
         visual_embedding = self.pooling(x_5).squeeze()
@@ -169,11 +171,21 @@ class Net(nn.Module):
         out = F.leaky_relu(self.in_6(x_6), negative_slope=0.2)
 
         x_7 = self.upsample(out)
+        b, c, w, h = x_7.size()
+        reshaped = x_7.view(b, -1, w * h)
+        reshaped = torch.bmm(reshaped, x_3_attention.permute(0, 2, 1))
+        x_7_attention = reshaped.view(b, c, w, h)
+        x_7 = x_7 + x_7_attention
         x_7 = torch.cat((x_3, x_7), dim=1)
         x_7 = self.block_7(x_7)
         out = F.leaky_relu(self.in_7(x_7), negative_slope=0.2)
 
         x_8 = self.upsample(out)
+        b, c, w, h = x_8.size()
+        reshaped = x_8.view(b, -1, w * h)
+        reshaped = torch.bmm(reshaped, x_2_attention.permute(0, 2, 1))
+        x_8_attention = reshaped.view(b, c, w, h)
+        x_8 = x_8 + x_8_attention
         x_8 = torch.cat((x_2, x_8), dim=1)
         x_8 = self.block_8(x_8)
         out = F.leaky_relu(self.in_8(x_8), negative_slope=0.2)
