@@ -66,7 +66,7 @@ lr = 0.0002
 # refine_optimizer = optim.Adam(refine.parameters(), lr=r_lr, betas=(0.5, 0.999))
 # global_optimizer = optim.Adam(global_d.parameters(), lr=d_lr, betas=(0.9, 0.999))
 # local_optimizer = optim.Adam(local_d.parameters(), lr=d_lr, betas=(0.9, 0.999))
-optimizer = optim.Adam(net.parameters(), lr=lr, betas=(0.0, 0.999))
+optimizer = optim.Adam(net.parameters(), lr=lr, betas=(0.5, 0.999))
 
 # coarse_scheduler = optim.lr_scheduler.ExponentialLR(coarse_optimizer, gamma=0.9)
 # coarse_scheduler = optim.lr_scheduler.StepLR(coarse_optimizer, step_size=3100, gamma=0.5)
