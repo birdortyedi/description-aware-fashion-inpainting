@@ -135,6 +135,7 @@ class Net(nn.Module):
         self.lstm_block = lstm_block(vocab_size, output_size=128)
         self.pooling = nn.AdaptiveAvgPool2d(output_size=(1, 1))
         self.upsample = nn.Upsample(mode="nearest", scale_factor=2.0)
+        self.conv = nn.Conv2d(in_channels=128, out_channels=32, kernel_size=1)
 
         self.block_6 = PartialConv2d(in_channels=144, out_channels=128, kernel_size=3, padding=1, bias=False, multi_channel=True, return_mask=True)
         self.in_6 = nn.InstanceNorm2d(num_features=128)
@@ -172,7 +173,7 @@ class Net(nn.Module):
         out = embedding.view(-1, 16, 4, 4)
 
         x_6 = self.upsample(out)
-        m_6 = self.upsample()
+        m_6 = self.upsample(self.conv(m_4))
         x_6 = torch.cat((x_4, x_6), dim=1)
         m_6 = torch.cat((m_4, m_6), dim=1)
         x_6, m_6 = self.block_6(x_6, m_6)
