@@ -173,7 +173,8 @@ class Net(nn.Module):
         out = embedding.view(-1, 16, 4, 4)
 
         x_6 = self.upsample(out)
-        m_6 = self.upsample(self.conv(m_4))
+        m_6 = self.conv(m_4)
+        m_6 = torch.where(m_6 > 0.5, torch.ones_like(m_6).float(), torch.zeros_like(m_6).float())
         x_6 = torch.cat((x_4, x_6), dim=1)
         m_6 = torch.cat((m_4, m_6), dim=1)
         x_6, m_6 = self.block_6(x_6, m_6)
