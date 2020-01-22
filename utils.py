@@ -44,7 +44,7 @@ class HDF5Dataset(data.Dataset):
         i = self.indices[index]
         img = self.h5_file["input_image"][i, :, :]
         img = ToPILImage()(img)
-        rnd_central_eraser = CentralErasing(scale=(0.03125, 0.0625), ratio=(0.75, 1.25), value=1)
+        rnd_central_eraser = CentralErasing(scale=(0.03125, 0.0625), ratio=(0.75, 1.25), value="random")
         h_flip = RandomHorizontalFlip(p=0.5)
         normalizer = Normalize((0.7535, 0.7359, 0.7292), (0.5259, 0.5487, 0.5589))
 
@@ -69,7 +69,7 @@ class HDF5Dataset(data.Dataset):
 
 
 class CentralErasing(object):
-    def __init__(self, scale=(0.02, 0.33), ratio=(0.3, 3.3), value=0, inplace=False):
+    def __init__(self, scale=(0.02, 0.33), ratio=(0.3, 3.3), value=None, inplace=False):
         assert isinstance(value, (numbers.Number, str, tuple, list))
         if (scale[0] > scale[1]) or (ratio[0] > ratio[1]):
             warnings.warn("range should be of kind (min, max)")
@@ -109,8 +109,8 @@ class CentralErasing(object):
 
     def __call__(self, img):
         x, y, h, w, v = self.get_params(img, scale=self.scale, ratio=self.ratio, value=self.value)
-        mask = torch.zeros_like(img).float()
-        mask[:, x:x+h, y:y+w] = 1.0
+        mask = torch.ones_like(img).float()
+        mask[:, x:x+h, y:y+w] = 0.0
         return F.erase(img, x, y, h, w, v, self.inplace), \
             ToTensor()(ToPILImage()(mask)),\
             ToTensor()(F.crop(ToPILImage()(img), x, y, h, w)), \
