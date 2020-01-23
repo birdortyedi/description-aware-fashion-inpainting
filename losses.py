@@ -145,13 +145,13 @@ class CustomLoss(nn.Module):
         self.tv = TVLoss()
 
     def forward(self, x, output, composite, mask, vgg_features_gt, vgg_features_composite, vgg_features_output):
-        x_valid = (1.0 - mask) * x
-        output_valid = (1.0 - mask) * output
-        x_hole = mask * x
-        output_hole = mask * output
+        x_hole = (1.0 - mask) * x
+        output_hole = (1.0 - mask) * output
+        x_valid = mask * x
+        output_valid = mask * output
 
-        pixel_valid_loss = self.pixel(output_valid, x_valid.detach()).mean()
         pixel_hole_loss = self.pixel(output_hole, x_hole.detach()).mean()
+        pixel_valid_loss = self.pixel(output_valid, x_valid.detach()).mean()
 
         s_loss_output, s_loss_composite = 0.0, 0.0
         c_loss_output, c_loss_composite = 0.0, 0.0
@@ -164,12 +164,12 @@ class CustomLoss(nn.Module):
             if i == 2:
                 c_loss_output += self.content(f_output, f_gt).mean()
                 c_loss_composite += self.content(f_composite, f_gt).mean()
-        style_loss = 0.15 * s_loss_output + 0.85 * s_loss_composite
-        content_loss = 0.15 * c_loss_output + 0.85 * c_loss_composite
+        style_loss = s_loss_output + s_loss_composite
+        content_loss = c_loss_output + c_loss_composite
 
         tv_loss = self.tv(composite)
 
-        return 10.0 * pixel_valid_loss + 120.0 * pixel_hole_loss + 1.0 * content_loss + 100.0 * style_loss + 0.1 * tv_loss, \
+        return 2.0 * pixel_valid_loss + 12.0 * pixel_hole_loss + 0.1 * content_loss + 120.0 * style_loss + 0.1 * tv_loss, \
             pixel_valid_loss, pixel_hole_loss, content_loss, style_loss, tv_loss
 
     @staticmethod

@@ -90,8 +90,8 @@ def train(epoch, loader):
         # local_coords = local_coords.float().to(device)
 
         net.zero_grad()
-        output = net(x_train, x_desc, (1 - x_mask))
-        composite = (1.0 - x_mask) * x_train + x_mask * output
+        output = net(x_train, x_desc, x_mask)
+        composite = x_mask * y_train + (1.0 - x_mask) * output
 
         vgg_features_gt = vgg(normalize_batch(unnormalize_batch(y_train)))
         vgg_features_composite = vgg(composite)
