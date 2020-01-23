@@ -130,10 +130,10 @@ class Net(nn.Module):
         self.s_attention_3 = SelfAttention(in_channels=64)
         self.block_4 = PartialConv2d(in_channels=64, out_channels=128, kernel_size=5, stride=2, padding=2, multi_channel=True, return_mask=True)
         self.in_4 = nn.InstanceNorm2d(num_features=128)
-        self.s_attention_3 = SelfAttention(in_channels=128)
+        self.s_attention_4 = SelfAttention(in_channels=128)
         self.block_5 = PartialConv2d(in_channels=128, out_channels=128, kernel_size=5, stride=2, padding=2, multi_channel=True, return_mask=True)
         self.in_5 = nn.InstanceNorm2d(num_features=128)
-        self.s_attention_3 = SelfAttention(in_channels=128)
+        self.s_attention_5 = SelfAttention(in_channels=128)
 
         self.lstm_block = lstm_block(vocab_size, output_size=128)
         self.pooling = nn.AdaptiveAvgPool2d(output_size=(1, 1))
