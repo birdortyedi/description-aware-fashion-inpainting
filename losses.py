@@ -139,12 +139,13 @@ class RefineLoss(nn.Module):
 class CustomLoss(nn.Module):
     def __init__(self):
         super(CustomLoss, self).__init__()
-        self.pixel = nn.SmoothL1Loss()
+        self.pixel = nn.L1Loss()
         self.content = nn.L1Loss()
         self.style = nn.L1Loss()
         self.tv = TVLoss()
+        self.adversarial = nn.BCELoss()
 
-    def forward(self, x, output, composite, mask, vgg_features_gt, vgg_features_composite, vgg_features_output):
+    def forward(self, x, output, composite, mask, d_out, vgg_features_gt, vgg_features_composite, vgg_features_output):
         x_hole = (1.0 - mask) * x
         output_hole = (1.0 - mask) * output
         x_valid = mask * x
@@ -168,9 +169,10 @@ class CustomLoss(nn.Module):
         content_loss = c_loss_output + c_loss_composite
 
         tv_loss = self.tv(composite)
+        adversarial_loss = self.adversarial(d_out, torch.ones_like(d_out))
 
-        return 20.0 * pixel_valid_loss + 100.0 * pixel_hole_loss + 1.0 * content_loss + 120.0 * style_loss + 0.1 * tv_loss, \
-            pixel_valid_loss, pixel_hole_loss, content_loss, style_loss, tv_loss
+        return 2.0 * pixel_valid_loss + 10.0 * pixel_hole_loss + 0.5 * content_loss + 120.0 * style_loss + 0.1 * tv_loss + 0.5 * adversarial_loss, \
+            pixel_valid_loss, pixel_hole_loss, content_loss, style_loss, tv_loss, adversarial_loss
 
     @staticmethod
     def _gram_matrix(mat):

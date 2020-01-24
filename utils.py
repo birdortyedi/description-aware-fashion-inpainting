@@ -113,8 +113,7 @@ class CentralErasing(object):
         mask[:, x:x+h, y:y+w] = 0.0
         return F.erase(img, x, y, h, w, v, self.inplace), \
             ToTensor()(ToPILImage()(mask)),\
-            ToTensor()(F.crop(ToPILImage()(img), x, y, h, w)), \
-            torch.Tensor([x, y, h, w])
+            ToTensor()(F.crop(ToPILImage()(img), x, y, h, w))
 
 
 class UnNormalize(object):
