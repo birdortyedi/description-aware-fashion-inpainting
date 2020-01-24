@@ -54,7 +54,7 @@ class HDF5Dataset(data.Dataset):
             img = h_flip(img)
 
         img = ToTensor()(img)
-        erased, mask, local, coords = rnd_central_eraser(img)
+        erased, mask, local = rnd_central_eraser(img)
 
         img = normalizer(img)
         erased = normalizer(erased)
@@ -62,7 +62,7 @@ class HDF5Dataset(data.Dataset):
         local = ToTensor()(Resize(size=(32, 32))(ToPILImage()(local)))
         local = normalizer(local)
 
-        return erased, desc, mask, local, coords, img
+        return erased, desc, mask, local, img
 
     def __len__(self):
         return len(self.indices)
