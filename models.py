@@ -19,20 +19,20 @@ class Discriminator(nn.Module):
         self.bn_1 = nn.BatchNorm2d(num_features=32)
         self.conv_2 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, stride=2, padding=1, bias=False)
         self.bn_2 = nn.BatchNorm2d(num_features=64)
-        self.conv_3 = nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, stride=2, padding=1, bias=False)
-        self.bn_3 = nn.BatchNorm2d(num_features=128)
-        self.conv_4 = nn.Conv2d(in_channels=128, out_channels=256, kernel_size=3, stride=2, padding=1, bias=False)
-        self.bn_4 = nn.BatchNorm2d(num_features=256)
-        self.conv_5 = nn.Conv2d(in_channels=256, out_channels=1, kernel_size=3, stride=2, padding=1, bias=False)
+        self.conv_3 = nn.Conv2d(in_channels=64, out_channels=1, kernel_size=3, stride=2, padding=1, bias=False)
+        # self.bn_3 = nn.BatchNorm2d(num_features=128)
+        # self.conv_4 = nn.Conv2d(in_channels=128, out_channels=256, kernel_size=3, stride=2, padding=1, bias=False)
+        # self.bn_4 = nn.BatchNorm2d(num_features=256)
+        # self.conv_5 = nn.Conv2d(in_channels=256, out_channels=1, kernel_size=3, stride=2, padding=1, bias=False)
         self.pooling = nn.AdaptiveAvgPool2d(output_size=(1, 1))
 
     def forward(self, x):
         x = F.leaky_relu(self.conv_0(x), negative_slope=0.2)
         x = F.leaky_relu(self.bn_1(self.conv_1(x)), negative_slope=0.2)
         x = F.leaky_relu(self.bn_2(self.conv_2(x)), negative_slope=0.2)
-        x = F.leaky_relu(self.bn_3(self.conv_3(x)), negative_slope=0.2)
-        x = F.leaky_relu(self.bn_4(self.conv_4(x)), negative_slope=0.2)
-        x = torch.sigmoid(self.pooling(self.conv_5(x).squeeze()))
+        # x = F.leaky_relu(self.bn_3(self.conv_3(x)), negative_slope=0.2)
+        # x = F.leaky_relu(self.bn_4(self.conv_4(x)), negative_slope=0.2)
+        x = torch.sigmoid(self.pooling(self.conv_3(x).squeeze()))
         return x
 
 
