@@ -70,13 +70,13 @@ def train(epoch, loader):
         vgg_features_output = vgg(output)
 
         total_loss, pixel_valid_loss, pixel_hole_loss,\
-            content_loss, style_loss, tv_loss, adversarial_loss = loss_fn(y_train, output, composite, x_mask, d_output,
-                                                                          vgg_features_gt, vgg_features_composite, vgg_features_output)
+            style_loss, tv_loss, adversarial_loss = loss_fn(y_train, output, composite, x_mask, d_output,
+                                                            vgg_features_gt, vgg_features_composite, vgg_features_output)
 
         writer.add_scalar("Generator/on_step_total_loss", total_loss.item(), num_step)
         writer.add_scalar("Generator/on_step_pixel_valid_loss", pixel_valid_loss.item(), num_step)
         writer.add_scalar("Generator/on_step_pixel_hole_loss", pixel_hole_loss.item(), num_step)
-        writer.add_scalar("Generator/on_step_content_loss", content_loss.item(), num_step)
+        # writer.add_scalar("Generator/on_step_content_loss", content_loss.item(), num_step)
         writer.add_scalar("Generator/on_step_style_loss", style_loss.item(), num_step)
         writer.add_scalar("Generator/on_step_tv_loss", tv_loss.item(), num_step)
         writer.add_scalar("Generator/on_step_adversarial_loss", adversarial_loss.item(), num_step)
@@ -123,7 +123,7 @@ def train(epoch, loader):
                   "Loss: {:.6f} ".format(total_loss.item()),
                   "Valid: {:.6f} ".format(pixel_valid_loss.item()),
                   "Hole: {:.6f} ".format(pixel_hole_loss.item()),
-                  "Content: {:.5f} ".format(content_loss.item()),
+                  # "Content: {:.5f} ".format(content_loss.item()),
                   "Style: {:.6f} ".format(style_loss.item()),
                   "TV: {:.6f} ".format(tv_loss.item()),
                   "Adv.: {:.6f} ".format(adversarial_loss.item())

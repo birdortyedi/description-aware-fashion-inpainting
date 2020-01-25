@@ -140,7 +140,7 @@ class CustomLoss(nn.Module):
     def __init__(self):
         super(CustomLoss, self).__init__()
         self.pixel = nn.L1Loss()
-        self.content = nn.L1Loss()
+        # self.content = nn.L1Loss()
         self.style = nn.L1Loss()
         self.tv = TVLoss()
         self.adversarial = nn.BCELoss()
@@ -155,26 +155,26 @@ class CustomLoss(nn.Module):
         pixel_valid_loss = self.pixel(output_valid, x_valid.detach()).mean()
 
         s_loss_output, s_loss_composite = 0.0, 0.0
-        c_loss_output, c_loss_composite = 0.0, 0.0
+        # c_loss_output, c_loss_composite = 0.0, 0.0
         for i, (f_gt, f_composite, f_output) in enumerate(zip(vgg_features_gt, vgg_features_composite, vgg_features_output)):
             g_f_gt = self._gram_matrix(f_gt)
             g_f_output = self._gram_matrix(f_output)
             g_f_composite = self._gram_matrix(f_composite)
             s_loss_output += self.style(g_f_output, g_f_gt).mean()
             s_loss_composite += self.style(g_f_composite, g_f_gt).mean()
-            if i == 2:
-                c_loss_output += self.content(f_output, f_gt).mean()
-                c_loss_composite += self.content(f_composite, f_gt).mean()
+            # if i == 2:
+                # c_loss_output += self.content(f_output, f_gt).mean()
+                # c_loss_composite += self.content(f_composite, f_gt).mean()
         style_loss = s_loss_output + s_loss_composite
-        content_loss = c_loss_output + c_loss_composite
+        # content_loss = c_loss_output + c_loss_composite
 
         tv_loss = self.tv(composite)
         adversarial_loss = self.adversarial(d_out,
                                             torch.FloatTensor(d_out.size(0)).uniform_(0.0, 0.3).to(torch.device("cuda" if torch.cuda.is_available()
                                                                                                                 else "cpu")))
 
-        return 2.0 * pixel_valid_loss + 10.0 * pixel_hole_loss + 0.5 * content_loss + 120.0 * style_loss + 0.1 * tv_loss + 0.5 * adversarial_loss, \
-            pixel_valid_loss, pixel_hole_loss, content_loss, style_loss, tv_loss, adversarial_loss
+        return 2.0 * pixel_valid_loss + 10.0 * pixel_hole_loss + 120.0 * style_loss + 0.1 * tv_loss + 0.5 * adversarial_loss, \
+            pixel_valid_loss, pixel_hole_loss, style_loss, tv_loss, adversarial_loss
 
     @staticmethod
     def _gram_matrix(mat):
