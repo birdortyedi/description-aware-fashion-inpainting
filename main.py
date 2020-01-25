@@ -87,17 +87,22 @@ def train(epoch, loader):
 
         d_net.zero_grad()
         d_real_output = d_net(y_train).view(-1)
-        d_real_loss = d_loss_fn(d_real_output, torch.ones_like(d_real_output))
-        writer.add_scalar("Discriminator/on_step_real_loss", d_real_loss.mean().item(), num_step)
-
         d_fake_output = d_net(net(x_train, x_desc, x_mask)).view(-1)
-        d_fake_loss = d_loss_fn(d_fake_output, torch.zeros_like(d_fake_output))
+
+        if torch.rand(1) > 0.2:
+            d_real_loss = d_loss_fn(d_real_output, torch.FloatTensor(d_real_output.size(0)).uniform_(0.0, 0.3))
+            d_fake_loss = d_loss_fn(d_fake_output, torch.FloatTensor(d_fake_output.size(0)).uniform_(0.7, 1.2))
+        else:
+            d_real_loss = d_loss_fn(d_real_output, torch.FloatTensor(d_fake_output.size(0)).uniform_(0.7, 1.2))
+            d_fake_loss = d_loss_fn(d_fake_output, torch.FloatTensor(d_real_output.size(0)).uniform_(0.0, 0.3))
+
+        writer.add_scalar("Discriminator/on_step_real_loss", d_real_loss.mean().item(), num_step)
         writer.add_scalar("Discriminator/on_step_fake_loss", d_fake_loss.mean().item(), num_step)
+
         d_loss = d_real_loss + d_fake_loss
 
-        if d_loss.mean().item() <= 0.5:
-            d_loss.backward()
-            d_optimizer.step()
+        d_loss.backward()
+        d_optimizer.step()
 
         if batch_idx % 100 == 0:
             x_grid = make_grid(unnormalize_batch(x_train), nrow=16, padding=2)
