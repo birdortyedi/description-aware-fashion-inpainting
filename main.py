@@ -89,7 +89,7 @@ def train(epoch, loader):
         d_real_output = d_net(y_train).view(-1)
         d_fake_output = d_net(net(x_train, x_desc, x_mask)).view(-1)
 
-        if torch.rand(1) > 0.2:
+        if torch.rand(1) > 0.1:
             d_real_loss = d_loss_fn(d_real_output, torch.FloatTensor(d_real_output.size(0)).uniform_(0.0, 0.3).to(device))
             d_fake_loss = d_loss_fn(d_fake_output, torch.FloatTensor(d_fake_output.size(0)).uniform_(0.7, 1.2).to(device))
         else:

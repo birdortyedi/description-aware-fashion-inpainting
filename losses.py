@@ -169,7 +169,9 @@ class CustomLoss(nn.Module):
         content_loss = c_loss_output + c_loss_composite
 
         tv_loss = self.tv(composite)
-        adversarial_loss = self.adversarial(d_out, torch.zeros_like(d_out))
+        adversarial_loss = self.adversarial(d_out,
+                                            torch.FloatTensor(d_out.size(0)).uniform_(0.0, 0.3).to(torch.device("cuda" if torch.cuda.is_available()
+                                                                                                                else "cpu")))
 
         return 2.0 * pixel_valid_loss + 10.0 * pixel_hole_loss + 0.5 * content_loss + 120.0 * style_loss + 0.1 * tv_loss + 0.5 * adversarial_loss, \
             pixel_valid_loss, pixel_hole_loss, content_loss, style_loss, tv_loss, adversarial_loss
