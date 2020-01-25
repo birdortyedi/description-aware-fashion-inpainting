@@ -58,7 +58,6 @@ class Net(nn.Module):
 
         self.lstm_block = lstm_block(vocab_size, output_size=128)
         self.pooling = nn.AdaptiveAvgPool2d(output_size=(1, 1))
-        self.dropout = nn.Dropout2d(p=0.5)
         self.upsample = nn.Upsample(mode="nearest", scale_factor=2.0)
         self.conv = nn.Conv2d(in_channels=128, out_channels=16, kernel_size=1)
 
@@ -109,7 +108,7 @@ class Net(nn.Module):
         x_6 = torch.cat((x_4, x_6), dim=1)
         m_6 = torch.cat((m_4, m_6), dim=1)
         x_6, m_6 = self.block_6(x_6, m_6)
-        out = self.dropout(F.leaky_relu(self.in_6(x_6), negative_slope=0.2))
+        out = F.leaky_relu(self.in_6(x_6), negative_slope=0.2)
 
         x_7 = self.upsample(out)
         m_7 = self.upsample(m_6)
@@ -121,7 +120,7 @@ class Net(nn.Module):
         x_7 = torch.cat((x_3, x_7), dim=1)
         m_7 = torch.cat((m_3, m_7), dim=1)
         x_7, m_7 = self.block_7(x_7, m_7)
-        out = self.dropout(F.leaky_relu(self.in_7(x_7), negative_slope=0.2))
+        out = F.leaky_relu(self.in_7(x_7), negative_slope=0.2)
 
         x_8 = self.upsample(out)
         m_8 = self.upsample(m_7)
@@ -133,21 +132,21 @@ class Net(nn.Module):
         x_8 = torch.cat((x_2, x_8), dim=1)
         m_8 = torch.cat((m_2, m_8), dim=1)
         x_8, m_8 = self.block_8(x_8, m_8)
-        out = self.dropout(F.leaky_relu(self.in_8(x_8), negative_slope=0.2))
+        out = F.leaky_relu(self.in_8(x_8), negative_slope=0.2)
 
         x_9 = self.upsample(out)
         m_9 = self.upsample(m_8)
         x_9 = torch.cat((x_1, x_9), dim=1)
         m_9 = torch.cat((m_1, m_9), dim=1)
         x_9, m_9 = self.block_9(x_9, m_9)
-        out = self.dropout(F.leaky_relu(self.in_9(x_9), negative_slope=0.2))
+        out = F.leaky_relu(self.in_9(x_9), negative_slope=0.2)
 
         x_10 = self.upsample(out)
         m_10 = self.upsample(m_9)
         x_10 = torch.cat((x_0, x_10), dim=1)
         m_10 = torch.cat((m_0, m_10), dim=1)
         x_10, m_10 = self.block_10(x_10, m_10)
-        out = self.dropout(F.leaky_relu(self.in_10(x_10), negative_slope=0.2))
+        out = F.leaky_relu(self.in_10(x_10), negative_slope=0.2)
 
         x_11 = self.upsample(out)
         m_11 = self.upsample(m_10)
