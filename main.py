@@ -62,7 +62,7 @@ def train(epoch, loader):
 
         net.zero_grad()
         output = net(x_train, x_desc, x_mask)
-        d_output = d_net(output.detach())
+        d_output = d_net(output.detach()).view(-1)
         composite = x_mask * y_train + (1.0 - x_mask) * output
 
         vgg_features_gt = vgg(normalize_batch(unnormalize_batch(y_train)))
