@@ -140,7 +140,7 @@ class CustomLoss(nn.Module):
     def __init__(self):
         super(CustomLoss, self).__init__()
         self.pixel = nn.L1Loss()
-        # self.content = nn.L1Loss()
+        self.content = nn.L1Loss()
         self.style = nn.L1Loss()
         self.tv = TVLoss()
         self.adversarial = nn.BCELoss()
