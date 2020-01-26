@@ -9,7 +9,7 @@ from colorama import Fore
 
 from utils import HDF5Dataset, weights_init, normalize_batch, unnormalize_batch
 from models import Net, Discriminator, VGG16
-from losses import CustomLoss
+from losses import CustomLoss, RefineLoss
 
 NUM_EPOCHS = 10
 BATCH_SIZE = 16
@@ -26,7 +26,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 d_net = Discriminator()
 net = Net(vocab_size=fg_train.vocab_size)
-refine_net = Net(lstm=False)
+refine_net = Net(partial=False, lstm=False)
 vgg = VGG16(requires_grad=False)
 if torch.cuda.device_count() > 1:
     print("Using {} GPUs...".format(torch.cuda.device_count()))
@@ -36,17 +36,22 @@ if torch.cuda.device_count() > 1:
 vgg.to(device)
 
 net.apply(weights_init)
+refine_net.apply(weights_init)
 
 d_loss_fn = nn.BCELoss()
 d_loss_fn = d_loss_fn.to(device)
 loss_fn = CustomLoss()
 loss_fn = loss_fn.to(device)
+refine_loss_fn = RefineLoss()
+refine_loss_fn = refine_loss_fn.to(device)
 
-lr, d_lr = 0.0002, 0.0001
+lr, r_lr, d_lr = 0.0002, 0.0002, 0.0001
 d_optimizer = optim.Adam(d_net.parameters(), lr=d_lr, betas=(0.9, 0.999))
+r_optimizer = optim.Adam(refine_net.parameters(), lr=r_lr, betas=(0.5, 0.999))
 optimizer = optim.Adam(net.parameters(), lr=lr, betas=(0.0, 0.999))
 
 d_scheduler = optim.lr_scheduler.ExponentialLR(d_optimizer, gamma=0.9)
+r_scheduler = optim.lr_scheduler.ExponentialLR(r_optimizer, gamma=0.9)
 scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.9)
 
 writer = SummaryWriter()
@@ -64,7 +69,6 @@ def train(epoch, loader):
 
         net.zero_grad()
         output = net(x_train, x_mask, x_desc)
-        d_output = d_net(output.detach()).view(-1)
         composite = x_mask * y_train + (1.0 - x_mask) * output
 
         vgg_features_gt = vgg(normalize_batch(unnormalize_batch(y_train)))
@@ -72,24 +76,41 @@ def train(epoch, loader):
         vgg_features_output = vgg(output)
 
         total_loss, pixel_valid_loss, pixel_hole_loss,\
-            content_loss, style_loss, tv_loss, adversarial_loss = loss_fn(y_train, output, composite, x_mask, d_output,
-                                                                          vgg_features_gt, vgg_features_composite, vgg_features_output)
+            content_loss, style_loss, tv_loss = loss_fn(y_train, output, composite, x_mask,
+                                                        vgg_features_gt, vgg_features_composite, vgg_features_output)
 
-        writer.add_scalar("Generator/on_step_total_loss", total_loss.item(), num_step)
-        writer.add_scalar("Generator/on_step_pixel_valid_loss", pixel_valid_loss.item(), num_step)
-        writer.add_scalar("Generator/on_step_pixel_hole_loss", pixel_hole_loss.item(), num_step)
-        writer.add_scalar("Generator/on_step_content_loss", content_loss.item(), num_step)
-        writer.add_scalar("Generator/on_step_style_loss", style_loss.item(), num_step)
-        writer.add_scalar("Generator/on_step_tv_loss", tv_loss.item(), num_step)
-        writer.add_scalar("Generator/on_step_adversarial_loss", adversarial_loss.item(), num_step)
+        writer.add_scalar("Coarse_G/on_step_total_loss", total_loss.item(), num_step)
+        writer.add_scalar("Coarse_G/on_step_pixel_valid_loss", pixel_valid_loss.item(), num_step)
+        writer.add_scalar("Coarse_G/on_step_pixel_hole_loss", pixel_hole_loss.item(), num_step)
+        writer.add_scalar("Coarse_G/on_step_content_loss", content_loss.item(), num_step)
+        writer.add_scalar("Coarse_G/on_step_style_loss", style_loss.item(), num_step)
+        writer.add_scalar("Coarse_G/on_step_tv_loss", tv_loss.item(), num_step)
         writer.add_scalar("LR/learning_rate", scheduler.get_lr(), num_step)
 
         total_loss.backward()
         optimizer.step()
 
+        refine_net.zero_grad()
+        r_output = refine_net(output.detach())
+        d_output = d_net(r_output.detach()).view(-1)
+        r_composite = x_mask * y_train + (1.0 - x_mask) * r_output
+
+        vgg_features_r_composite = vgg(r_composite)
+        vgg_features_r_output = vgg(r_output)
+
+        r_total_loss, r_pixel_loss, r_style_loss, adversarial_loss = refine_loss_fn(y_train, r_output, r_composite, d_output,
+                                                                                    vgg_features_gt, vgg_features_r_composite, vgg_features_r_output)
+        writer.add_scalar("Refine_G/on_step_total_loss", r_total_loss.item(), num_step)
+        writer.add_scalar("Refine_G/on_step_pixel_loss", r_pixel_loss.item(), num_step)
+        writer.add_scalar("Refine_G/on_step_style_loss", r_style_loss.item(), num_step)
+        writer.add_scalar("Refine_G/on_step_adversarial_loss", adversarial_loss.item(), num_step)
+
+        r_total_loss.backward()
+        r_optimizer.step()
+
         d_net.zero_grad()
         d_real_output = d_net(y_train).view(-1)
-        d_fake_output = d_net(net(x_train, x_mask, x_desc)).view(-1)
+        d_fake_output = d_output.detach()
 
         if torch.rand(1) > 0.1:
             d_real_loss = d_loss_fn(d_real_output, torch.FloatTensor(d_real_output.size(0)).uniform_(0.0, 0.3).to(device))
@@ -112,23 +133,20 @@ def train(epoch, loader):
             local_grid = make_grid(unnormalize_batch(x_local), nrow=16, padding=2)
             output_grid = make_grid(torch.clamp(unnormalize_batch(output), min=0.0, max=1.0), nrow=16, padding=2)
             composite_grid = make_grid(torch.clamp(unnormalize_batch(composite), min=0.0, max=1.0), nrow=16, padding=2)
+            r_output_grid = make_grid(torch.clamp(unnormalize_batch(r_output), min=0.0, max=1.0), nrow=16, padding=2)
+            r_composite_grid = make_grid(torch.clamp(unnormalize_batch(r_composite), min=0.0, max=1.0), nrow=16, padding=2)
             writer.add_image("x_train/epoch_{}".format(epoch), x_grid, num_step)
             writer.add_image("org/epoch_{}".format(epoch), y_grid, num_step)
             writer.add_image("local/epoch_{}".format(epoch), local_grid, num_step)
             writer.add_image("output/epoch_{}".format(epoch), output_grid, num_step)
             writer.add_image("composite/epoch_{}".format(epoch), composite_grid, num_step)
+            writer.add_image("refine_output/epoch_{}".format(epoch), r_output_grid, num_step)
+            writer.add_image("refine_composite/epoch_{}".format(epoch), r_composite_grid, num_step)
 
             print("Step:{}  ".format(num_step),
                   "Epoch:{}".format(epoch),
                   "[{}/{} ".format(batch_idx * len(x_train), len(train_loader.dataset)),
-                  "({}%)]  ".format(int(100 * batch_idx / float(len(train_loader)))),
-                  "Loss: {:.6f} ".format(total_loss.item()),
-                  "Valid: {:.6f} ".format(pixel_valid_loss.item()),
-                  "Hole: {:.6f} ".format(pixel_hole_loss.item()),
-                  # "Content: {:.5f} ".format(content_loss.item()),
-                  "Style: {:.6f} ".format(style_loss.item()),
-                  "TV: {:.6f} ".format(tv_loss.item()),
-                  "Adv.: {:.6f} ".format(adversarial_loss.item())
+                  "({}%)]  ".format(int(100 * batch_idx / float(len(train_loader))))
                   )
 
 
@@ -136,6 +154,7 @@ if __name__ == '__main__':
     for e in range(NUM_EPOCHS):
         train(e, train_loader)
         scheduler.step(e)
+        r_scheduler.step(e)
         d_scheduler.step(e)
         torch.save(net.state_dict(), "./weights/weights_epoch_{}.pth".format(e))
     writer.close()

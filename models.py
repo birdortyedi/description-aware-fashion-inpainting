@@ -38,9 +38,10 @@ class Discriminator(nn.Module):
 class Net(nn.Module):
     def __init__(self, vocab_size=10000, partial=True, i_norm=True, attention=True, lstm=True):
         super(Net, self).__init__()
+        self.partial = partial
         self.attention = attention
         self.lstm = lstm
-        self.convolutional_layer = PartialConv2d if partial else nn.Conv2d
+        self.convolutional_layer = PartialConv2d if self.partial else nn.Conv2d
         self.normalization_layer = nn.InstanceNorm2d if i_norm else nn.BatchNorm2d
 
         self.block_0 = self.convolutional_layer(in_channels=3, out_channels=32, kernel_size=7, stride=2,
@@ -96,29 +97,47 @@ class Net(nn.Module):
                                                  padding=1, multi_channel=True, return_mask=True)
 
     def forward(self, x, mask=None, descriptions=None):
-        x_0, m_0 = self.block_0(x, mask)
+        if self.partial:
+            x_0, m_0 = self.block_0(x, mask)
+        else:
+            x_0 = self.block_0(x)
         x_0 = F.relu(x_0)
-        x_1, m_1 = self.block_1(x_0, m_0)
+        if self.partial:
+            x_1, m_1 = self.block_1(x_0, m_0)
+        else:
+            x_1 = self.block_1(x_0)
         x_1 = F.relu(self.norm_1(x_1))
         if self.attention:
             x_1, _ = self.s_attention_1(x_1)
             x_1 = F.relu(x_1)
-        x_2, m_2 = self.block_2(x_1, m_1)
+        if self.partial:
+            x_2, m_2 = self.block_2(x_1, m_1)
+        else:
+            x_2 = self.block_2(x_1)
         x_2 = F.relu(self.norm_2(x_2))
         if self.attention:
             x_2, x_2_attention = self.s_attention_2(x_2)
             x_2 = F.relu(x_2)
-        x_3, m_3 = self.block_3(x_2, m_2)
+        if self.partial:
+            x_3, m_3 = self.block_3(x_2, m_2)
+        else:
+            x_3 = self.block_3(x_2)
         x_3 = F.relu(self.norm_3(x_3))
         if self.attention:
             x_3, x_3_attention = self.s_attention_3(x_3)
             x_3 = F.relu(x_3)
-        x_4, m_4 = self.block_4(x_3, m_3)
+        if self.partial:
+            x_4, m_4 = self.block_4(x_3, m_3)
+        else:
+            x_4 = self.block_4(x_3)
         x_4 = F.relu(self.norm_4(x_4))
         if self.attention:
             x_4, x_4_attention = self.s_attention_4(x_4)
             x_4 = F.relu(x_4)
-        x_5, m_5 = self.block_5(x_4, m_4)
+        if self.partial:
+            x_5, m_5 = self.block_5(x_4, m_4)
+        else:
+            x_5 = self.block_5(x_4)
         x_5 = F.relu(self.norm_5(x_5))
         if self.attention:
             x_5, x_5_attention = self.s_attention_5(x_5)
@@ -133,57 +152,67 @@ class Net(nn.Module):
             out = visual_embedding.view(-1, 16, 4, 4)
 
         x_6 = self.upsample(out)
-        m_6 = self.conv(m_4)
-        m_6 = torch.where(m_6 > 0.5, torch.ones_like(m_6).float(), torch.zeros_like(m_6).float())
         x_6 = torch.cat((x_4, x_6), dim=1)
-        m_6 = torch.cat((m_4, m_6), dim=1)
-        x_6, m_6 = self.block_6(x_6, m_6)
+        if self.partial:
+            m_6 = self.conv(m_4)
+            m_6 = torch.where(m_6 > 0.5, torch.ones_like(m_6).float(), torch.zeros_like(m_6).float())
+            m_6 = torch.cat((m_4, m_6), dim=1)
+            x_6, m_6 = self.block_6(x_6, m_6)
+        else:
+            x_6 = self.block_6(x_6)
         out = F.leaky_relu(self.norm_6(x_6), negative_slope=0.2)
 
         x_7 = self.upsample(out)
-        m_7 = self.upsample(m_6)
         x_7 = torch.cat((x_3, x_7), dim=1)
-        m_7 = torch.cat((m_3, m_7), dim=1)
-        x_7, m_7 = self.block_7(x_7, m_7)
+        if self.partial:
+            m_7 = self.upsample(m_6)
+            m_7 = torch.cat((m_3, m_7), dim=1)
+            x_7, m_7 = self.block_7(x_7, m_7)
+        else:
+            x_7 = self.block_7(x_7)
         out = F.leaky_relu(self.norm_7(x_7), negative_slope=0.2)
 
         x_8 = self.upsample(out)
-        m_8 = self.upsample(m_7)
         x_8 = torch.cat((x_2, x_8), dim=1)
-        m_8 = torch.cat((m_2, m_8), dim=1)
-        x_8, m_8 = self.block_8(x_8, m_8)
+        if self.partial:
+            m_8 = self.upsample(m_7)
+            m_8 = torch.cat((m_2, m_8), dim=1)
+            x_8, m_8 = self.block_8(x_8, m_8)
+        else:
+            x_8 = self.block_8(x_8)
         out = F.leaky_relu(self.norm_8(x_8), negative_slope=0.2)
 
         x_9 = self.upsample(out)
-        m_9 = self.upsample(m_8)
         x_9 = torch.cat((x_1, x_9), dim=1)
-        m_9 = torch.cat((m_1, m_9), dim=1)
-        x_9, m_9 = self.block_9(x_9, m_9)
+        if self.partial:
+            m_9 = self.upsample(m_8)
+            m_9 = torch.cat((m_1, m_9), dim=1)
+            x_9, m_9 = self.block_9(x_9, m_9)
+        else:
+            x_9 = self.block_9(x_9)
         out = F.leaky_relu(self.norm_9(x_9), negative_slope=0.2)
 
         x_10 = self.upsample(out)
-        m_10 = self.upsample(m_9)
         x_10 = torch.cat((x_0, x_10), dim=1)
-        m_10 = torch.cat((m_0, m_10), dim=1)
-        x_10, m_10 = self.block_10(x_10, m_10)
+        if self.partial:
+            m_10 = self.upsample(m_9)
+            m_10 = torch.cat((m_0, m_10), dim=1)
+            x_10, m_10 = self.block_10(x_10, m_10)
+        else:
+            x_10 = self.block_10(x_10)
         out = F.leaky_relu(self.norm_10(x_10), negative_slope=0.2)
 
         x_11 = self.upsample(out)
-        m_11 = self.upsample(m_10)
         x_11 = torch.cat((x, x_11), dim=1)
-        m_11 = torch.cat((mask, m_11), dim=1)
-        x_11, _ = self.block_11(x_11, m_11)
+        if self.partial:
+            m_11 = self.upsample(m_10)
+            m_11 = torch.cat((mask, m_11), dim=1)
+            x_11, _ = self.block_11(x_11, m_11)
+        else:
+            x_11 = self.block_11(x_11)
         out = torch.tanh(x_11)
 
         return out
-
-
-class RefineNet(nn.Module):
-    def __init__(self):
-        super(RefineNet, self).__init__()
-
-    def forward(self, x):
-        return x
 
 
 class VGG16(torch.nn.Module):
