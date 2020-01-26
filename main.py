@@ -26,11 +26,13 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 d_net = Discriminator()
 net = Net(vocab_size=fg_train.vocab_size)
+refine_net = Net(lstm=False)
 vgg = VGG16(requires_grad=False)
 if torch.cuda.device_count() > 1:
     print("Using {} GPUs...".format(torch.cuda.device_count()))
     d_net = nn.DataParallel(d_net).to(device)
     net = nn.DataParallel(net).to(device)
+    refine_net = nn.DataParallel(refine_net).to(device)
 vgg.to(device)
 
 net.apply(weights_init)
@@ -61,7 +63,7 @@ def train(epoch, loader):
         y_train = y_train.float().to(device)
 
         net.zero_grad()
-        output = net(x_train, x_desc, x_mask)
+        output = net(x_train, x_mask, x_desc)
         d_output = d_net(output.detach()).view(-1)
         composite = x_mask * y_train + (1.0 - x_mask) * output
 
@@ -70,13 +72,13 @@ def train(epoch, loader):
         vgg_features_output = vgg(output)
 
         total_loss, pixel_valid_loss, pixel_hole_loss,\
-            style_loss, tv_loss, adversarial_loss = loss_fn(y_train, output, composite, x_mask, d_output,
-                                                            vgg_features_gt, vgg_features_composite, vgg_features_output)
+            content_loss, style_loss, tv_loss, adversarial_loss = loss_fn(y_train, output, composite, x_mask, d_output,
+                                                                          vgg_features_gt, vgg_features_composite, vgg_features_output)
 
         writer.add_scalar("Generator/on_step_total_loss", total_loss.item(), num_step)
         writer.add_scalar("Generator/on_step_pixel_valid_loss", pixel_valid_loss.item(), num_step)
         writer.add_scalar("Generator/on_step_pixel_hole_loss", pixel_hole_loss.item(), num_step)
-        # writer.add_scalar("Generator/on_step_content_loss", content_loss.item(), num_step)
+        writer.add_scalar("Generator/on_step_content_loss", content_loss.item(), num_step)
         writer.add_scalar("Generator/on_step_style_loss", style_loss.item(), num_step)
         writer.add_scalar("Generator/on_step_tv_loss", tv_loss.item(), num_step)
         writer.add_scalar("Generator/on_step_adversarial_loss", adversarial_loss.item(), num_step)
@@ -87,7 +89,7 @@ def train(epoch, loader):
 
         d_net.zero_grad()
         d_real_output = d_net(y_train).view(-1)
-        d_fake_output = d_net(net(x_train, x_desc, x_mask)).view(-1)
+        d_fake_output = d_net(net(x_train, x_mask, x_desc)).view(-1)
 
         if torch.rand(1) > 0.1:
             d_real_loss = d_loss_fn(d_real_output, torch.FloatTensor(d_real_output.size(0)).uniform_(0.0, 0.3).to(device))

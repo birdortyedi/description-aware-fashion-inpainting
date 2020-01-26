@@ -92,64 +92,6 @@ def one_by_one_conv_lrelu_block(in_channels, out_channels):
     )
 
 
-class LSTMModule(nn.Module):
-    def __init__(self, vocab_size, embedding_dim, hidden_dim, n_layers, output_size):
-        super(LSTMModule, self).__init__()
-        self.embedding_dim = embedding_dim
-        self.hidden_dim = hidden_dim
-        self.n_layers = n_layers
-        self.embedding = nn.Embedding(vocab_size, embedding_dim)
-        self.lstm = nn.LSTM(embedding_dim, hidden_dim, n_layers, dropout=0.25, batch_first=True, bidirectional=True)
-        self.dropout = nn.Dropout(0.25)
-        self.linear_1 = nn.Linear(hidden_dim * 2, output_size)
-
-    def forward(self, x):
-        h0 = torch.zeros(self.n_layers * 2, x.size(0), self.hidden_dim).requires_grad_().cuda()
-        c0 = torch.zeros(self.n_layers * 2, x.size(0), self.hidden_dim).requires_grad_().cuda()
-
-        x = self.embedding(x)
-        self.lstm.flatten_parameters()
-        lstm_out, _ = self.lstm(x, (h0.detach(), c0.detach()))
-        out = self.dropout(lstm_out[:, -1, :])
-        out = F.relu(self.linear_1(out))
-        return out
-
-
-class SelfAttention(nn.Module):
-    """ Self attention Layer"""
-
-    def __init__(self, in_channels, gamma=1):
-        super(SelfAttention, self).__init__()
-        self.in_channels = in_channels
-
-        self.query_conv = nn.Conv2d(in_channels=in_channels, out_channels=in_channels // 8, kernel_size=1)
-        self.key_conv = nn.Conv2d(in_channels=in_channels, out_channels=in_channels // 8, kernel_size=1)
-        self.value_conv = nn.Conv2d(in_channels=in_channels, out_channels=in_channels, kernel_size=1)
-        self.gamma = nn.Parameter(torch.zeros(gamma), requires_grad=False)
-        self.softmax = nn.Softmax(dim=-1)
-
-    def forward(self, x):
-        """
-            inputs :
-                x : input feature maps( B X C X W X H)
-            returns :
-                out : self attention value + input feature
-                attention: B X N X N (N: width*height)
-        """
-        b_size, C, w, h = x.size()
-        p_query = self.query_conv(x).view(b_size, -1, w * h).permute(0, 2, 1)  # B X C X (N)
-        p_key = self.key_conv(x).view(b_size, -1, w * h)  # B X C x (*W*H)
-        energy = torch.bmm(p_query, p_key)  # transpose check
-        attention = self.softmax(energy)  # B X (N) X (N)
-        p_value = self.value_conv(x).view(b_size, -1, w * h)  # B X C X N
-
-        out = torch.bmm(p_value, attention.permute(0, 2, 1))
-        out = out.view(b_size, C, w, h)
-
-        out = self.gamma * out + x
-        return out, attention
-
-
 class DilatedResidualBlock(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size, stride, dilation, padding):
         super(DilatedResidualBlock, self).__init__()
