@@ -11,7 +11,7 @@ from utils import HDF5Dataset, weights_init, normalize_batch, unnormalize_batch
 from models import Net, Discriminator, VGG16
 from losses import CustomLoss, RefineLoss
 
-NUM_EPOCHS = 10
+NUM_EPOCHS = 20
 BATCH_SIZE = 16
 
 fg_train = HDF5Dataset(filename='./Fashion-Gen/fashiongen_256_256_train.h5')
@@ -26,7 +26,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 d_net = Discriminator()
 net = Net(vocab_size=fg_train.vocab_size)
-refine_net = Net(partial=False, lstm=False)
+refine_net = Net(partial=False, attention=False, lstm=False)
 vgg = VGG16(requires_grad=False)
 if torch.cuda.device_count() > 1:
     print("Using {} GPUs...".format(torch.cuda.device_count()))
@@ -50,9 +50,9 @@ d_optimizer = optim.Adam(d_net.parameters(), lr=d_lr, betas=(0.9, 0.999))
 r_optimizer = optim.Adam(refine_net.parameters(), lr=r_lr, betas=(0.5, 0.999))
 optimizer = optim.Adam(net.parameters(), lr=lr, betas=(0.0, 0.999))
 
-d_scheduler = optim.lr_scheduler.ExponentialLR(d_optimizer, gamma=0.9)
-r_scheduler = optim.lr_scheduler.ExponentialLR(r_optimizer, gamma=0.9)
-scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.9)
+d_scheduler = optim.lr_scheduler.ExponentialLR(d_optimizer, gamma=0.95)
+r_scheduler = optim.lr_scheduler.ExponentialLR(r_optimizer, gamma=0.95)
+scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.95)
 
 writer = SummaryWriter()
 
