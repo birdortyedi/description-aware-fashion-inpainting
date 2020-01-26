@@ -41,35 +41,67 @@ class Net(nn.Module):
         self.partial = partial
         self.attention = attention
         self.lstm = lstm
-        self.convolutional_layer = PartialConv2d if self.partial else nn.Conv2d
         self.normalization_layer = nn.InstanceNorm2d if i_norm else nn.BatchNorm2d
 
-        self.block_0 = self.convolutional_layer(in_channels=3, out_channels=32, kernel_size=7, stride=2,
-                                                padding=3, multi_channel=True, return_mask=True)
-        self.block_1 = self.convolutional_layer(in_channels=32, out_channels=64, kernel_size=5, stride=2,
-                                                padding=2, multi_channel=True, return_mask=True)
+        if self.partial:
+            self.block_0 = PartialConv2d(in_channels=3, out_channels=32, kernel_size=7, stride=2,
+                                         padding=3, multi_channel=True, return_mask=True)
+            self.block_1 = PartialConv2d(in_channels=32, out_channels=64, kernel_size=5, stride=2,
+                                         padding=2, multi_channel=True, return_mask=True)
+            self.block_2 = PartialConv2d(in_channels=64, out_channels=128, kernel_size=5, stride=2,
+                                         padding=2, multi_channel=True, return_mask=True)
+            self.block_3 = PartialConv2d(in_channels=128, out_channels=64, kernel_size=5, stride=2,
+                                         padding=2, multi_channel=True, return_mask=True)
+            self.block_4 = PartialConv2d(in_channels=64, out_channels=128, kernel_size=5, stride=2,
+                                         padding=2, multi_channel=True, return_mask=True)
+            self.block_6 = PartialConv2d(in_channels=144, out_channels=128, kernel_size=3,
+                                         padding=1, multi_channel=True, return_mask=True)
+            self.block_7 = PartialConv2d(in_channels=192, out_channels=128, kernel_size=3,
+                                         padding=1, multi_channel=True, return_mask=True)
+            self.block_8 = PartialConv2d(in_channels=256, out_channels=128, kernel_size=3,
+                                         padding=1, multi_channel=True, return_mask=True)
+            self.block_9 = PartialConv2d(in_channels=192, out_channels=128, kernel_size=3,
+                                         padding=1, multi_channel=True, return_mask=True)
+            self.block_10 = PartialConv2d(in_channels=160, out_channels=64, kernel_size=3,
+                                          padding=1, multi_channel=True, return_mask=True)
+            self.block_11 = PartialConv2d(in_channels=67, out_channels=3, kernel_size=3,
+                                          padding=1, multi_channel=True, return_mask=True)
+        else:
+            self.block_0 = nn.Conv2d(in_channels=3, out_channels=32, kernel_size=7, stride=2, padding=3)
+            self.block_1 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=5, stride=2, padding=2)
+            self.block_2 = nn.Conv2d(in_channels=64, out_channels=128, kernel_size=5, stride=2, padding=2)
+            self.block_3 = nn.Conv2d(in_channels=128, out_channels=64, kernel_size=5, stride=2, padding=2)
+            self.block_4 = nn.Conv2d(in_channels=64, out_channels=128, kernel_size=5, stride=2, padding=2)
+            self.block_6 = nn.Conv2d(in_channels=144, out_channels=128, kernel_size=3, padding=1)
+            self.block_7 = nn.Conv2d(in_channels=192, out_channels=128, kernel_size=3, padding=1)
+            self.block_8 = nn.Conv2d(in_channels=256, out_channels=128, kernel_size=3, padding=1)
+            self.block_9 = nn.Conv2d(in_channels=192, out_channels=128, kernel_size=3, padding=1)
+            self.block_10 = nn.Conv2d(in_channels=160, out_channels=64, kernel_size=3, padding=1)
+            self.block_11 = nn.Conv2d(in_channels=67, out_channels=3, kernel_size=3, padding=1)
+
         self.norm_1 = self.normalization_layer(num_features=64)
         self.s_attention_1 = SelfAttention(in_channels=64)
-        self.block_2 = self.convolutional_layer(in_channels=64, out_channels=128, kernel_size=5, stride=2,
-                                                padding=2, multi_channel=True, return_mask=True)
         self.norm_2 = self.normalization_layer(num_features=128)
         self.s_attention_2 = SelfAttention(in_channels=128)
-        self.block_3 = self.convolutional_layer(in_channels=128, out_channels=64, kernel_size=5, stride=2,
-                                                padding=2, multi_channel=True, return_mask=True)
         self.norm_3 = self.normalization_layer(num_features=64)
         self.s_attention_3 = SelfAttention(in_channels=64)
-        self.block_4 = self.convolutional_layer(in_channels=64, out_channels=128, kernel_size=5, stride=2,
-                                                padding=2, multi_channel=True, return_mask=True)
         self.norm_4 = self.normalization_layer(num_features=128)
         self.s_attention_4 = SelfAttention(in_channels=128)
+
         if self.lstm:
-            self.block_5 = self.convolutional_layer(in_channels=128, out_channels=128, kernel_size=5, stride=2,
-                                                    padding=2, multi_channel=True, return_mask=True)
+            if self.partial:
+                self.block_5 = PartialConv2d(in_channels=128, out_channels=128, kernel_size=5, stride=2,
+                                             padding=2, multi_channel=True, return_mask=True)
+            else:
+                self.block_5 = nn.Conv2d(in_channels=128, out_channels=128, kernel_size=5, stride=2,  padding=2)
             self.norm_5 = self.normalization_layer(num_features=128)
             self.s_attention_5 = SelfAttention(in_channels=128)
         else:
-            self.block_5 = self.convolutional_layer(in_channels=128, out_channels=256, kernel_size=5, stride=2,
-                                                    padding=2, multi_channel=True, return_mask=True)
+            if self.partial:
+                self.block_5 = PartialConv2d(in_channels=128, out_channels=256, kernel_size=5, stride=2,
+                                             padding=2, multi_channel=True, return_mask=True)
+            else:
+                self.block_5 = nn.Conv2d(in_channels=128, out_channels=256, kernel_size=5, stride=2, padding=2)
             self.norm_5 = self.normalization_layer(num_features=256)
             self.s_attention_5 = SelfAttention(in_channels=256)
 
@@ -78,23 +110,11 @@ class Net(nn.Module):
         self.upsample = nn.Upsample(mode="nearest", scale_factor=2.0)
         self.conv = nn.Conv2d(in_channels=128, out_channels=16, kernel_size=1)
 
-        self.block_6 = self.convolutional_layer(in_channels=144, out_channels=128, kernel_size=3,
-                                                padding=1, multi_channel=True, return_mask=True)
         self.norm_6 = self.normalization_layer(num_features=128)
-        self.block_7 = self.convolutional_layer(in_channels=192, out_channels=128, kernel_size=3,
-                                                padding=1, multi_channel=True, return_mask=True)
         self.norm_7 = self.normalization_layer(num_features=128)
-        self.block_8 = self.convolutional_layer(in_channels=256, out_channels=128, kernel_size=3,
-                                                padding=1, multi_channel=True, return_mask=True)
         self.norm_8 = self.normalization_layer(num_features=128)
-        self.block_9 = self.convolutional_layer(in_channels=192, out_channels=128, kernel_size=3,
-                                                padding=1, multi_channel=True, return_mask=True)
         self.norm_9 = self.normalization_layer(num_features=128)
-        self.block_10 = self.convolutional_layer(in_channels=160, out_channels=64, kernel_size=3,
-                                                 padding=1, multi_channel=True, return_mask=True)
         self.norm_10 = self.normalization_layer(num_features=64)
-        self.block_11 = self.convolutional_layer(in_channels=67, out_channels=3, kernel_size=3,
-                                                 padding=1, multi_channel=True, return_mask=True)
 
     def forward(self, x, mask=None, descriptions=None):
         if self.partial:
