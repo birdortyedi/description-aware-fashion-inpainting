@@ -17,9 +17,9 @@ class TVLoss(nn.Module):
 class RefineLoss(nn.Module):
     def __init__(self):
         super(RefineLoss, self).__init__()
-        self.pixel_loss = nn.L1Loss()
-        self.style_loss = nn.L1Loss()
-        self.adversarial_loss = nn.BCELoss()
+        self.pixel = nn.L1Loss()
+        self.style = nn.L1Loss()
+        self.adversarial = nn.BCELoss()
 
     def forward(self, x, out, composite, d_out, vgg_features_gt, vgg_features_composite, vgg_features_output):
         pixel_output_loss = self.pixel(x, out).mean()
