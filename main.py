@@ -25,7 +25,7 @@ val_loader = data.DataLoader(fg_val, batch_size=BATCH_SIZE, shuffle=False, num_w
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 d_net = Discriminator()
-net = Net(vocab_size=fg_train.vocab_size)
+net = Net(vocab_size=fg_train.vocab_size, attention=False)
 refine_net = Net(partial=False, attention=False, lstm=False)
 vgg = VGG16(requires_grad=False)
 if torch.cuda.device_count() > 1:

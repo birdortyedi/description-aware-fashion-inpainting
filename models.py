@@ -107,7 +107,7 @@ class Net(nn.Module):
 
         self.lstm_block = LSTMModule(vocab_size, embedding_dim=32, hidden_dim=1024, n_layers=3, output_size=128)
         self.pooling = nn.AdaptiveAvgPool2d(output_size=(1, 1))
-        self.upsample = nn.Upsample(mode="nearest", scale_factor=2.0)
+        self.upsample = nn.UpsamplingNearest2d(scale_factor=2.0)
         self.conv = nn.Conv2d(in_channels=128, out_channels=16, kernel_size=1)
 
         self.norm_6 = self.normalization_layer(num_features=128)
