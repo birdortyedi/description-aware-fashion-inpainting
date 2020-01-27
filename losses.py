@@ -85,7 +85,7 @@ class CustomLoss(nn.Module):
 
         tv_loss = self.tv(composite)
 
-        return 2.0 * pixel_valid_loss + 10.0 * pixel_hole_loss + 0.1 * content_loss + 120.0 * style_loss + 0.1 * tv_loss, \
+        return 2.0 * pixel_valid_loss + 10.0 * pixel_hole_loss + 0.05 * content_loss + 50.0 * style_loss + 0.1 * tv_loss, \
             pixel_valid_loss, pixel_hole_loss, content_loss, style_loss, tv_loss
 
     @staticmethod
