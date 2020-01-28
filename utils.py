@@ -44,7 +44,7 @@ class HDF5Dataset(data.Dataset):
         i = self.indices[index]
         img = self.h5_file["input_image"][i, :, :]
         img = ToPILImage()(img)
-        rnd_central_eraser = CentralErasing(scale=(0.015625, 0.0625), ratio=(0.75, 1.25), value=1)
+        rnd_central_eraser = CentralErasing(scale=(0.0625, 0.125), ratio=(0.75, 1.25), value=1)
         h_flip = RandomHorizontalFlip(p=0.5)
         normalizer = Normalize((0.7535, 0.7359, 0.7292), (0.5259, 0.5487, 0.5589))
 
@@ -94,8 +94,8 @@ class CentralErasing(object):
             w = int(round(math.sqrt(erase_area / aspect_ratio)))
 
             if h < img_h and w < img_w:
-                i = random.randint(img_h // 5, 4 * img_h // 5 - h)  # 0, img_h - h
-                j = random.randint(img_w // 5, 4 * img_w // 5 - w)  # 0, img_w - w
+                i = random.randint(img_h // 4, 3 * img_h // 4 - h)  # 0, img_h - h
+                j = random.randint(img_w // 4, 3 * img_w // 4 - w)  # 0, img_w - w
                 if isinstance(value, numbers.Number):
                     v = value
                 elif isinstance(value, torch._six.string_classes):
