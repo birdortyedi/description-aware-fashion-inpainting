@@ -21,25 +21,25 @@ class RefineLoss(nn.Module):
         self.style = nn.L1Loss()
         self.adversarial = nn.BCELoss()
 
-    def forward(self, x, out, composite, d_out, vgg_features_gt, vgg_features_composite, vgg_features_output):
+    def forward(self, x, out, composite, d_out):
         pixel_output_loss = self.pixel(x, out).mean()
         pixel_composite_loss = self.pixel(x, composite).mean()
         pixel_loss = pixel_output_loss + pixel_composite_loss
 
-        s_loss_output, s_loss_composite = 0.0, 0.0
-        for i, (f_gt, f_composite, f_output) in enumerate(zip(vgg_features_gt, vgg_features_composite, vgg_features_output)):
-            g_f_gt = self._gram_matrix(f_gt)
-            g_f_output = self._gram_matrix(f_output)
-            g_f_composite = self._gram_matrix(f_composite)
-            s_loss_output += self.style(g_f_output, g_f_gt).mean()
-            s_loss_composite += self.style(g_f_composite, g_f_gt).mean()
-        style_loss = s_loss_output + s_loss_composite
+        # s_loss_output, s_loss_composite = 0.0, 0.0
+        # for i, (f_gt, f_composite, f_output) in enumerate(zip(vgg_features_gt, vgg_features_composite, vgg_features_output)):
+        #     g_f_gt = self._gram_matrix(f_gt)
+        #     g_f_output = self._gram_matrix(f_output)
+        #     g_f_composite = self._gram_matrix(f_composite)
+        #     s_loss_output += self.style(g_f_output, g_f_gt).mean()
+        #     s_loss_composite += self.style(g_f_composite, g_f_gt).mean()
+        # style_loss = s_loss_output + s_loss_composite
 
         adversarial_loss = self.adversarial(d_out,
                                             torch.FloatTensor(d_out.size(0)).uniform_(0.0, 0.3).to(torch.device("cuda" if torch.cuda.is_available()
                                                                                                                 else "cpu")))
-        return 10.0 * pixel_loss + 100.0 * style_loss + 0.1 * adversarial_loss, \
-            pixel_loss, style_loss, adversarial_loss
+        return 100.0 * pixel_loss + adversarial_loss, \
+            pixel_loss, adversarial_loss
 
     @staticmethod
     def _gram_matrix(mat):

@@ -7,6 +7,8 @@ from tensorboardX import SummaryWriter
 from tqdm import tqdm
 from colorama import Fore
 
+import os
+
 from utils import HDF5Dataset, weights_init, normalize_batch, unnormalize_batch
 from models import Net, Discriminator, VGG16
 from losses import CustomLoss, RefineLoss
@@ -26,7 +28,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 d_net = Discriminator()
 net = Net(vocab_size=fg_train.vocab_size, attention=False)
-refine_net = Net(partial=False, attention=False, lstm=False)
+refine_net = Net(partial=False, lstm=False)
 vgg = VGG16(requires_grad=False)
 if torch.cuda.device_count() > 1:
     print("Using {} GPUs...".format(torch.cuda.device_count()))
@@ -95,14 +97,9 @@ def train(epoch, loader):
         d_output = d_net(r_output.detach()).view(-1)
         r_composite = x_mask * y_train + (1.0 - x_mask) * r_output
 
-        vgg_features_r_composite = vgg(r_composite)
-        vgg_features_r_output = vgg(r_output)
-
-        r_total_loss, r_pixel_loss, r_style_loss, adversarial_loss = refine_loss_fn(y_train, r_output, r_composite, d_output,
-                                                                                    vgg_features_gt, vgg_features_r_composite, vgg_features_r_output)
+        r_total_loss, r_pixel_loss, adversarial_loss = refine_loss_fn(y_train, r_output, r_composite, d_output)
         writer.add_scalar("Refine_G/on_step_total_loss", r_total_loss.item(), num_step)
         writer.add_scalar("Refine_G/on_step_pixel_loss", r_pixel_loss.item(), num_step)
-        writer.add_scalar("Refine_G/on_step_style_loss", r_style_loss.item(), num_step)
         writer.add_scalar("Refine_G/on_step_adversarial_loss", adversarial_loss.item(), num_step)
 
         r_total_loss.backward()
@@ -151,10 +148,11 @@ def train(epoch, loader):
 
 
 if __name__ == '__main__':
+    os.mkdir("./runs/*baremetal01/weights")
     for e in range(NUM_EPOCHS):
         train(e, train_loader)
         scheduler.step(e)
         r_scheduler.step(e)
         d_scheduler.step(e)
-        torch.save(net.state_dict(), "./weights/weights_epoch_{}.pth".format(e))
+        torch.save(net.state_dict(), "./runs/*baremetal01/weights/weights_epoch_{}.pth".format(e))
     writer.close()

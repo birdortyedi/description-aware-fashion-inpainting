@@ -80,13 +80,11 @@ class Net(nn.Module):
             self.block_11 = nn.Conv2d(in_channels=67, out_channels=3, kernel_size=3, padding=1)
 
         self.norm_1 = self.normalization_layer(num_features=64)
-        self.s_attention_1 = SelfAttention(in_channels=64)
         self.norm_2 = self.normalization_layer(num_features=128)
         self.s_attention_2 = SelfAttention(in_channels=128)
         self.norm_3 = self.normalization_layer(num_features=64)
         self.s_attention_3 = SelfAttention(in_channels=64)
         self.norm_4 = self.normalization_layer(num_features=128)
-        self.s_attention_4 = SelfAttention(in_channels=128)
 
         if self.lstm:
             if self.partial:
@@ -95,7 +93,6 @@ class Net(nn.Module):
             else:
                 self.block_5 = nn.Conv2d(in_channels=128, out_channels=128, kernel_size=5, stride=2,  padding=2)
             self.norm_5 = self.normalization_layer(num_features=128)
-            self.s_attention_5 = SelfAttention(in_channels=128)
         else:
             if self.partial:
                 self.block_5 = PartialConv2d(in_channels=128, out_channels=256, kernel_size=5, stride=2,
@@ -103,7 +100,6 @@ class Net(nn.Module):
             else:
                 self.block_5 = nn.Conv2d(in_channels=128, out_channels=256, kernel_size=5, stride=2, padding=2)
             self.norm_5 = self.normalization_layer(num_features=256)
-            self.s_attention_5 = SelfAttention(in_channels=256)
 
         self.lstm_block = LSTMModule(vocab_size, embedding_dim=32, hidden_dim=1024, n_layers=3, output_size=128)
         self.pooling = nn.AdaptiveAvgPool2d(output_size=(1, 1))
@@ -127,9 +123,6 @@ class Net(nn.Module):
         else:
             x_1 = self.block_1(x_0)
         x_1 = F.relu(self.norm_1(x_1))
-        if self.attention:
-            x_1, _ = self.s_attention_1(x_1)
-            x_1 = F.relu(x_1)
         if self.partial:
             x_2, m_2 = self.block_2(x_1, m_1)
         else:
@@ -151,17 +144,11 @@ class Net(nn.Module):
         else:
             x_4 = self.block_4(x_3)
         x_4 = F.relu(self.norm_4(x_4))
-        if self.attention:
-            x_4, x_4_attention = self.s_attention_4(x_4)
-            x_4 = F.relu(x_4)
         if self.partial:
             x_5, m_5 = self.block_5(x_4, m_4)
         else:
             x_5 = self.block_5(x_4)
         x_5 = F.relu(self.norm_5(x_5))
-        if self.attention:
-            x_5, x_5_attention = self.s_attention_5(x_5)
-            x_5 = F.relu(x_5)
 
         visual_embedding = self.pooling(x_5).squeeze()
         if self.lstm:
