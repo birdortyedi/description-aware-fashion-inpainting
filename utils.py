@@ -44,7 +44,7 @@ class HDF5Dataset(data.Dataset):
         i = self.indices[index]
         img = self.h5_file["input_image"][i, :, :]
         img = ToPILImage()(img)
-        rnd_central_eraser = CentralErasing(scale=(0.0625, 0.125), ratio=(0.5, 1.25), value=1)
+        rnd_central_eraser = CentralErasing(scale=(0.0625, 0.125), ratio=(0.75, 1.5), value=1)
         h_flip = RandomHorizontalFlip(p=0.5)
         normalizer = Normalize((0.7535, 0.7359, 0.7292), (0.5259, 0.5487, 0.5589))
 
