@@ -148,12 +148,12 @@ def train(epoch, loader):
 
 
 if __name__ == '__main__':
+    if not os.path.exists("./weights"):
+        os.mkdir("./weights")
     for e in range(NUM_EPOCHS):
         train(e, train_loader)
         scheduler.step(e)
         r_scheduler.step(e)
         d_scheduler.step(e)
-        if not os.path.exists("./runs/*baremetal01/weights"):
-            os.mkdir("./runs/*baremetal01/weights")
-        torch.save(net.state_dict(), "./runs/*baremetal01/weights/weights_epoch_{}.pth".format(e))
+        torch.save(net.state_dict(), "./weights/weights_epoch_{}.pth".format(e))
     writer.close()
