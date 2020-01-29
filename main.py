@@ -42,7 +42,7 @@ val_mask_loader = data.DataLoader(m_val, batch_size=BATCH_SIZE, shuffle=False, n
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 d_net = Discriminator()
-net = Net(vocab_size=fg_train.vocab_size, attention=False)
+net = Net(vocab_size=fg_train.vocab_size)
 refine_net = Net(partial=False, lstm=False)
 vgg = VGG16(requires_grad=False)
 if torch.cuda.device_count() > 1:
@@ -89,7 +89,7 @@ def train(epoch, img_loader, mask_loader):
         noise = torch.zeros((x_mask.size(0), 256), dtype=torch.float32).normal_().to(device)
 
         net.zero_grad()
-        output = net(x_train, x_mask, x_desc, noise)
+        output, attention_maps = net(x_train, x_mask, x_desc, noise)
         composite = x_mask * y_train + (1.0 - x_mask) * output
 
         vgg_features_gt = vgg(normalize_batch(unnormalize_batch(y_train)))
@@ -113,7 +113,7 @@ def train(epoch, img_loader, mask_loader):
 
         refine_net.zero_grad()
         noise = torch.zeros((x_mask.size(0), 256), dtype=torch.float32).normal_().to(device)
-        r_output = refine_net(output.detach(), noise=noise)
+        r_output, r_attention_maps = refine_net(output.detach(), noise=noise)
         d_output = d_net(r_output.detach()).view(-1)
         r_composite = x_mask * y_train + (1.0 - x_mask) * r_output
 
@@ -152,6 +152,12 @@ def train(epoch, img_loader, mask_loader):
             composite_grid = make_grid(torch.clamp(unnormalize_batch(composite), min=0.0, max=1.0), nrow=16, padding=2)
             r_output_grid = make_grid(torch.clamp(unnormalize_batch(r_output), min=0.0, max=1.0), nrow=16, padding=2)
             r_composite_grid = make_grid(torch.clamp(unnormalize_batch(r_composite), min=0.0, max=1.0), nrow=16, padding=2)
+            for i in range(len(attention_maps)):
+                attention_maps_grid = make_grid(attention_maps, nrow=16, padding=2)
+                writer.add_image("attention_map_2/epoch_{}".format(epoch), attention_maps_grid, num_step)
+            for i in range(len(r_attention_maps)):
+                r_attention_maps_grid = make_grid(r_attention_maps, nrow=16, padding=2)
+                writer.add_image("attention_map_3/epoch_{}".format(epoch), r_attention_maps_grid, num_step)
             writer.add_image("x_train/epoch_{}".format(epoch), x_grid, num_step)
             writer.add_image("org/epoch_{}".format(epoch), y_grid, num_step)
             # writer.add_image("local/epoch_{}".format(epoch), local_grid, num_step)
