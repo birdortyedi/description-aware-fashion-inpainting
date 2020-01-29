@@ -42,6 +42,7 @@ class Net(nn.Module):
         self.attention = attention
         self.lstm = lstm
         self.normalization_layer = nn.InstanceNorm2d if i_norm else nn.BatchNorm2d
+        self.noise = torch.FloatTensor(1)
 
         if self.partial:
             self.block_0 = PartialConv2d(in_channels=3, out_channels=32, kernel_size=7, stride=2,
@@ -103,7 +104,7 @@ class Net(nn.Module):
 
         self.lstm_block = LSTMModule(vocab_size, embedding_dim=32, hidden_dim=1024, n_layers=3, output_size=128)
         self.pooling = nn.AdaptiveAvgPool2d(output_size=(1, 1))
-        self.noise = GaussianNoise()
+        self.noise_layer = GaussianNoise(self.noise)
         self.upsample = nn.UpsamplingNearest2d(scale_factor=2.0)
         self.conv = nn.Conv2d(in_channels=128, out_channels=16, kernel_size=1)
 
@@ -159,7 +160,7 @@ class Net(nn.Module):
         else:
             out = visual_embedding.view(-1, 16, 4, 4)
 
-        out = self.noise(out)
+        out = self.noise_layer(out)
 
         x_6 = self.upsample(out)
         x_6 = torch.cat((x_4, x_6), dim=1)

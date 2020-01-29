@@ -153,11 +153,11 @@ class GaussianNoise(nn.Module):
             network to generate vectors with smaller values.
     """
 
-    def __init__(self, sigma=0.1, is_relative_detach=True):
+    def __init__(self, noise, sigma=0.1, is_relative_detach=True):
         super().__init__()
+        self.noise = noise
         self.sigma = sigma
         self.is_relative_detach = is_relative_detach
-        self.noise = torch.FloatTensor(1)
 
     def forward(self, x):
         if self.training and self.sigma != 0.0:

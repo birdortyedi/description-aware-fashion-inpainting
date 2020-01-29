@@ -48,9 +48,7 @@ vgg = VGG16(requires_grad=False)
 if torch.cuda.device_count() > 1:
     print("Using {} GPUs...".format(torch.cuda.device_count()))
     d_net = nn.DataParallel(d_net).to(device)
-    net.noise.to(device)
     net = nn.DataParallel(net).to(device)
-    refine_net.noise.to(device)
     refine_net = nn.DataParallel(refine_net).to(device)
 vgg.to(device)
 
