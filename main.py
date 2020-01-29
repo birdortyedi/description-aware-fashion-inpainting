@@ -52,6 +52,35 @@ if torch.cuda.device_count() > 1:
     refine_net = nn.DataParallel(refine_net).to(device)
 vgg.to(device)
 
+
+class GaussianNoise(nn.Module):
+    """Gaussian noise regularizer.
+
+    Args:
+        sigma (float, optional): relative standard deviation used to generate the
+            noise. Relative means that it will be multiplied by the magnitude of
+            the value your are adding the noise to. This means that sigma can be
+            the same regardless of the scale of the vector.
+        is_relative_detach (bool, optional): whether to detach the variable before
+            computing the scale of the noise. If `False` then the scale of the noise
+            won't be seen as a constant but something to optimize: this will bias the
+            network to generate vectors with smaller values.
+    """
+
+    def __init__(self, sigma=0.1, is_relative_detach=True):
+        super().__init__()
+        self.sigma = sigma
+        self.is_relative_detach = is_relative_detach
+        self.noise = torch.FloatTensor(1).to(device)
+
+    def forward(self, x):
+        if self.training and self.sigma != 0.0:
+            scale = self.sigma * x.detach() if self.is_relative_detach else self.sigma * x
+            sampled_noise = self.noise.repeat(*x.size()).normal_() * scale
+            x = x + sampled_noise
+        return x
+
+
 net.apply(weights_init)
 refine_net.apply(weights_init)
 
