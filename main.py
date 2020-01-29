@@ -152,8 +152,6 @@ def train(epoch, img_loader, mask_loader):
             composite_grid = make_grid(torch.clamp(unnormalize_batch(composite), min=0.0, max=1.0), nrow=16, padding=2)
             r_output_grid = make_grid(torch.clamp(unnormalize_batch(r_output), min=0.0, max=1.0), nrow=16, padding=2)
             r_composite_grid = make_grid(torch.clamp(unnormalize_batch(r_composite), min=0.0, max=1.0), nrow=16, padding=2)
-            print(type(attention_maps[0]))
-            print(len(attention_maps))
             for i in range(len(attention_maps)):
                 attention_maps_grid = make_grid(attention_maps[i], nrow=16, padding=2)
                 writer.add_image("attention_map_{}/epoch_{}".format(i+2, epoch), attention_maps_grid, num_step)
