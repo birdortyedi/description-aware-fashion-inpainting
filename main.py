@@ -77,7 +77,7 @@ writer = SummaryWriter()
 def train(epoch, img_loader, mask_loader):
     for batch_idx, (y_train, x_desc) in tqdm(enumerate(img_loader), ncols=50, desc="Training",
                                              bar_format="{l_bar}%s{bar}%s{r_bar}" % (Fore.GREEN, Fore.RESET)):
-        x_mask, _ = next(mask_loader)
+        x_mask, _ = next(iter(mask_loader))
         num_step = epoch * len(img_loader) + batch_idx
         # x_train = x_train.float().to(device)
         x_desc = x_desc.long().to(device)
