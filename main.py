@@ -28,6 +28,7 @@ val_img_loader = data.DataLoader(fg_val, batch_size=BATCH_SIZE, shuffle=False, n
 
 mask_transform = transforms.Compose([transforms.RandomHorizontalFlip(p=0.5),
                                      transforms.RandomVerticalFlip(p=0.5),
+                                     transforms.Resize(256),
                                      transforms.ToTensor(), ])
 
 m_train = ImageFolder(root="./qd_imd/train/", transform=mask_transform)
