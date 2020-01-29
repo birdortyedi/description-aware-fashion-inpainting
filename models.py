@@ -7,8 +7,7 @@ from torchvision import models
 
 from collections import namedtuple
 from utils import HDF5Dataset, CentralErasing
-from layers import PartialConv2d, LSTMModule, SelfAttention
-from main import GaussianNoise
+from layers import PartialConv2d, LSTMModule, SelfAttention, GaussianNoise
 
 
 class Discriminator(nn.Module):
