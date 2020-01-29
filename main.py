@@ -89,8 +89,7 @@ def train(epoch, img_loader, mask_loader):
         noise = torch.zeros((x_mask.size(0), 256), dtype=torch.float32).normal_().to(device)
 
         net.zero_grad()
-        output, features_2, features_3 = net(x_train, x_mask, x_desc, noise)
-        print(features_2.size())
+        output = net(x_train, x_mask, x_desc, noise)
         composite = x_mask * y_train + (1.0 - x_mask) * output
 
         vgg_features_gt = vgg(normalize_batch(unnormalize_batch(y_train)))
@@ -114,7 +113,7 @@ def train(epoch, img_loader, mask_loader):
 
         refine_net.zero_grad()
         noise = torch.zeros((x_mask.size(0), 256), dtype=torch.float32).normal_().to(device)
-        r_output, r_features_2, r_features_3 = refine_net(output.detach(), noise=noise)
+        r_output = refine_net(output.detach(), noise=noise)
         d_output = d_net(r_output.detach()).view(-1)
         r_composite = x_mask * y_train + (1.0 - x_mask) * r_output
 
@@ -153,15 +152,7 @@ def train(epoch, img_loader, mask_loader):
             composite_grid = make_grid(torch.clamp(unnormalize_batch(composite), min=0.0, max=1.0), nrow=16, padding=2)
             r_output_grid = make_grid(torch.clamp(unnormalize_batch(r_output), min=0.0, max=1.0), nrow=16, padding=2)
             r_composite_grid = make_grid(torch.clamp(unnormalize_batch(r_composite), min=0.0, max=1.0), nrow=16, padding=2)
-            features_2_grid = make_grid(features_2, nrow=16, padding=2)
-            features_3_grid = make_grid(features_3, nrow=16, padding=2)
-            r_features_2_grid = make_grid(r_features_2, nrow=16, padding=2)
-            r_features_3_grid = make_grid(r_features_3, nrow=16, padding=2)
 
-            writer.add_image("features_2/epoch_{}".format(epoch), features_2_grid, num_step)
-            writer.add_image("features_3/epoch_{}".format(epoch), features_3_grid, num_step)
-            writer.add_image("r_features_2/epoch_{}".format(epoch), r_features_2_grid, num_step)
-            writer.add_image("r_features_3/epoch_{}".format(epoch), r_features_3_grid, num_step)
             writer.add_image("x_train/epoch_{}".format(epoch), x_grid, num_step)
             writer.add_image("org/epoch_{}".format(epoch), y_grid, num_step)
             # writer.add_image("local/epoch_{}".format(epoch), local_grid, num_step)
