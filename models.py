@@ -7,7 +7,7 @@ from torchvision import models
 
 from collections import namedtuple
 from utils import HDF5Dataset, CentralErasing
-from layers import PartialConv2d, LSTMModule, SelfAttention
+from layers import PartialConv2d, LSTMModule, SelfAttention, GaussianNoise
 
 
 class Discriminator(nn.Module):
@@ -18,9 +18,9 @@ class Discriminator(nn.Module):
         self.bn_1 = nn.BatchNorm2d(num_features=32)
         self.conv_2 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, stride=2, padding=1, bias=False)
         self.bn_2 = nn.BatchNorm2d(num_features=64)
-        self.conv_3 = nn.Conv2d(in_channels=64, out_channels=1, kernel_size=3, stride=2, padding=1, bias=False)
-        # self.bn_3 = nn.BatchNorm2d(num_features=128)
-        # self.conv_4 = nn.Conv2d(in_channels=128, out_channels=256, kernel_size=3, stride=2, padding=1, bias=False)
+        self.conv_3 = nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, stride=2, padding=1, bias=False)
+        self.bn_3 = nn.BatchNorm2d(num_features=128)
+        self.conv_4 = nn.Conv2d(in_channels=128, out_channels=32, kernel_size=3, stride=2, padding=1, bias=False)
         # self.bn_4 = nn.BatchNorm2d(num_features=256)
         # self.conv_5 = nn.Conv2d(in_channels=256, out_channels=1, kernel_size=3, stride=2, padding=1, bias=False)
         self.pooling = nn.AdaptiveAvgPool2d(output_size=(1, 1))
@@ -29,9 +29,9 @@ class Discriminator(nn.Module):
         x = F.leaky_relu(self.conv_0(x), negative_slope=0.2)
         x = F.leaky_relu(self.bn_1(self.conv_1(x)), negative_slope=0.2)
         x = F.leaky_relu(self.bn_2(self.conv_2(x)), negative_slope=0.2)
-        # x = F.leaky_relu(self.bn_3(self.conv_3(x)), negative_slope=0.2)
+        x = F.leaky_relu(self.bn_3(self.conv_3(x)), negative_slope=0.2)
         # x = F.leaky_relu(self.bn_4(self.conv_4(x)), negative_slope=0.2)
-        x = torch.sigmoid(self.pooling(self.conv_3(x).squeeze()))
+        x = torch.sigmoid(self.pooling(self.conv_4(x).squeeze()))
         return x
 
 
@@ -103,6 +103,7 @@ class Net(nn.Module):
 
         self.lstm_block = LSTMModule(vocab_size, embedding_dim=32, hidden_dim=1024, n_layers=3, output_size=128)
         self.pooling = nn.AdaptiveAvgPool2d(output_size=(1, 1))
+        self.noise = GaussianNoise()
         self.upsample = nn.UpsamplingNearest2d(scale_factor=2.0)
         self.conv = nn.Conv2d(in_channels=128, out_channels=16, kernel_size=1)
 
@@ -157,6 +158,8 @@ class Net(nn.Module):
             out = embedding.view(-1, 16, 4, 4)
         else:
             out = visual_embedding.view(-1, 16, 4, 4)
+
+        out = self.noise(out)
 
         x_6 = self.upsample(out)
         x_6 = torch.cat((x_4, x_6), dim=1)
