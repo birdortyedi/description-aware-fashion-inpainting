@@ -36,13 +36,13 @@ class Discriminator(nn.Module):
 
 
 class Net(nn.Module):
-    def __init__(self, vocab_size=10000, partial=True, i_norm=True, attention=True, lstm=True):
+    def __init__(self, vocab_size=10000, partial=True, i_norm=True, attention=True, lstm=True, noise=True):
         super(Net, self).__init__()
         self.partial = partial
         self.attention = attention
         self.lstm = lstm
+        self.noise = noise
         self.normalization_layer = nn.InstanceNorm2d if i_norm else nn.BatchNorm2d
-        self.noise = torch.FloatTensor(1)
 
         if self.partial:
             self.block_0 = PartialConv2d(in_channels=3, out_channels=32, kernel_size=7, stride=2,
@@ -104,7 +104,7 @@ class Net(nn.Module):
 
         self.lstm_block = LSTMModule(vocab_size, embedding_dim=32, hidden_dim=1024, n_layers=3, output_size=128)
         self.pooling = nn.AdaptiveAvgPool2d(output_size=(1, 1))
-        self.noise_layer = GaussianNoise(self.noise)
+        self.noise_layer = GaussianNoise()
         self.upsample = nn.UpsamplingNearest2d(scale_factor=2.0)
         self.conv = nn.Conv2d(in_channels=128, out_channels=16, kernel_size=1)
 
@@ -114,7 +114,7 @@ class Net(nn.Module):
         self.norm_9 = self.normalization_layer(num_features=128)
         self.norm_10 = self.normalization_layer(num_features=64)
 
-    def forward(self, x, mask=None, descriptions=None):
+    def forward(self, x, mask=None, descriptions=None, noise=None):
         if self.partial:
             x_0, m_0 = self.block_0(x, mask)
         else:
@@ -160,7 +160,8 @@ class Net(nn.Module):
         else:
             out = visual_embedding.view(-1, 16, 4, 4)
 
-        out = self.noise_layer(out)
+        if self.noise:
+            out = self.noise_layer(out, noise)
 
         x_6 = self.upsample(out)
         x_6 = torch.cat((x_4, x_6), dim=1)

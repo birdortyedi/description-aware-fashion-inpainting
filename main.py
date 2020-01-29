@@ -85,9 +85,10 @@ def train(epoch, img_loader, mask_loader):
         y_train = y_train.float().to(device)
 
         x_train = x_mask * y_train + (1.0 - x_mask) * 0.5
+        noise = torch.zeros((x_mask.size(0), 256), dtype=torch.float32).normal_().to(device)
 
         net.zero_grad()
-        output = net(x_train, x_mask, x_desc)
+        output = net(x_train, x_mask, x_desc, noise)
         composite = x_mask * y_train + (1.0 - x_mask) * output
 
         vgg_features_gt = vgg(normalize_batch(unnormalize_batch(y_train)))
@@ -110,7 +111,8 @@ def train(epoch, img_loader, mask_loader):
         optimizer.step()
 
         refine_net.zero_grad()
-        r_output = refine_net(output.detach())
+        noise = torch.zeros((x_mask.size(0), 256), dtype=torch.float32).normal_().to(device)
+        r_output = refine_net(output.detach(), noise=noise)
         d_output = d_net(r_output.detach()).view(-1)
         r_composite = x_mask * y_train + (1.0 - x_mask) * r_output
 
