@@ -48,7 +48,9 @@ vgg = VGG16(requires_grad=False)
 if torch.cuda.device_count() > 1:
     print("Using {} GPUs...".format(torch.cuda.device_count()))
     d_net = nn.DataParallel(d_net).to(device)
+    net.noise.to(device)
     net = nn.DataParallel(net).to(device)
+    refine_net.noise.to(device)
     refine_net = nn.DataParallel(refine_net).to(device)
 vgg.to(device)
 
@@ -87,7 +89,6 @@ def train(epoch, img_loader, mask_loader):
         x_train = x_mask * y_train + (1.0 - x_mask) * 0.5
 
         net.zero_grad()
-        net.noise.to(device)
         output = net(x_train, x_mask, x_desc)
         composite = x_mask * y_train + (1.0 - x_mask) * output
 
@@ -111,7 +112,6 @@ def train(epoch, img_loader, mask_loader):
         optimizer.step()
 
         refine_net.zero_grad()
-        refine_net.noise.to(device)
         r_output = refine_net(output.detach())
         d_output = d_net(r_output.detach()).view(-1)
         r_composite = x_mask * y_train + (1.0 - x_mask) * r_output
