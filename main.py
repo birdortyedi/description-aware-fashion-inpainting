@@ -153,11 +153,11 @@ def train(epoch, img_loader, mask_loader):
             r_output_grid = make_grid(torch.clamp(unnormalize_batch(r_output), min=0.0, max=1.0), nrow=16, padding=2)
             r_composite_grid = make_grid(torch.clamp(unnormalize_batch(r_composite), min=0.0, max=1.0), nrow=16, padding=2)
             for i in range(len(attention_maps)):
-                attention_maps_grid = make_grid(attention_maps, nrow=16, padding=2)
-                writer.add_image("attention_map_2/epoch_{}".format(epoch), attention_maps_grid, num_step)
+                attention_maps_grid = make_grid(attention_maps[i], nrow=16, padding=2)
+                writer.add_image("attention_map_{}/epoch_{}".format(i+2, epoch), attention_maps_grid, num_step)
             for i in range(len(r_attention_maps)):
-                r_attention_maps_grid = make_grid(r_attention_maps, nrow=16, padding=2)
-                writer.add_image("attention_map_3/epoch_{}".format(epoch), r_attention_maps_grid, num_step)
+                r_attention_maps_grid = make_grid(r_attention_maps[i], nrow=16, padding=2)
+                writer.add_image("r_attention_map_{}/epoch_{}".format(i+2, epoch), r_attention_maps_grid, num_step)
             writer.add_image("x_train/epoch_{}".format(epoch), x_grid, num_step)
             writer.add_image("org/epoch_{}".format(epoch), y_grid, num_step)
             # writer.add_image("local/epoch_{}".format(epoch), local_grid, num_step)
