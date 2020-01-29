@@ -226,7 +226,7 @@ class Net(nn.Module):
         out = torch.tanh(x_11)
 
         if self.attention:
-            return out, (x_2, x_3)
+            return out, x_2, x_3
         return out
 
 
