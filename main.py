@@ -1,6 +1,7 @@
 import torch
 from torch import nn, optim
 from torch.utils import data
+from torchvision import transforms
 from torchvision.datasets import ImageFolder
 from torchvision.utils import make_grid
 from tensorboardX import SummaryWriter
@@ -25,8 +26,12 @@ print("Sample size in training: {}".format(len(fg_train)))
 train_img_loader = data.DataLoader(fg_train, batch_size=BATCH_SIZE, shuffle=True, num_workers=0)
 val_img_loader = data.DataLoader(fg_val, batch_size=BATCH_SIZE, shuffle=False, num_workers=0)
 
-m_train = ImageFolder(root="./qd_imd/train/")
-m_val = ImageFolder(root="./qd_imd/test/")
+mask_transform = transforms.Compose([transforms.RandomHorizontalFlip(p=0.5),
+                                     transforms.RandomVerticalFlip(p=0.5),
+                                     transforms.ToTensor(), ])
+
+m_train = ImageFolder(root="./qd_imd/train/", transform=mask_transform)
+m_val = ImageFolder(root="./qd_imd/test/", transform=mask_transform)
 
 print("Mask size in training: {}".format(len(m_train)))
 
