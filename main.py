@@ -90,6 +90,7 @@ def train(epoch, img_loader, mask_loader):
 
         net.zero_grad()
         output, features_2, features_3 = net(x_train, x_mask, x_desc, noise)
+        print(features_2.size())
         composite = x_mask * y_train + (1.0 - x_mask) * output
 
         vgg_features_gt = vgg(normalize_batch(unnormalize_batch(y_train)))
