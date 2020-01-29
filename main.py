@@ -1,6 +1,7 @@
 import torch
 from torch import nn, optim
 from torch.utils import data
+from torchvision.datasets import ImageFolder
 from torchvision.utils import make_grid
 from tensorboardX import SummaryWriter
 
@@ -21,8 +22,16 @@ fg_val = HDF5Dataset(filename='./Fashion-Gen/fashiongen_256_256_validation.h5', 
 
 print("Sample size in training: {}".format(len(fg_train)))
 
-train_loader = data.DataLoader(fg_train, batch_size=BATCH_SIZE, shuffle=True, num_workers=0)
-val_loader = data.DataLoader(fg_val, batch_size=BATCH_SIZE, shuffle=False, num_workers=0)
+train_img_loader = data.DataLoader(fg_train, batch_size=BATCH_SIZE, shuffle=True, num_workers=0)
+val_img_loader = data.DataLoader(fg_val, batch_size=BATCH_SIZE, shuffle=False, num_workers=0)
+
+m_train = ImageFolder(root="./qd_imd/train/")
+m_val = ImageFolder(root="./qd_imd/test/")
+
+print("Mask size in training: {}".format(len(m_train)))
+
+train_mask_loader = data.DataLoader(m_train, batch_size=BATCH_SIZE, shuffle=True, num_workers=0)
+val_mask_loader = data.DataLoader(m_val, batch_size=BATCH_SIZE, shuffle=False, num_workers=0)
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -59,15 +68,17 @@ scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.95)
 writer = SummaryWriter()
 
 
-def train(epoch, loader):
-    for batch_idx, (x_train, x_desc, x_mask, x_local, y_train) in tqdm(enumerate(loader), ncols=50, desc="Training",
-                                                                       bar_format="{l_bar}%s{bar}%s{r_bar}" % (Fore.GREEN, Fore.RESET)):
-        num_step = epoch * len(loader) + batch_idx
-        x_train = x_train.float().to(device)
+def train(epoch, img_loader, mask_loader):
+    for batch_idx, ((y_train, x_desc), (x_mask, _)) in tqdm(enumerate(zip(img_loader, mask_loader)), ncols=50, desc="Training",
+                                                            bar_format="{l_bar}%s{bar}%s{r_bar}" % (Fore.GREEN, Fore.RESET)):
+        num_step = epoch * len(img_loader) + batch_idx
+        # x_train = x_train.float().to(device)
         x_desc = x_desc.long().to(device)
         x_mask = x_mask.float().to(device)
-        x_local = x_local.float().to(device)
+        # x_local = x_local.float().to(device)
         y_train = y_train.float().to(device)
+
+        x_train = x_mask * y_train + (1.0 - x_mask) * 0.5
 
         net.zero_grad()
         output = net(x_train, x_mask, x_desc)
@@ -127,14 +138,14 @@ def train(epoch, loader):
         if batch_idx % 100 == 0:
             x_grid = make_grid(unnormalize_batch(x_train), nrow=16, padding=2)
             y_grid = make_grid(unnormalize_batch(y_train), nrow=16, padding=2)
-            local_grid = make_grid(unnormalize_batch(x_local), nrow=16, padding=2)
+            # local_grid = make_grid(unnormalize_batch(x_local), nrow=16, padding=2)
             output_grid = make_grid(torch.clamp(unnormalize_batch(output), min=0.0, max=1.0), nrow=16, padding=2)
             composite_grid = make_grid(torch.clamp(unnormalize_batch(composite), min=0.0, max=1.0), nrow=16, padding=2)
             r_output_grid = make_grid(torch.clamp(unnormalize_batch(r_output), min=0.0, max=1.0), nrow=16, padding=2)
             r_composite_grid = make_grid(torch.clamp(unnormalize_batch(r_composite), min=0.0, max=1.0), nrow=16, padding=2)
             writer.add_image("x_train/epoch_{}".format(epoch), x_grid, num_step)
             writer.add_image("org/epoch_{}".format(epoch), y_grid, num_step)
-            writer.add_image("local/epoch_{}".format(epoch), local_grid, num_step)
+            # writer.add_image("local/epoch_{}".format(epoch), local_grid, num_step)
             writer.add_image("output/epoch_{}".format(epoch), output_grid, num_step)
             writer.add_image("composite/epoch_{}".format(epoch), composite_grid, num_step)
             writer.add_image("refine_output/epoch_{}".format(epoch), r_output_grid, num_step)
@@ -142,8 +153,8 @@ def train(epoch, loader):
 
             print("Step:{}  ".format(num_step),
                   "Epoch:{}".format(epoch),
-                  "[{}/{} ".format(batch_idx * len(x_train), len(train_loader.dataset)),
-                  "({}%)]  ".format(int(100 * batch_idx / float(len(train_loader))))
+                  "[{}/{} ".format(batch_idx * len(x_train), len(train_img_loader.dataset)),
+                  "({}%)]  ".format(int(100 * batch_idx / float(len(train_img_loader))))
                   )
 
 
@@ -151,7 +162,7 @@ if __name__ == '__main__':
     if not os.path.exists("./weights"):
         os.mkdir("./weights")
     for e in range(NUM_EPOCHS):
-        train(e, train_loader)
+        train(e, train_img_loader, train_mask_loader)
         scheduler.step(e)
         r_scheduler.step(e)
         d_scheduler.step(e)
