@@ -156,12 +156,13 @@ class Net(nn.Module):
         if self.lstm:
             textual_embedding = self.lstm_block(descriptions)
             embedding = torch.cat((visual_embedding, textual_embedding), dim=1)
+            if self.noise:
+                embedding = self.noise_layer(embedding, noise)
             out = embedding.view(-1, 16, 4, 4)
         else:
+            if self.noise:
+                visual_embedding = self.noise_layer(visual_embedding, noise)
             out = visual_embedding.view(-1, 16, 4, 4)
-
-        if self.noise:
-            out = self.noise_layer(out, noise)
 
         x_6 = self.upsample(out)
         x_6 = torch.cat((x_4, x_6), dim=1)
