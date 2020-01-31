@@ -178,5 +178,5 @@ if __name__ == '__main__':
         scheduler.step(e)
         r_scheduler.step(e)
         d_scheduler.step(e)
-        torch.save(net.state_dict(), "./weights/weights_with_in_epoch_{}.pth".format(e))
+        torch.save(net.state_dict(), "./weights/weights_with_bn_epoch_{}.pth".format(e))
     writer.close()
