@@ -12,7 +12,7 @@ from colorama import Fore
 import os
 
 from utils import HDF5Dataset, weights_init, normalize_batch, unnormalize_batch
-from models import Net, Discriminator, VGG16
+from models import Net, BaseNet, Discriminator, VGG16
 from losses import CustomLoss, RefineLoss
 
 NUM_EPOCHS = 20
@@ -42,8 +42,8 @@ val_mask_loader = data.DataLoader(m_val, batch_size=BATCH_SIZE, shuffle=False, n
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 d_net = Discriminator()
-net = Net(vocab_size=fg_train.vocab_size)
-refine_net = Net(partial=False, lstm=False)
+net = Net(i_norm=False)
+refine_net = BaseNet(i_norm=False, lstm=False)
 vgg = VGG16(requires_grad=False)
 if torch.cuda.device_count() > 1:
     print("Using {} GPUs...".format(torch.cuda.device_count()))
