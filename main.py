@@ -15,7 +15,7 @@ from utils import HDF5Dataset, weights_init, normalize_batch, unnormalize_batch
 from models import Net, BaseNet, Discriminator, VGG16
 from losses import CustomLoss, RefineLoss
 
-NUM_EPOCHS = 5
+NUM_EPOCHS = 10
 BATCH_SIZE = 32
 
 fg_train = HDF5Dataset(filename='./Fashion-Gen/fashiongen_256_256_train.h5')
@@ -42,7 +42,7 @@ val_mask_loader = data.DataLoader(m_val, batch_size=BATCH_SIZE, shuffle=False, n
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 d_net = Discriminator()
-net = BaseNet(i_norm=False)  # screen -r 19.. := BN || screen -r 37.. := IN
+net = BaseNet(i_norm=False)
 refine_net = BaseNet(i_norm=False, lstm=False)
 vgg = VGG16(requires_grad=False)
 if torch.cuda.device_count() > 1:
