@@ -16,7 +16,7 @@ from models import Net, BaseNet, Discriminator, VGG16
 from losses import CustomLoss, RefineLoss
 
 NUM_EPOCHS = 10
-BATCH_SIZE = 32
+BATCH_SIZE = 16
 
 fg_train = HDF5Dataset(filename='./Fashion-Gen/fashiongen_256_256_train.h5')
 fg_val = HDF5Dataset(filename='./Fashion-Gen/fashiongen_256_256_validation.h5', is_train=False)
