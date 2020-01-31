@@ -8,9 +8,11 @@ from tensorboardX import SummaryWriter
 
 from tqdm import tqdm
 from colorama import Fore
+from math import log10
 
 import os
 
+from pytorch_msssim import SSIM
 from utils import HDF5Dataset, weights_init, normalize_batch, unnormalize_batch
 from models import Net, BaseNet, Discriminator, VGG16
 from losses import CustomLoss, RefineLoss
@@ -170,13 +172,56 @@ def train(epoch, img_loader, mask_loader):
                   )
 
 
+def test(img_loader, epoch=0):
+    l1_criterion = nn.L1Loss()
+    l2_criterion = nn.MSELoss()
+    ssim_loss = SSIM(window_size=11)
+    avg_l1, avg_l2, avg_ssim, avg_psnr = 0.0, 0.0, 0.0, 0.0
+    with torch.no_grad():
+        for batch_idx, (y_train, x_desc, x_train, x_mask) in tqdm(enumerate(img_loader), ncols=50, desc="Testing",
+                                                                  bar_format="{l_bar}%s{bar}%s{r_bar}" % (Fore.GREEN, Fore.RESET)):
+            x_train = x_train.float().to(device)
+            x_desc = x_desc.long().to(device)
+            x_mask = x_mask.float().to(device)
+            y_train = y_train.float().to(device)
+
+            noise = torch.zeros((x_mask.size(0), 256), dtype=torch.float32).normal_().to(device)
+            output = net(x_train, x_mask, x_desc, noise)
+
+            l1 = l1_criterion(y_train, output)
+            avg_l1 += l1
+            mse = l2_criterion(output, y_train)
+            avg_l2 += mse
+            ssim = ssim_loss(output, y_train)
+            avg_ssim += ssim
+            psnr = 10.0 * log10(1.0 / mse.item())
+            avg_psnr += psnr
+
+        avg_l1 = avg_l1 / len(img_loader)
+        avg_l2 = avg_l2 / len(img_loader)
+        avg_ssim = avg_ssim / len(img_loader)
+        avg_psnr = avg_psnr / len(img_loader)
+
+        writer.add_text("l1", str(avg_l1), epoch)
+        writer.add_text("l2", str(avg_l2), epoch)
+        writer.add_text("ssim", str(avg_ssim), epoch)
+        writer.add_text("psnr", str(avg_psnr), epoch)
+
+        print("L1 Loss:{:.4f}  ".format(avg_l1),
+              "L2 Loss:{:.4f}  ".format(avg_l2),
+              "SSIM:{:.4f}  ".format(avg_ssim),
+              "PSNR:{:.4f}  ".format(avg_psnr))
+
+
 if __name__ == '__main__':
     if not os.path.exists("./weights"):
         os.mkdir("./weights")
+    writer.add_text("model_name", "BN + US + Desc + SA + CL")
     for e in range(NUM_EPOCHS):
         train(e, train_img_loader, train_mask_loader)
         scheduler.step(e)
         r_scheduler.step(e)
         d_scheduler.step(e)
         torch.save(net.state_dict(), "./weights/weights_with_bn_epoch_{}.pth".format(e))
+        test(val_img_loader, epoch=e)
     writer.close()
