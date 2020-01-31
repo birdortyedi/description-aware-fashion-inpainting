@@ -178,6 +178,7 @@ class Net(nn.Module):
 
 class BaseNet(nn.Module):
     def __init__(self, vocab_size=10000, i_norm=True, attention=True, dilation=True, lstm=True, noise=True):
+        super(BaseNet, self).__init__()
         self.attention = attention
         self.dilation = dilation
         self.lstm = lstm
