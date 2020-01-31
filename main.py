@@ -42,7 +42,7 @@ val_mask_loader = data.DataLoader(m_val, batch_size=BATCH_SIZE, shuffle=False, n
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 d_net = Discriminator()
-net = Net(i_norm=False)
+net = Net(i_norm=False)  # screen -r 19.. := BN || screen -r 37.. := IN
 refine_net = BaseNet(i_norm=False, lstm=False)
 vgg = VGG16(requires_grad=False)
 if torch.cuda.device_count() > 1:
@@ -178,5 +178,5 @@ if __name__ == '__main__':
         scheduler.step(e)
         r_scheduler.step(e)
         d_scheduler.step(e)
-        torch.save(net.state_dict(), "./weights/weights_epoch_{}.pth".format(e))
+        torch.save(net.state_dict(), "./weights/weights_with_bn_epoch_{}.pth".format(e))
     writer.close()
