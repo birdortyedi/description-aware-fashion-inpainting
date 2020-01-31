@@ -42,7 +42,7 @@ val_mask_loader = data.DataLoader(m_val, batch_size=BATCH_SIZE, shuffle=False, n
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 d_net = Discriminator()
-net = BaseNet()
+net = BaseNet(vocab_size=fg_train.vocab_size)
 refine_net = BaseNet(lstm=False)
 vgg = VGG16(requires_grad=False)
 if torch.cuda.device_count() > 1:
