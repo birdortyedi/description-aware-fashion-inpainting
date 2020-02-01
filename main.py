@@ -44,7 +44,7 @@ val_mask_loader = data.DataLoader(m_val, batch_size=BATCH_SIZE, shuffle=False, n
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 d_net = Discriminator()
-net = BaseNet(vocab_size=fg_train.vocab_size)
+net = BaseNet(lstm=False)
 refine_net = BaseNet(lstm=False)
 vgg = VGG16(requires_grad=False)
 if torch.cuda.device_count() > 1:
@@ -216,12 +216,12 @@ def test(img_loader, epoch=0):
 if __name__ == '__main__':
     if not os.path.exists("./weights"):
         os.mkdir("./weights")
-    writer.add_text("model_name", "IN + US + Desc + SA + CL")
+    writer.add_text("model_name", "IN + US + SA + CL")
     for e in range(NUM_EPOCHS):
         train(e, train_img_loader, train_mask_loader)
         scheduler.step(e)
         r_scheduler.step(e)
         d_scheduler.step(e)
-        torch.save(net.state_dict(), "./weights/weights_with_in_epoch_{}.pth".format(e))
+        torch.save(net.state_dict(), "./weights/weights_with_in_wout_desc_epoch_{}.pth".format(e))
         test(val_img_loader, epoch=e)
     writer.close()
