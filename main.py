@@ -19,6 +19,7 @@ from losses import CustomLoss, RefineLoss
 
 NUM_EPOCHS = 5
 BATCH_SIZE = 32
+TEST = True
 
 fg_train = HDF5Dataset(filename='./Fashion-Gen/fashiongen_256_256_train.h5')
 fg_val = HDF5Dataset(filename='./Fashion-Gen/fashiongen_256_256_validation.h5', is_train=False)
@@ -214,14 +215,33 @@ def test(img_loader, epoch=0):
 
 
 if __name__ == '__main__':
-    if not os.path.exists("./weights"):
-        os.mkdir("./weights")
-    writer.add_text("model_name", "IN + US + SA + CL")
-    for e in range(NUM_EPOCHS):
-        train(e, train_img_loader, train_mask_loader)
-        scheduler.step(e)
-        r_scheduler.step(e)
-        d_scheduler.step(e)
-        torch.save(net.state_dict(), "./weights/weights_with_in_wout_desc_epoch_{}.pth".format(e))
-        test(val_img_loader, epoch=e)
-    writer.close()
+    if TEST:
+        state_dict = torch.load("./runs/Feb01_03-04-30_in-us/weights/weights_with_in_epoch_4.pth")
+        net.load_state_dict(state_dict)
+        writer.add_text("model", "Feb01_03-04-30_in-us")
+        with torch.no_grad():
+            for batch_idx, (y_train, x_desc, x_train, x_mask) in tqdm(enumerate(val_img_loader), ncols=50, desc="Testing",
+                                                                      bar_format="{l_bar}%s{bar}%s{r_bar}" % (Fore.GREEN, Fore.RESET)):
+                x_train = x_train.float().to(device)
+                x_desc = x_desc.long().to(device)
+                x_mask = x_mask.float().to(device)
+                y_train = y_train.float().to(device)
+
+                noise = torch.zeros((x_mask.size(0), 256), dtype=torch.float32).normal_().to(device)
+                output = net(x_train, x_mask, x_desc, noise)
+                for i, (x, y, out) in enumerate(zip(x_train, y_train, output)):
+                    writer.add_image("images/x_train", x_train, i)
+                    writer.add_image("images/y_train", y_train, i)
+                    writer.add_image("images/output", output, i)
+    else:
+        if not os.path.exists("./weights"):
+            os.mkdir("./weights")
+        writer.add_text("model_name", "IN + US + SA + CL")
+        for e in range(NUM_EPOCHS):
+            train(e, train_img_loader, train_mask_loader)
+            scheduler.step(e)
+            r_scheduler.step(e)
+            d_scheduler.step(e)
+            torch.save(net.state_dict(), "./weights/weights_with_in_wout_desc_epoch_{}.pth".format(e))
+            test(val_img_loader, epoch=e)
+        writer.close()
