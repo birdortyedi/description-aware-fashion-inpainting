@@ -230,9 +230,9 @@ if __name__ == '__main__':
                 noise = torch.zeros((x_mask.size(0), 256), dtype=torch.float32).normal_().to(device)
                 output = net(x_train, x_mask, x_desc, noise)
                 for i, (x, y, out) in enumerate(zip(x_train, y_train, output)):
-                    writer.add_image("images/x_train", x_train, i)
-                    writer.add_image("images/y_train", y_train, i)
-                    writer.add_image("images/output", output, i)
+                    writer.add_image("images/x_train", x, i)
+                    writer.add_image("images/y_train", y, i)
+                    writer.add_image("images/output", out, i)
     else:
         if not os.path.exists("./weights"):
             os.mkdir("./weights")
