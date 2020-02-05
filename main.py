@@ -233,9 +233,9 @@ if __name__ == '__main__':
                 x_train = unnormalize_batch(x_train)
                 y_train = unnormalize_batch(y_train)
                 for i, (x, y, out) in enumerate(zip(x_train, y_train, output)):
-                    writer.add_image("x_train/x_train_{}_{}".format(batch_idx, i), x, i)
-                    writer.add_image("y_train/y_train_{}_{}".format(batch_idx, i), y, i)
-                    writer.add_image("output/output_{}_{}".format(batch_idx, i), out, i)
+                    writer.add_image("x_train/x_train_{}".format(batch_idx), x, i)
+                    writer.add_image("y_train/y_train_{}".format(batch_idx), y, i)
+                    writer.add_image("output/output_{}".format(batch_idx), out, i)
     else:
         if not os.path.exists("./weights"):
             os.mkdir("./weights")
