@@ -229,6 +229,9 @@ if __name__ == '__main__':
 
                 noise = torch.zeros((x_mask.size(0), 256), dtype=torch.float32).normal_().to(device)
                 output = net(x_train, x_mask, x_desc, noise)
+                output = torch.clamp(unnormalize_batch(output))
+                x_train = unnormalize_batch(x_train)
+                y_train = unnormalize_batch(y_train)
                 for i, (x, y, out) in enumerate(zip(x_train, y_train, output)):
                     writer.add_image("images/x_train", x, i)
                     writer.add_image("images/y_train", y, i)
