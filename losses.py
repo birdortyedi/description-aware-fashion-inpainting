@@ -1,6 +1,5 @@
 import torch
 from torch import nn
-import pytorch_msssim
 
 
 class TVLoss(nn.Module):
@@ -8,92 +7,65 @@ class TVLoss(nn.Module):
         super(TVLoss, self).__init__()
 
     def forward(self, x):
-        var_w = torch.abs(x[:, :, :, :-1] - x[:, :, :, 1:]).mean()
-        var_h = torch.abs(x[:, :, :-1, :] - x[:, :, 1:, :]).mean()
-
+        var_w = torch.sum(torch.pow(x[:, :, :, :-1] - x[:, :, :, 1:], 2))
+        var_h = torch.sum(torch.pow(x[:, :, :-1, :] - x[:, :, 1:, :], 2))
         return var_w + var_h
+
+
+class CoarseLoss(nn.Module):
+    def __init__(self):
+        super(CoarseLoss, self).__init__()
+        self.pixel_loss = nn.SmoothL1Loss()
+        self.style_loss = nn.SmoothL1Loss()
+
+    def forward(self, x, out): # , features_x, features_out):
+        p_loss = self.pixel_loss(x, out.detach())
+        # c_loss = 0.0
+        G_x = self._gram_matrix(x).detach()
+        G_out = self._gram_matrix(out).detach()
+        s_loss = self.style_loss(G_x, G_out)
+        # for f_x, f_out in zip(features_x, features_out):
+        # G_f_x = self._gram_matrix(f_x).detach()
+        # G_f_out = self._gram_matrix(f_out).detach()
+        # s_loss += self.style_loss(G_f_x, G_f_out)
+        # c_loss += self.content_loss(f_x.detach(), f_out.detach()) / 255.
+        return 20.0 * p_loss + 100.0 * s_loss, p_loss, s_loss
+
+    @staticmethod
+    def _gram_matrix(mat):
+        b, ch, h, w = mat.size()
+        m = mat.view(b, ch, w * h)
+        m_transposed = m.transpose(1, 2)
+        G = m.bmm(m_transposed) / (h * w * ch)
+        return G
 
 
 class RefineLoss(nn.Module):
     def __init__(self):
         super(RefineLoss, self).__init__()
-        self.pixel = nn.L1Loss()
-        self.style = nn.L1Loss()
-        self.adversarial = nn.BCELoss()
+        self.pixel_loss = nn.SmoothL1Loss()
+        self.style_loss = nn.SmoothL1Loss()
+        self.tv_loss = TVLoss()
 
-    def forward(self, x, out, composite, d_out):
-        pixel_output_loss = self.pixel(x, out).mean()
-        pixel_composite_loss = self.pixel(x, composite).mean()
-        pixel_loss = pixel_output_loss + pixel_composite_loss
-
-        # s_loss_output, s_loss_composite = 0.0, 0.0
-        # for i, (f_gt, f_composite, f_output) in enumerate(zip(vgg_features_gt, vgg_features_composite, vgg_features_output)):
-        #     g_f_gt = self._gram_matrix(f_gt)
-        #     g_f_output = self._gram_matrix(f_output)
-        #     g_f_composite = self._gram_matrix(f_composite)
-        #     s_loss_output += self.style(g_f_output, g_f_gt).mean()
-        #     s_loss_composite += self.style(g_f_composite, g_f_gt).mean()
-        # style_loss = s_loss_output + s_loss_composite
-
-        adversarial_loss = self.adversarial(d_out,
-                                            torch.FloatTensor(d_out.size(0)).uniform_(0.0, 0.3).to(torch.device("cuda" if torch.cuda.is_available()
-                                                                                                                else "cpu")))
-        return 100.0 * pixel_loss + adversarial_loss, \
-            pixel_loss, adversarial_loss
+    def forward(self, x, out): # , features_x, features_out):
+        p_loss = self.pixel_loss(x, out.detach())
+        # c_loss = 0.0
+        G_x = self._gram_matrix(x).detach()
+        G_out = self._gram_matrix(out).detach()
+        s_loss = self.style_loss(G_x, G_out)
+        # for f_x, f_out in zip(features_x, features_out):
+        # G_f_x = self._gram_matrix(f_x).detach()
+        # G_f_out = self._gram_matrix(f_out).detach()
+        # s_loss += self.style_loss(G_f_x, G_f_out)
+        # c_loss += self.content_loss(f_x.detach(), f_out.detach()) / 255.
+        t_loss = self.tv_loss(out.detach())
+        return 20.0 * p_loss + 100.0 * s_loss + 0.0000002 * t_loss, \
+        p_loss, s_loss, t_loss
 
     @staticmethod
     def _gram_matrix(mat):
         b, ch, h, w = mat.size()
         m = mat.view(b, ch, w * h)
         m_transposed = m.transpose(1, 2)
-        # G = m.bmm(m_transposed) / (h * w * ch)
-        i_ = torch.zeros(b, ch, ch).type(m.type())
-        G = torch.baddbmm(i_, m, m_transposed, beta=0, alpha=1. / (ch * h * w), out=None)
-        return G
-
-
-class CustomLoss(nn.Module):
-    def __init__(self):
-        super(CustomLoss, self).__init__()
-        self.pixel = nn.L1Loss()
-        self.content = nn.L1Loss()
-        self.style = nn.L1Loss()
-        self.tv = TVLoss()
-
-    def forward(self, x, output, composite, mask, vgg_features_gt, vgg_features_composite, vgg_features_output):
-        x_hole = (1.0 - mask) * x
-        output_hole = (1.0 - mask) * output
-        x_valid = mask * x
-        output_valid = mask * output
-
-        pixel_hole_loss = self.pixel(output_hole, x_hole.detach()).mean()
-        pixel_valid_loss = self.pixel(output_valid, x_valid.detach()).mean()
-
-        s_loss_output, s_loss_composite = 0.0, 0.0
-        c_loss_output, c_loss_composite = 0.0, 0.0
-        for i, (f_gt, f_composite, f_output) in enumerate(zip(vgg_features_gt, vgg_features_composite, vgg_features_output)):
-            g_f_gt = self._gram_matrix(f_gt)
-            g_f_output = self._gram_matrix(f_output)
-            g_f_composite = self._gram_matrix(f_composite)
-            s_loss_output += self.style(g_f_output, g_f_gt).mean()
-            s_loss_composite += self.style(g_f_composite, g_f_gt).mean()
-            if i == 2:
-                c_loss_output += self.content(f_output, f_gt).mean()
-                c_loss_composite += self.content(f_composite, f_gt).mean()
-        style_loss = s_loss_output + s_loss_composite
-        content_loss = c_loss_output + c_loss_composite
-
-        tv_loss = self.tv(composite)
-
-        return 12.0 * pixel_valid_loss + 50.0 * pixel_hole_loss + 0.1 * content_loss + 120.0 * style_loss + 0.01 * tv_loss, \
-            pixel_valid_loss, pixel_hole_loss, content_loss, style_loss, tv_loss
-
-    @staticmethod
-    def _gram_matrix(mat):
-        b, ch, h, w = mat.size()
-        m = mat.view(b, ch, w * h)
-        m_transposed = m.transpose(1, 2)
-        # G = m.bmm(m_transposed) / (h * w * ch)
-        i_ = torch.zeros(b, ch, ch).type(m.type())
-        G = torch.baddbmm(i_, m, m_transposed, beta=0, alpha=1. / (ch * h * w), out=None)
+        G = m.bmm(m_transposed) / (h * w * ch)
         return G
